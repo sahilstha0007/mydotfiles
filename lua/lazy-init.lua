@@ -28,6 +28,8 @@ require('lazy').setup({
     { import = 'plugins.editor.lualine' },
     { import = 'plugins.editor.mini' },
     { import = 'plugins.editor.file-tree' },
+    { import = 'plugins.editor.disable-neotree' },
+    { import = 'plugins.editor.disable-neotree' },
     { import = 'plugins.editor.overseer' },
     { import = 'plugins.editor.snacks' },
     { import = 'plugins.editor.telescope' },

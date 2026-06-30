@@ -1,9 +1,9 @@
 return {
   {
-    "nvim-neo-tree/neo-tree.nvim",
+    "nvim-tree/nvim-tree.lua",
     opts = function(_, opts)
       vim.api.nvim_create_autocmd("FileType", {
-        pattern = "neo-tree",
+        pattern = "NvimTree",
         callback = function()
           vim.wo.winblend = 15
         end,

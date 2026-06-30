@@ -1,6 +1,7 @@
 return {
   { -- Highlight, edit, and navigate code
     'nvim-treesitter/nvim-treesitter',
+    branch = 'master',
     build = ':TSUpdate',
     main = 'nvim-treesitter.configs', -- Sets main module to use for opts
     -- [[ Configure Treesitter ]] See `:help nvim-treesitter`
@@ -8,9 +9,7 @@ return {
       ensure_installed = {
         'astro',
         'bash',
-        'blade',
         'c',
-        'caddy',
         'css',
         'diff',
         'dockerfile',
@@ -19,24 +18,24 @@ return {
         'go',
         'gomod',
         'gosum',
+        'gowork',
         'html',
         'javascript',
         'json',
         'lua',
         'luadoc',
-        'nginx',
-        'php',
-        'php_only',
+        'markdown',
+        'markdown_inline',
         'python',
         'sql',
+        'tsx',
         'typescript',
         'vim',
         'vimdoc',
-        'ninja',
-        'rst',
+        'yaml',
       },
-      -- Autoinstall languages that are not installed
-      auto_install = true,
+      -- Install only the parsers listed above; no surprise background installs.
+      auto_install = false,
       highlight = {
         enable = true,
         -- Some languages depend on vim's regex highlighting system (such as Ruby) for indent rules.
@@ -59,7 +58,7 @@ return {
         },
       }
 
-    --       require('nvim-treesitter.configs').setup(opts) -- Disabled by automation to fix module crash
+      require('nvim-treesitter.configs').setup(opts)
     end,
   },
 }

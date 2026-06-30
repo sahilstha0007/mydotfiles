@@ -65,3 +65,25 @@ vim.api.nvim_create_autocmd('TextYankPost', {
 -- Better indenting
 keymap.set('v', '<', '<gv')
 keymap.set('v', '>', '>gv')
+
+-- Skip over closing brackets, quotes, and commas with <C-l>
+local skip_chars = { ')', ']', '}', "'", '"', ',', '`', ';' }
+local function is_skip_char(char)
+  for _, c in ipairs(skip_chars) do
+    if char == c then
+      return true
+    end
+  end
+  return false
+end
+
+vim.keymap.set('i', '<C-l>', function()
+  local col = vim.fn.col('.')
+  local line = vim.fn.getline('.')
+  local char_under_cursor = line:sub(col, col)
+  if is_skip_char(char_under_cursor) then
+    return '<Right>'
+  else
+    return '<C-l>'
+  end
+end, { expr = true, noremap = true, desc = 'Skip past closing bracket/quote/comma' })

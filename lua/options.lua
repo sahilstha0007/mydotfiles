@@ -7,8 +7,10 @@ vim.opt.number = true
 -- Relative numbers
 vim.opt.relativenumber = true
 
--- Disable wrap
-vim.wo.wrap = false
+-- Enable wrap
+vim.wo.wrap = true
+vim.wo.linebreak = true
+vim.wo.breakindent = true
 
 -- Enable mouse mode, can be useful for resizing splits for example!
 vim.opt.mouse = 'a'
