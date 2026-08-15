@@ -58,6 +58,11 @@ return {
           icon = { icon = '󰈞', color = 'yellow' },
         },
         {
+          '<leader>q',
+          group = 'Session',
+          icon = { icon = '󰁯', color = 'cyan' },
+        },
+        {
           '<leader>g',
           group = 'Git',
           icon = { icon = '󰊢', color = 'orange' },

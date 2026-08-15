@@ -102,6 +102,11 @@ return {
 
       local function open_tree_on_setup(args)
         vim.schedule(function()
+          -- Let the snacks dashboard own the empty-launch start screen.
+          if vim.bo.filetype == 'snacks_dashboard' then
+            return
+          end
+
           local file = args.file
           local buf_name = vim.api.nvim_buf_get_name(0)
           local is_no_name_buffer = buf_name == ''

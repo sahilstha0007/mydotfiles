@@ -6,7 +6,10 @@ return {
     'saghen/blink.cmp',
     event = 'InsertEnter',
     version = '*',
-    dependencies = { 'folke/lazydev.nvim' },
+    dependencies = {
+      'folke/lazydev.nvim',
+      'rafamadriz/friendly-snippets', -- loaded by blink's native vim.snippet engine
+    },
     ---@module 'blink.cmp'
     ---@type blink.cmp.Config
     opts = {
