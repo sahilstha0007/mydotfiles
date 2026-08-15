@@ -69,3 +69,6 @@ vim.opt.termguicolors = true
 
 -- Set statusline to be global
 vim.opt.laststatus = 3
+
+-- Window border style
+vim.o.winborder = 'rounded'
