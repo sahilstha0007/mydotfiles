@@ -1,4 +1,4 @@
-local lsp = 'pyright'
+local lsp = 'ruff'
 local ruff = 'ruff'
 
 return {
@@ -51,24 +51,8 @@ return {
           },
         },
       },
-      setup = {
-        [ruff] = function()
-          local on_attach = function(client, _)
-            -- Disable hover in favor of Pyright
-            client.server_capabilities.hoverProvider = false
-          end
-          local name = ruff
-          vim.api.nvim_create_autocmd('LspAttach', {
-            callback = function(args)
-              local buffer = args.buf ---@type number
-              local client = vim.lsp.get_client_by_id(args.data.client_id)
-              if client and (not name or client.name == name) then
-                return on_attach(client, buffer)
-              end
-            end,
-          })
-        end,
-      },
+      -- ruff is the single Python server (lint + type-checking + format).
+      -- No setup needed — it replaces pyright entirely.
     },
   },
   {

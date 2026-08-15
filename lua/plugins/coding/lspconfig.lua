@@ -34,7 +34,7 @@ return {
         'tailwindcss',
         'cssls',
         'gopls',
-        'pyright',
+        -- ruff replaces pyright for Python (lint + type-checking + format)
         'ruff',
         'astro',
         'dockerls',
@@ -54,8 +54,9 @@ return {
 
       -- Buffer-local keymaps + behavior when a server attaches. Neovim 0.11
       -- already provides defaults (K hover, grn rename, gra code action,
-      -- grr refs, gri impl, gO symbols, C-s signature, [d/]d diagnostics);
-      -- we only add definition/type navigation via fzf-lua and a few extras.
+      -- grr refs, gri impl, gO symbols, C-s signature, [d/]d diagnostics).
+      -- Go-to-definition/type/references/impl are bound globally by telescope
+      -- (see plugins/editor/telescope.lua); we only add code actions here.
       vim.api.nvim_create_autocmd('LspAttach', {
         group = vim.api.nvim_create_augroup('lsp-attach', { clear = true }),
         callback = function(event)
@@ -68,18 +69,6 @@ return {
             )
           end
 
-          map('gd', function()
-            require('fzf-lua').lsp_definitions { jump1 = true, ignore_current_line = true }
-          end, 'Goto Definition')
-          map('gy', function()
-            require('fzf-lua').lsp_typedefs { jump1 = true, ignore_current_line = true }
-          end, 'Goto Type Definition')
-          map('grr', function()
-            require('fzf-lua').lsp_references { jump1 = true, ignore_current_line = true }
-          end, 'References')
-          map('gri', function()
-            require('fzf-lua').lsp_implementations { jump1 = true, ignore_current_line = true }
-          end, 'Goto Implementation')
           map('<leader>ca', vim.lsp.buf.code_action, 'Code Action', { 'n', 'x' })
 
           local client = vim.lsp.get_client_by_id(event.data.client_id)
@@ -148,7 +137,7 @@ return {
           'css-lsp',
           -- gopls is provided by mise (go: backend) so it lands on PATH as a
           -- shim; mason can't install it because mise overrides GOBIN.
-          'pyright',
+          -- pyright removed: ruff replaces it (see servers list above).
           'ruff',
           'astro-language-server',
           'dockerfile-language-server',

@@ -85,7 +85,6 @@ return {
           gitsigns.reset_buffer,
           { desc = 'Buffer Reset' }
         )
-        map('n', '<leader>gbl', gitsigns.blame_line, { desc = 'Blame Line' })
         map('n', '<leader>gdi', gitsigns.diffthis, { desc = 'Diff Index' })
         map('n', '<leader>gdc', function()
           gitsigns.diffthis '@'

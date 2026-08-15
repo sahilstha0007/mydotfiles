@@ -147,7 +147,10 @@ return {
       -- You'll need to check that you have the required things installed
       -- online, please don't ask me how to install them :)
       ensure_installed = {
-        -- Update this to ensure that you have the debuggers for the langs you want
+        -- DAP adapter names (not mason package names). Add/remove per language.
+        -- JS/TS (pwa-node) is wired separately in plugins/languages/typescript.lua.
+        'python', -- debugpy — Python
+        'delve', -- Go
       },
     },
     -- mason-nvim-dap is loaded when nvim-dap loads
