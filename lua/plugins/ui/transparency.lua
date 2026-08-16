@@ -5,7 +5,7 @@ return {
       vim.api.nvim_create_autocmd("FileType", {
         pattern = "NvimTree",
         callback = function()
-          vim.wo.winblend = 15
+          vim.wo.winblend = 25
         end,
       })
       return opts

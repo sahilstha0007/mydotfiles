@@ -16,6 +16,7 @@ require('lazy').setup({
     { import = 'plugins.coding.cmp' },
     { import = 'plugins.coding.lspconfig' },
     { import = 'plugins.coding.todo-comments' },
+    { import = 'plugins.coding.textobjects' },
     { import = 'plugins.coding.treesitter' },
     { import = 'plugins.coding.trouble' },
     { import = 'plugins.dap.core' },
@@ -27,8 +28,11 @@ require('lazy').setup({
     { import = 'plugins.editor.lualine' },
     { import = 'plugins.editor.mini' },
     { import = 'plugins.editor.file-tree' },
+    { import = 'plugins.editor.flash' },
     { import = 'plugins.editor.disable-neotree' },
     { import = 'plugins.editor.ai-tools' },
+    { import = 'plugins.editor.bufferline' },
+    { import = 'plugins.editor.diffview' },
     { import = 'plugins.editor.overseer' },
     { import = 'plugins.editor.snacks' },
     { import = 'plugins.editor.telescope' },
@@ -46,6 +50,8 @@ require('lazy').setup({
     { import = 'plugins.languages.tailwind' },
     { import = 'plugins.languages.typescript' },
     { import = 'plugins.linting.core' },
+    -- note: plugins/linting/phpstan.lua is NOT a plugin spec — it's a
+    -- nvim-lint linter definition loaded via require() from linting/core.lua
     { import = 'plugins.test.core' },
 --  { import = 'plugins.ui.colorscheme' },
     { import = 'plugins.ui.matugen' },         
@@ -70,20 +76,23 @@ require('lazy').setup({
   ui = {
     -- If you are using a Nerd Font: set icons to an empty table which will use the
     -- default lazy.nvim defined Nerd Font icons, otherwise define a unicode icons table
+    -- Fallback only used when have_nerd_font is false; glyphs are verified
+    -- Nerd Fonts 3.5 codepoints (no emoji — emoji aren't in the font and
+    -- would render as boxes if this table ever became active).
     icons = vim.g.have_nerd_font and {} or {
       cmd = '⌘',
-      config = '🛠',
-      event = '📅',
-      ft = '📂',
-      init = '⚙',
-      keys = '🗝',
-      plugin = '🔌',
-      runtime = '💻',
-      require = '🌙',
-      source = '📄',
-      start = '🚀',
-      task = '📌',
-      lazy = '💤 ',
+      config = vim.fn.nr2char(0xF0493), -- md-cog
+      event = vim.fn.nr2char(0xF00ED), -- md-calendar
+      ft = vim.fn.nr2char(0xF024B),    -- md-folder
+      init = vim.fn.nr2char(0xF040A),  -- md-play
+      keys = vim.fn.nr2char(0xF030C),  -- md-keyboard
+      plugin = vim.fn.nr2char(0xF0431), -- md-puzzle
+      runtime = vim.fn.nr2char(0xF018D), -- md-console
+      require = vim.fn.nr2char(0xF01DA), -- md-download
+      source = vim.fn.nr2char(0xF0214), -- md-file
+      start = vim.fn.nr2char(0xF040A), -- md-play
+      task = vim.fn.nr2char(0xF012C),  -- md-check
+      lazy = vim.fn.nr2char(0xF04B2) .. ' ', -- md-sleep
     },
   },
 })

@@ -98,7 +98,8 @@ return {
         end,
         color = function()
           -- Cheap per-redraw: a table lookup against the precomputed map.
-          return { bg = colors.bg, fg = mode_color[vim.fn.mode()] }
+          -- bg 'NONE' keeps the statusline transparent (see lualine-theme).
+          return { bg = 'NONE', fg = mode_color[vim.fn.mode()] }
         end,
         padding = { right = 1 },
       }

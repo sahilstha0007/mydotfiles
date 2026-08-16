@@ -1,0 +1,1266 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Learn Neovim — complete coding reference for your setup</title>
+<meta name="description" content="A basic-to-intermediate complete reference for Neovim, built around Sahil's actual config: keymaps, leader, telescope, LSP, git, DAP, tests, plugins.">
+<style>
+/* ------------------------------------------------------------------ *
+ *  Learn Neovim — complete coding reference for Sahil's setup.
+ *  Mode colors mirror lualine (n=red i=green v=blue c=magenta)
+ * ------------------------------------------------------------------ */
+:root{
+  --bg:#0e1015;
+  --surface:#151922;
+  --raised:#1c2230;
+  --line:#262e3f;
+  --ink:#e7e4dc;
+  --muted:#97a0b3;
+  --faint:#6b7487;
+  --amber:#e0a85e;
+  --mint:#7fd8b0;
+  --red:#e56b6f;
+  --green:#7fd89b;
+  --blue:#6fa8dc;
+  --magenta:#c49ce4;
+  --mono:ui-monospace,"Cascadia Code","JetBrains Mono","SF Mono",Menlo,Consolas,monospace;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --railw:235px;
+  --statline-h:44px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+body{
+  background:var(--bg);
+  color:var(--ink);
+  font-family:var(--sans);
+  line-height:1.62;
+  -webkit-font-smoothing:antialiased;
+}
+::selection{background:var(--amber);color:#14100a}
+a{color:var(--mint)}
+a:focus-visible,kbd:focus-visible,button:focus-visible{outline:2px solid var(--amber);outline-offset:2px;border-radius:4px}
+code,kbd,.mono{font-family:var(--mono)}
+
+/* ---------- the statusline (signature) ---------- */
+#statline{
+  position:fixed;inset:0 0 auto 0;height:var(--statline-h);z-index:50;
+  display:flex;align-items:stretch;
+  background:var(--raised);
+  border-bottom:1px solid var(--line);
+  font-family:var(--mono);font-size:12px;letter-spacing:.02em;
+}
+#statline .mode{
+  display:flex;align-items:center;gap:.55em;
+  padding:0 1em;font-weight:700;color:#14100a;white-space:nowrap;
+  transition:background .18s ease;
+}
+#statline .mode::before{content:"";width:8px;height:8px;border-radius:50%;background:#14100a;opacity:.85}
+#statline[data-mode="normal"]  .mode{background:var(--red)}
+#statline[data-mode="insert"]  .mode{background:var(--green)}
+#statline[data-mode="visual"]  .mode{background:var(--blue)}
+#statline[data-mode="command"]  .mode{background:var(--magenta)}
+#statline .sec{display:flex;align-items:center;padding:0 1em;color:var(--ink);overflow:hidden;white-space:nowrap}
+#statline .sec b{font-weight:600;text-overflow:ellipsis;overflow:hidden}
+#statline .right{margin-left:auto;display:flex;align-items:center;gap:1.2em;padding:0 1em;color:var(--muted);white-space:nowrap}
+#statline .right .dot{color:var(--mint)}
+#statline .right .clock{color:var(--faint)}
+#statline .bar{position:absolute;left:0;bottom:-1px;height:2px;width:0;background:var(--amber);transition:width .12s linear}
+
+/* ---------- layout ---------- */
+.wrap{display:grid;grid-template-columns:var(--railw) minmax(0,1fr);gap:0;max-width:1220px;margin:0 auto;padding:0 24px}
+main{max-width:800px;padding:0 0 80px;margin:0 auto}
+
+/* ---------- rail / toc ---------- */
+.toc{
+  position:sticky;top:var(--statline-h);align-self:start;
+  height:calc(100vh - var(--statline-h));
+  overflow-y:auto;padding:28px 18px 40px 0;
+  font-size:13px;color:var(--muted);
+  scrollbar-width:thin;
+}
+.toc h2{font-size:11px;text-transform:uppercase;letter-spacing:.16em;color:var(--faint);margin:22px 0 8px;font-family:var(--mono)}
+.toc h2:first-child{margin-top:0}
+.toc a{display:block;padding:4px 10px;margin:1px 0;color:var(--muted);text-decoration:none;border-radius:6px;border-left:2px solid transparent}
+.toc a:hover{color:var(--ink);background:var(--surface)}
+.toc a.here{color:var(--ink);background:var(--raised);border-left-color:var(--amber)}
+.toc a .n{display:inline-block;width:1.7em;font-family:var(--mono);color:var(--faint)}
+.toc .legend{margin-top:26px;padding:12px;background:var(--surface);border:1px solid var(--line);border-radius:10px;font-size:12px}
+.toc .legend b{display:block;font-family:var(--mono);font-size:10px;letter-spacing:.14em;color:var(--faint);text-transform:uppercase;margin-bottom:8px}
+.toc .legend li{list-style:none;display:flex;gap:8px;align-items:baseline;margin:5px 0}
+.toc .legend .sw{width:9px;height:9px;border-radius:3px;flex:none;transform:translateY(1px)}
+.sw-normal{background:var(--red)}.sw-insert{background:var(--green)}.sw-visual{background:var(--blue)}.sw-command{background:var(--magenta)}
+
+/* ---------- hero ---------- */
+.hero{padding:74px 0 40px}
+.hero .kicker{font-family:var(--mono);font-size:13px;letter-spacing:.22em;text-transform:uppercase;color:var(--amber);margin-bottom:16px}
+.hero h1{font-family:var(--mono);font-size:clamp(34px,6vw,58px);line-height:1.04;letter-spacing:-.02em;font-weight:800}
+.hero h1 em{font-style:normal;color:var(--amber)}
+.hero p.lede{max-width:58ch;margin-top:18px;color:var(--muted);font-size:17px}
+.hero .term{
+  margin-top:34px;background:var(--surface);border:1px solid var(--line);border-radius:12px;
+  overflow:hidden;font-family:var(--mono);font-size:13.5px;box-shadow:0 24px 60px -30px rgba(0,0,0,.9);
+}
+.hero .term .tb{display:flex;align-items:center;gap:6px;padding:9px 14px;background:var(--raised);border-bottom:1px solid var(--line)}
+.hero .term .tb i{width:11px;height:11px;border-radius:50%;display:block}
+.hero .term .tb i:nth-child(1){background:#e56b6f}.hero .term .tb i:nth-child(2){background:#e0a85e}.hero .term .tb i:nth-child(3){background:#7fd89b}
+.hero .term .tb span{margin-left:10px;color:var(--faint);font-size:12px}
+.hero .term pre{padding:18px 20px;overflow-x:auto;color:var(--ink)}
+.hero .term pre .c{color:var(--faint)}
+.hero .term pre .k{color:var(--amber)}
+.hero .term pre .m{color:var(--magenta)}
+.hero .term pre .g{color:var(--mint)}
+.hero .term pre .r{color:var(--red)}
+.hero .term pre .b{color:var(--blue)}
+.hero .statline-demo{display:flex;font-size:12px;border-top:1px solid var(--line)}
+.hero .statline-demo .md{padding:7px 12px;background:var(--red);color:#14100a;font-weight:700}
+.hero .statline-demo .fd{flex:1;padding:7px 12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hero .statline-demo .rt{padding:7px 12px;color:var(--faint);white-space:nowrap}
+
+/* ---------- lessons ---------- */
+.lesson{scroll-margin-top:calc(var(--statline-h) + 14px);padding:44px 0 8px}
+.lesson .part{font-family:var(--mono);font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--faint);margin-bottom:10px}
+.lesson h2{font-size:27px;line-height:1.2;letter-spacing:-.01em;font-weight:800;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.lesson h2 .no{font-family:var(--mono);font-size:15px;color:var(--amber);font-weight:700}
+.lesson h2 .badge{
+  font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;padding:4px 10px;border-radius:999px;
+  border:1px solid;font-weight:700;text-transform:uppercase;
+}
+.lesson[data-mode="normal"]  .badge{color:var(--red);border-color:var(--red)}
+.lesson[data-mode="insert"]  .badge{color:var(--green);border-color:var(--green)}
+.lesson[data-mode="visual"]  .badge{color:var(--blue);border-color:var(--blue)}
+.lesson[data-mode="command"] .badge{color:var(--magenta);border-color:var(--magenta)}
+.lesson h2 .badge::before{content:"◆ ";font-size:9px;vertical-align:1px}
+.lesson .lede{margin-top:10px;color:var(--muted);max-width:62ch}
+.lesson h3{margin:28px 0 8px;font-size:15px;letter-spacing:.02em;color:var(--ink)}
+.lesson p{margin:10px 0;color:var(--muted)}
+.lesson p b{color:var(--ink);font-weight:600}
+.lesson ul,ol{margin:10px 0 10px 1.4em;color:var(--muted)}
+.lesson li{margin:5px 0}
+.lesson li b{color:var(--ink);font-weight:600}
+
+/* keycaps + code */
+kbd{
+  display:inline-block;padding:1px 7px;margin:0 2px;border-radius:6px;
+  background:var(--raised);border:1px solid var(--line);border-bottom-width:3px;
+  font-family:var(--mono);font-size:.86em;color:var(--ink);white-space:nowrap;line-height:1.5;
+}
+.lesson code{
+  background:var(--raised);border:1px solid var(--line);border-radius:5px;
+  padding:1px 6px;font-size:.9em;color:var(--amber);white-space:nowrap;
+}
+pre.ex{
+  background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--amber);
+  border-radius:8px;padding:12px 16px;overflow-x:auto;margin:12px 0;
+  font-family:var(--mono);font-size:13px;color:var(--ink);line-height:1.6;
+}
+pre.ex .cm{color:var(--faint)}
+pre.ex .out{color:var(--mint)}
+
+/* keycap rows */
+.krow{display:flex;gap:18px;align-items:baseline;padding:9px 0;border-bottom:1px dashed var(--line);flex-wrap:wrap}
+.krow:last-child{border-bottom:none}
+.krow .k{min-width:150px;font-family:var(--mono);font-size:13px}
+.krow .d{flex:1;min-width:230px;color:var(--muted);font-size:14.5px}
+.krow .d b{color:var(--ink);font-weight:600}
+
+/* reference tables */
+table.ref{width:100%;border-collapse:collapse;margin:12px 0;font-size:13.5px;background:var(--surface);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+table.ref th{background:var(--raised);text-align:left;font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);padding:8px 12px;border-bottom:1px solid var(--line)}
+table.ref td{padding:7px 12px;border-bottom:1px dashed var(--line);vertical-align:top;color:var(--muted)}
+table.ref tr:last-child td{border-bottom:none}
+table.ref td:first-child{white-space:nowrap;font-family:var(--mono);color:var(--ink)}
+table.ref td:first-child kbd{margin:0}
+table.ref .grp td:first-child{color:var(--amber);font-family:var(--mono);font-weight:700;letter-spacing:.06em;font-size:12px}
+
+/* two-up grids */
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:14px;margin:14px 0}
+
+/* your-config callout */
+.yset{margin:18px 0;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--surface)}
+.yset .yh{display:flex;align-items:center;gap:8px;padding:7px 14px;background:var(--raised);font-family:var(--mono);font-size:11.5px;letter-spacing:.08em;color:var(--faint);border-bottom:1px solid var(--line)}
+.yset .yh .tag{color:var(--amber)}
+.yset pre{margin:0;padding:12px 16px;overflow-x:auto;font-family:var(--mono);font-size:12.5px;color:var(--ink);line-height:1.65}
+.yset pre .k{color:var(--amber)}
+.yset pre .cm{color:var(--faint)}
+.yset pre .s{color:var(--mint)}
+
+/* cards */
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(215px,1fr));gap:10px;margin:14px 0}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.card kbd{display:block;width:fit-content;margin:0 0 8px;font-size:.92em}
+.card p{font-size:13.5px;margin:0;color:var(--muted)}
+
+/* pro tip */
+.tip{margin:16px 0;padding:12px 16px 12px 44px;position:relative;border-radius:10px;background:linear-gradient(90deg,var(--raised),var(--surface));border:1px solid var(--line);color:var(--muted);font-size:14px}
+.tip::before{content:"!";position:absolute;left:14px;top:50%;transform:translateY(-50%);width:20px;height:20px;border-radius:50%;background:var(--amber);color:#14100a;font-family:var(--mono);font-weight:800;font-size:13px;display:flex;align-items:center;justify-content:center}
+.tip b{color:var(--ink)}
+
+/* footer */
+footer{margin-top:70px;padding:26px 0 40px;border-top:1px solid var(--line);color:var(--faint);font-size:13px;display:flex;flex-wrap:wrap;gap:8px 20px;align-items:center}
+footer .mono{color:var(--muted)}
+
+/* mobile */
+@media (max-width:940px){
+  .wrap{grid-template-columns:1fr}
+  .toc{display:none}
+  #statline .sec{max-width:40vw}
+  .hero{padding-top:52px}
+}
+@media (max-width:560px){
+  #statline .right .hide-sm{display:none}
+  #statline .mode span{display:none}
+  .lesson h2{font-size:23px}
+}
+</style>
+</head>
+<body>
+
+<!-- ============ STATUSLINE (signature: mirrors your lualine) ============ -->
+<header id="statline" data-mode="normal">
+  <div class="mode" id="modeChip">NORMAL</div>
+  <div class="sec"><b id="secName">Start here</b></div>
+  <div class="right">
+    <span class="dot">●</span>
+    <span>learn-nvim</span>
+    <span class="hide-sm">main</span>
+    <span class="clock" id="clock">--:--</span>
+  </div>
+  <div class="bar" id="progress"></div>
+</header>
+
+<div class="wrap">
+
+<!-- ============ TOC RAIL ============ -->
+<nav class="toc" aria-label="Table of contents">
+  <h2>Start</h2>
+  <a href="#intro" class="here"><span class="n">00</span>Start here</a>
+
+  <h2>Part I · Modes</h2>
+  <a href="#normal"><span class="n">01</span>Normal: moving</a>
+  <a href="#edit"><span class="n">02</span>Normal: editing</a>
+  <a href="#insert"><span class="n">03</span>Insert mode</a>
+  <a href="#visual"><span class="n">04</span>Visual mode</a>
+  <a href="#command"><span class="n">05</span>Command mode</a>
+
+  <h2>Part II · Your setup</h2>
+  <a href="#leader"><span class="n">06</span>The leader key</a>
+  <a href="#windows"><span class="n">07</span>Windows &amp; tabs</a>
+  <a href="#buffers"><span class="n">08</span>Buffers</a>
+  <a href="#find"><span class="n">09</span>Find &amp; grep</a>
+  <a href="#tree"><span class="n">10</span>File tree</a>
+
+  <h2>Part III · Editing craft</h2>
+  <a href="#objects"><span class="n">11</span>Text objects</a>
+  <a href="#replace"><span class="n">12</span>Search &amp; replace</a>
+  <a href="#registers"><span class="n">13</span>Registers</a>
+  <a href="#marks"><span class="n">14</span>Marks &amp; jumps</a>
+  <a href="#macros"><span class="n">15</span>Macros</a>
+
+  <h2>Part IV · Languages</h2>
+  <a href="#lsp"><span class="n">16</span>LSP &amp; diagnostics</a>
+  <a href="#completion"><span class="n">17</span>Completion</a>
+  <a href="#format"><span class="n">18</span>Format &amp; lint</a>
+  <a href="#test"><span class="n">19</span>Tests</a>
+  <a href="#dap"><span class="n">20</span>Debugging</a>
+
+  <h2>Part V · Workflow</h2>
+  <a href="#git"><span class="n">21</span>Git</a>
+  <a href="#fold"><span class="n">22</span>Folding</a>
+  <a href="#terminal"><span class="n">23</span>Terminal &amp; tmux</a>
+  <a href="#ai"><span class="n">24</span>AI agents</a>
+  <a href="#plugins"><span class="n">25</span>Plugins &amp; config</a>
+  <a href="#health"><span class="n">26</span>Help &amp; health</a>
+  <a href="#polish"><span class="n">27</span>Dashboard &amp; polish</a>
+
+  <h2>Appendix</h2>
+  <a href="#cheatsheet"><span class="n">A</span>Full cheat sheet</a>
+
+  <div class="legend">
+    <b>Modes · like your statusline</b>
+    <ul>
+      <li><span class="sw sw-normal"></span>normal</li>
+      <li><span class="sw sw-insert"></span>insert</li>
+      <li><span class="sw sw-visual"></span>visual</li>
+      <li><span class="sw sw-command"></span>command</li>
+    </ul>
+  </div>
+</nav>
+
+<main>
+
+<!-- ============ HERO ============ -->
+<section class="hero" id="intro">
+  <div class="kicker">A complete field guide · basic → intermediate</div>
+  <h1>Learn <em>Neovim</em></h1>
+  <p class="lede">Everything you need to code in this editor — built from your actual config, not a generic tutorial. Every keybinding, plugin, and option below is real in this setup. Read the four modes first, then dive into whichever part you need. The <b>Appendix cheat sheet</b> at the end has every binding in your config on one page.</p>
+
+  <div class="term" aria-hidden="true">
+    <div class="tb"><i></i><i></i><i></i><span>nvim — learn-nvim.html</span></div>
+<pre><span class="c">$</span> nvim
+<span class="c">-- NORMAL --</span>            learn-nvim.html            <span class="g">●</span> main · 09:41
+<span class="c">Press  ?  for help          </span>
+the <span class="k">keyboard</span> is the whole <span class="m">editor</span>.
+<span class="r">▌</span> every keystroke is a <span class="b">command</span>.
+~</pre>
+    <div class="statline-demo">
+      <span class="md">NORMAL</span>
+      <span class="fd">learn-nvim.html · complete reference</span>
+      <span class="rt">● main · 09:41</span>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 00 ============ -->
+<section class="lesson" id="intro2" data-mode="normal">
+  <div class="part">Part 0 · Orientation</div>
+  <h2><span class="no">00</span>The one big idea <span class="badge">normal</span></h2>
+  <p class="lede">Neovim is <b>modal</b>: the same keys do different things depending on the mode you're in. Most editors are one big text box; nvim is four small ones, and you switch between them on purpose. This is why it feels alien for a week and fast forever after.</p>
+  <ul>
+    <li><b>Normal</b> — your home base. Every key is a command: <kbd>j</kbd> moves down, <kbd>d</kbd> deletes, <kbd>p</kbd> pastes. You live here ~70% of the time.</li>
+    <li><b>Insert</b> — actual typing. Enter it briefly, type, leave. Escaping back to Normal is the habit that makes vim fast.</li>
+    <li><b>Visual</b> — selecting text. Like Normal, but keys affect the selection instead of the cursor.</li>
+    <li><b>Command</b> — the <kbd>:</kbd> line. Save, quit, search-replace, run ex commands.</li>
+  </ul>
+  <div class="tip"><b>Rule one:</b> whenever you finish doing something, press <kbd>Esc</kbd> and get back to Normal. Your config even makes <kbd>Esc</kbd> clear search highlighting for you.</div>
+  <div class="yset">
+    <div class="yh"><span class="tag">your config</span> · what this setup is</div>
+<pre>leader      = <span class="s">space</span>          <span class="cm">-- lua/globals.lua</span>
+plugins     = <span class="s">lazy.nvim</span>       <span class="cm">-- lua/lazy-init.lua, one spec per file</span>
+colors      = <span class="s">matugen</span>          <span class="cm">-- Material You, from your wallpaper</span>
+completion  = <span class="s">blink.cmp</span>       <span class="cm">-- + friendly-snippets</span>
+finding     = <span class="s">telescope</span> + <span class="s">ripgrep</span>
+LSP         = <span class="s">vim.lsp</span> (native) + <span class="s">mason</span> installs
+statusline  = <span class="s">lualine</span>          <span class="cm">-- this page's header is modeled on it</span>
+dashboard   = <span class="s">snacks</span>           <span class="cm">-- start screen + smooth UX (lesson 27)</span>
+sessions    = <span class="s">mini.sessions</span>    <span class="cm">-- Space q q / l / s</span></pre>
+  </div>
+</section>
+
+<!-- ============ 01 NORMAL ============ -->
+<section class="lesson" id="normal" data-mode="normal">
+  <div class="part">Part I · Modes</div>
+  <h2><span class="no">01</span>Normal mode: moving <span class="badge">normal</span></h2>
+  <p class="lede">Movement is the first skill. Notice your <b>relative line numbers</b> — they're there so you can count jumps with your eyes.</p>
+
+  <div class="krow"><span class="k"><kbd>h</kbd> <kbd>j</kbd> <kbd>k</kbd> <kbd>l</kbd></span><span class="d">Left, down, up, right. Your arrows live on the home row now.</span></div>
+  <div class="krow"><span class="k"><kbd>w</kbd> <kbd>b</kbd> <kbd>e</kbd></span><span class="d">Jump <b>w</b>ord-by-word: next start, back, end of word.</span></div>
+  <div class="krow"><span class="k"><kbd>W</kbd> <kbd>B</kbd> <kbd>E</kbd></span><span class="d">Same, but by whitespace-separated words (skips punctuation).</span></div>
+  <div class="krow"><span class="k"><kbd>0</kbd> <kbd>$</kbd> <kbd>^</kbd></span><span class="d">Start of line, end of line, first non-space character.</span></div>
+  <div class="krow"><span class="k"><kbd>gg</kbd> <kbd>G</kbd></span><span class="d">Top of file / bottom of file. Add a count: <kbd>12G</kbd> or <kbd>42gg</kbd>.</span></div>
+  <div class="krow"><span class="k"><kbd>%</kbd></span><span class="d">Jump between matching brackets: <kbd>(</kbd> <kbd>[</kbd> <kbd>{</kbd> <kbd>&lt;</kbd>.</span></div>
+  <div class="krow"><span class="k"><kbd>f</kbd><kbd>x</kbd> <kbd>t</kbd><kbd>x</kbd> <kbd>;</kbd> <kbd>,</kbd></span><span class="d"><kbd>f</kbd><kbd>x</kbd> jumps to the next <code>x</code> on the line; <kbd>t</kbd><kbd>x</kbd> stops just before it. <kbd>;</kbd> repeats forward, <kbd>,</kbd> backward.</span></div>
+  <div class="krow"><span class="k"><kbd>F</kbd><kbd>x</kbd> <kbd>T</kbd><kbd>x</kbd></span><span class="d">Same, but search <b>backward</b> on the line.</span></div>
+  <div class="krow"><span class="k"><kbd>/</kbd>pattern <kbd>n</kbd> <kbd>N</kbd></span><span class="d">Search. <kbd>n</kbd> next match, <kbd>N</kbd> previous. <kbd>Esc</kbd> clears the highlight (your setup does this).</span></div>
+  <div class="krow"><span class="k"><kbd>*</kbd> <kbd>#</kbd></span><span class="d">Search for the word under the cursor — the fastest "where else is this used?".</span></div>
+  <div class="krow"><span class="k"><kbd>C-d</kbd> <kbd>C-u</kbd> <kbd>C-f</kbd> <kbd>C-b</kbd></span><span class="d">Scroll half-page down/up, full page down/up. <kbd>zz</kbd> centers the cursor line.</span></div>
+  <div class="krow"><span class="k"><kbd>(</kbd> <kbd>)</kbd> <kbd>{</kbd> <kbd>}</kbd></span><span class="d">Jump by sentence ( <kbd>(</kbd> <kbd>)</kbd> ) and paragraph / blank line ( <kbd>{</kbd> <kbd>}</kbd> ).</span></div>
+  <div class="krow"><span class="k"><kbd>C-o</kbd> <kbd>C-i</kbd></span><span class="d">Jump backward / forward through the <b>jumplist</b> — like browser history for your cursor.</span></div>
+
+  <div class="yset">
+    <div class="yh"><span class="tag">your config</span> · <code>lua/options.lua</code></div>
+<pre><span class="cm">-- relative numbers = jump by sight</span>
+vim.opt.relativenumber = <span class="s">true</span>
+
+<span class="cm">-- smart search: lowercase finds both, capitals find exact</span>
+vim.opt.ignorecase = <span class="s">true</span>
+vim.opt.smartcase  = <span class="s">true</span>
+
+<span class="cm">-- keep cursor out of the screen edges</span>
+vim.opt.scrolloff = <span class="s">10</span></pre>
+  </div>
+
+  <div class="tip"><b>Smartcase:</b> because your config sets it, <code>/user</code> matches "User" too, but <code>/User</code> only matches "User".</div>
+</section>
+
+<!-- ============ 02 EDIT ============ -->
+<section class="lesson" id="edit" data-mode="normal">
+  <div class="part">Part I · Modes</div>
+  <h2><span class="no">02</span>Normal mode: editing <span class="badge">normal</span></h2>
+  <p class="lede">The grammar of vim editing: <b>verb + noun</b>. <kbd>d</kbd> (delete), <kbd>c</kbd> (change = delete + insert), <kbd>y</kbd> (yank = copy) — followed by a motion or text object.</p>
+
+  <div class="krow"><span class="k"><kbd>x</kbd> <kbd>X</kbd></span><span class="d">Delete char under / before the cursor.</span></div>
+  <div class="krow"><span class="k"><kbd>dd</kbd> <kbd>yy</kbd> <kbd>p</kbd> <kbd>P</kbd></span><span class="d">Delete line, copy line, paste <b>after</b> cursor, paste <b>before</b>. <kbd>3dd</kbd> cuts three lines.</span></div>
+  <div class="krow"><span class="k"><kbd>dw</kbd> <kbd>d$</kbd> <kbd>d0</kbd></span><span class="d">Delete word, to end of line, to start of line.</span></div>
+  <div class="krow"><span class="k"><kbd>u</kbd> <kbd>C-r</kbd></span><span class="d">Undo / redo. Your undo <b>survives restarts</b> (undofile is on).</span></div>
+  <div class="krow"><span class="k"><kbd>.</kbd></span><span class="d">Repeat the last change. <kbd>dd</kbd> then <kbd>.</kbd> <kbd>.</kbd> <kbd>.</kbd> deletes line after line. The most powerful key in vim.</span></div>
+  <div class="krow"><span class="k"><kbd>r</kbd><kbd>x</kbd> <kbd>~</kbd></span><span class="d">Replace one char with <code>x</code>; flip case of a char.</span></div>
+  <div class="krow"><span class="k"><kbd>J</kbd></span><span class="d">Join the next line onto this one.</span></div>
+  <div class="krow"><span class="k"><kbd>c</kbd>w <kbd>c</kbd>i<kbd>w</kbd></span><span class="d">Change a word — deletes it and drops you into Insert. The fastest way to retype a word.</span></div>
+  <div class="krow"><span class="k"><kbd>g</kbd>u <kbd>g</kbd>U <kbd>g</kbd>~</span><span class="d">Lowercase / uppercase / flip case of a motion or line: <kbd>guu</kbd>, <kbd>gU$</kbd>, <kbd>gUiw</kbd>.</span></div>
+  <div class="krow"><span class="k"><kbd>=</kbd></span><span class="d">Re-indent: <kbd>=</kbd><kbd>=</kbd> this line, <kbd>gg</kbd><kbd>=</kbd><kbd>G</kbd> the whole file.</span></div>
+  <div class="krow"><span class="k"><kbd>&gt;</kbd> <kbd>&lt;</kbd></span><span class="d">Indent / outdent. In visual mode it stays on the selection (your config).</span></div>
+
+  <pre class="ex"><span class="cm"># the verb-noun pattern in one line</span>
+d  w     <span class="cm">→ delete  word</span>
+c  i  "  <span class="cm">→ change  inside  quotes</span>
+y  i  }  <span class="cm">→ yank    inside  braces</span>
+gU i w    <span class="cm">→ uppercase inner word</span>
+<span class="out">counts multiply everything:  3ciw  = change the next 3 words</span></pre>
+
+  <div class="yset">
+    <div class="yh"><span class="tag">your config</span> · <code>lua/options.lua</code> + <code>lua/keymaps.lua</code></div>
+<pre>vim.opt.undofile = <span class="s">true</span>            <span class="cm">-- undo survives restarts</span>
+vim.opt.clipboard = <span class="s">'unnamedplus'</span>  <span class="cm">-- yank/paste use the OS clipboard</span>
+
+<span class="cm">-- &lt; and &gt; in visual keep the selection so you can repeat</span>
+<span class="k">vim.keymap.set</span>(<span class="s">'v'</span>, <span class="s">'&lt;'</span>, <span class="s">'&lt;gv'</span>)
+<span class="k">vim.keymap.set</span>(<span class="s">'v'</span>, <span class="s">'&gt;'</span>, <span class="s">'&gt;gv'</span>)</pre>
+  </div>
+
+  <div class="tip"><b>Hardtime is watching:</b> your setup runs <code>hardtime.nvim</code> to break the <kbd>dd</kbd>/<kbd>x</kbd> mashing habit. It intentionally makes those slower until you start using motions + counts — the exact skills these lessons teach.</div>
+</section>
+
+<!-- ============ 03 INSERT ============ -->
+<section class="lesson" id="insert" data-mode="insert">
+  <div class="part">Part I · Modes</div>
+  <h2><span class="no">03</span>Insert mode <span class="badge">insert</span></h2>
+  <p class="lede">Insert is for typing, not for editing. Enter it with a purpose, type, leave.</p>
+
+  <div class="krow"><span class="k"><kbd>i</kbd> <kbd>a</kbd></span><span class="d">Insert <b>before</b> / <b>after</b> the cursor.</span></div>
+  <div class="krow"><span class="k"><kbd>I</kbd> <kbd>A</kbd></span><span class="d">Insert at <b>start</b> of line / <b>end</b> of line. <kbd>A</kbd> is "append to this line" — used constantly.</span></div>
+  <div class="krow"><span class="k"><kbd>o</kbd> <kbd>O</kbd></span><span class="d">New line <b>below</b> / <b>above</b>, straight into insert.</span></div>
+  <div class="krow"><span class="k"><kbd>s</kbd> <kbd>S</kbd> <kbd>cc</kbd></span><span class="d">Replace one char / whole line / whole line (keep indent).</span></div>
+  <div class="krow"><span class="k"><kbd>C-l</kbd></span><span class="d"><b>Your custom key:</b> in insert, jumps past a closing bracket, quote, or comma instead of typing it.</span></div>
+  <div class="krow"><span class="k"><kbd>C-w</kbd> <kbd>C-u</kbd> <kbd>C-h</kbd></span><span class="d">Delete back one word / to line start / one char (while typing).</span></div>
+  <div class="krow"><span class="k"><kbd>C-n</kbd> <kbd>C-p</kbd></span><span class="d">Native word completion from open buffers (blink.cmp usually handles this — see lesson 17).</span></div>
+  <div class="krow"><span class="k"><kbd>C-t</kbd> <kbd>C-d</kbd></span><span class="d">Indent / outdent the current line while typing.</span></div>
+  <div class="krow"><span class="k"><kbd>C-r</kbd><kbd>"</kbd></span><span class="d">Insert the content of a register while in insert (e.g. <kbd>C-r</kbd><kbd>+</kbd> pastes the OS clipboard).</span></div>
+
+  <div class="yset">
+    <div class="yh"><span class="tag">your config</span> · <code>lua/keymaps.lua</code> + <code>lua/plugins/coding/autopairs.lua</code></div>
+<pre><span class="cm">-- &lt;C-l&gt; skips closing brackets/quotes/commas instead of typing them</span>
+<span class="k">vim.keymap.set</span>(<span class="s">'i'</span>, <span class="s">'&lt;C-l&gt;'</span>, <span class="k">function</span>() <span class="cm">-- returns '&lt;Right&gt;' if on a closing char</span> <span class="k">end</span>, { expr = <span class="s">true</span> })
+
+<span class="cm">-- nvim-autopairs closes brackets for you</span>
+<span class="k">type</span> <span class="s">(</span>  →  <span class="s">()</span>  <span class="cm">cursor lands inside</span></pre>
+  </div>
+
+  <div class="tip"><b>Escape early, escape often.</b> The moment your thought is typed, <kbd>Esc</kbd> and move on. Speed in vim comes from <i>not</i> living in insert.</div>
+</section>
+
+<!-- ============ 04 VISUAL ============ -->
+<section class="lesson" id="visual" data-mode="visual">
+  <div class="part">Part I · Modes</div>
+  <h2><span class="no">04</span>Visual mode: selecting <span class="badge">visual</span></h2>
+  <p class="lede">Visual is Normal with a selection. Highlight, then act — delete, change, yank, or re-indent.</p>
+
+  <div class="krow"><span class="k"><kbd>v</kbd></span><span class="d">Character-wise select. Move with any motion: <kbd>v</kbd><kbd>w</kbd>, <kbd>v</kbd><kbd>f</kbd><kbd>x</kbd>, <kbd>v</kbd><kbd>%</kbd>.</span></div>
+  <div class="krow"><span class="k"><kbd>V</kbd></span><span class="d">Line-wise select — the one you'll use most for moving blocks.</span></div>
+  <div class="krow"><span class="k"><kbd>C-v</kbd></span><span class="d">Block select (columns). Select a column and type <kbd>I</kbd> to edit every line at once.</span></div>
+  <div class="krow"><span class="k"><kbd>d</kbd> <kbd>c</kbd> <kbd>y</kbd> <kbd>u</kbd> <kbd>~</kbd></span><span class="d">Delete, change, yank, lowercase, swap-case the selection.</span></div>
+  <div class="krow"><span class="k"><kbd>H</kbd> <kbd>L</kbd> <kbd>J</kbd> <kbd>K</kbd></span><span class="d"><b>Your config:</b> move the selected block left/right/down/up (mini.move). Select lines with <kbd>V</kbd>, then <kbd>J</kbd>/<kbd>K</kbd> to reorder.</span></div>
+  <div class="krow"><span class="k"><kbd>gv</kbd></span><span class="d">Re-select the last selection. Great for "I yanked the wrong bit".</span></div>
+  <div class="krow"><span class="k"><kbd>o</kbd></span><span class="d">Flip the cursor to the other end of the selection (handy when you overshoot).</span></div>
+
+  <h3>Block editing (the superpower)</h3>
+  <ol>
+    <li><kbd>C-v</kbd>, move down to cover several lines.</li>
+    <li><kbd>I</kbd> (capital i), type your prefix, <kbd>Esc</kbd> — the text is inserted on every line at once.</li>
+    <li>Or select a column and press <kbd>x</kbd>/<kbd>c</kbd> to delete/replace a column across lines.</li>
+  </ol>
+
+  <div class="yset">
+    <div class="yh"><span class="tag">your config</span> · <code>lua/plugins/editor/mini.lua</code> + <code>keymaps.lua</code></div>
+<pre><span class="cm">-- mini.move: H/L/J/K on a selection moves the block</span>
+<span class="k">require</span>(<span class="s">'mini.move'</span>).setup { mappings = { left = <span class="s">'H'</span>, right = <span class="s">'L'</span>, down = <span class="s">'J'</span>, up = <span class="s">'K'</span> } }
+
+<span class="cm">-- better indenting: &lt; and &gt; keep the selection (keymaps.lua)</span>
+<span class="k">vim.keymap.set</span>(<span class="s">'v'</span>, <span class="s">'&lt;'</span>, <span class="s">'&lt;gv'</span>)</pre>
+  </div>
+
+  <div class="tip"><b>Whole-file select:</b> <kbd>gg</kbd><kbd>V</kbd><kbd>G</kbd>. Then <kbd>=</kbd> re-indents everything — a classic "this file looks like garbage" fix.</div>
+</section>
+
+<!-- ============ 05 COMMAND ============ -->
+<section class="lesson" id="command" data-mode="command">
+  <div class="part">Part I · Modes</div>
+  <h2><span class="no">05</span>Command mode: <kbd>:</kbd> <span class="badge">command</span></h2>
+  <p class="lede">Press <kbd>:</kbd> and you get a full command line. This is where file ops, search-replace, and hundreds of ex-commands live.</p>
+
+  <div class="krow"><span class="k"><kbd>:w</kbd> <kbd>:q</kbd> <kbd>:wq</kbd></span><span class="d">Save / quit / save-and-quit. <kbd>:q!</kbd> quits without saving.</span></div>
+  <div class="krow"><span class="k"><kbd>:e</kbd> file <kbd>:e!</kbd></span><span class="d">Open a file by name / reload from disk.</span></div>
+  <div class="krow"><span class="k"><kbd>:w</kbd> new.txt</span><span class="d">Save the buffer under a new name.</span></div>
+  <div class="krow"><span class="k"><kbd>:%s/old/new/g</kbd></span><span class="d">Replace every <code>old</code> with <code>new</code> in the file. <code>g</code> = all on each line.</span></div>
+  <div class="krow"><span class="k"><kbd>:%s/foo/bar/gc</kbd></span><span class="d">Same, but <b>c</b>onfirm each one — <kbd>y</kbd>/<kbd>n</kbd>/<kbd>q</kbd> as you go.</span></div>
+  <div class="krow"><span class="k"><kbd>:</kbd>10,20d</span><span class="d">Ranges: delete lines 10–20. <code>:.d</code> current line, <code>:1,$</code> whole file.</span></div>
+  <div class="krow"><span class="k"><kbd>:!</kbd>cmd</span><span class="d">Run a shell command: <code>:!node script.js</code>. <kbd>:r</kbd>!cmd reads its output into the buffer.</span></div>
+  <div class="krow"><span class="k"><kbd>q:</kbd> <kbd>q/</kbd></span><span class="d">Open the command history / search history in a window you can edit.</span></div>
+
+  <div class="tip"><b>Live preview:</b> your config sets <code>inccommand = 'split'</code>, so <code>:s/</code> shows the replacement live as you type. Type the pattern, watch the file change.</div>
+
+  <div class="yset">
+    <div class="yh"><span class="tag">your config</span> · <code>lua/options.lua</code></div>
+<pre>vim.opt.inccommand = <span class="s">'split'</span>   <span class="cm">-- live preview of :s///</span>
+vim.opt.splitright = <span class="s">true</span>   <span class="cm">-- new splits go right</span>
+vim.opt.splitbelow = <span class="s">true</span>   <span class="cm">-- ...and below</span>
+vim.opt.cmdheight = <span class="s">0</span>        <span class="cm">-- the : line is drawn in the statusline area</span></pre>
+  </div>
+</section>
+
+<!-- ============ 06 LEADER ============ -->
+<section class="lesson" id="leader" data-mode="normal">
+  <div class="part">Part II · Your setup</div>
+  <h2><span class="no">06</span>The leader key <span class="badge">normal</span></h2>
+  <p class="lede">Your setup uses <b>Space</b> as the leader — a prefix that turns <kbd>Space</kbd> + a letter into a menu. Press <kbd>Space</kbd> and pause: <b>which-key</b> pops up the whole catalog. This is your config's own map.</p>
+
+  <div class="cards">
+    <div class="card"><kbd>Space</kbd><p>Wait a moment — which-key shows every leader menu.</p></div>
+    <div class="card"><kbd>Space</kbd><kbd>f</kbd><p>Find group: files, buffers, git files.</p></div>
+    <div class="card"><kbd>Space</kbd><kbd>s</kbd><p>Search group: grep, symbols, diagnostics, registers.</p></div>
+    <div class="card"><kbd>Space</kbd><kbd>b</kbd><p>Buffers group: delete, delete others.</p></div>
+    <div class="card"><kbd>Space</kbd><kbd>g</kbd><p>Git group: hunks, blame, diffs, lazygit.</p></div>
+    <div class="card"><kbd>Space</kbd><kbd>c</kbd><p>Code group: LSP, code actions, diagnostics.</p></div>
+    <div class="card"><kbd>Space</kbd><kbd>t</kbd><p>Test group (neotest).</p></div>
+    <div class="card"><kbd>Space</kbd><kbd>d</kbd><p>Debug group (nvim-dap).</p></div>
+    <div class="card"><kbd>Space</kbd><kbd>o</kbd><p>Overseer tasks: run builds &amp; commands.</p></div>
+    <div class="card"><kbd>Space</kbd><kbd>q</kbd><p>Session group: save / load last / select (mini.sessions).</p></div>
+  </div>
+
+  <div class="tip"><b>Your setup now has a start screen.</b> Launch nvim with no arguments and the snacks <b>dashboard</b> appears — press <kbd>f</kbd> to find a file, <kbd>g</kbd> to grep, <kbd>s</kbd> to restore a session, <kbd>a</kbd> for an AI agent. Full tour in lesson 27.</div>
+
+  <div class="yset">
+    <div class="yh"><span class="tag">your config</span> · <code>lua/globals.lua</code> + <code>lua/plugins/editor/which-key.lua</code></div>
+<pre><span class="cm">-- the leader must be set before any &lt;leader&gt; keymap loads</span>
+vim.g.mapleader = <span class="s">' '</span>
+vim.g.maplocalleader = <span class="s">' '</span>
+
+<span class="cm">-- which-key shows groups with icons + colors</span>
+spec = {
+  { <span class="s">'&lt;leader&gt;b'</span>, group = <span class="s">'Buffers'</span> },
+  { <span class="s">'&lt;leader&gt;c'</span>, group = <span class="s">'Code'</span> },
+  { <span class="s">'&lt;leader&gt;f'</span>, group = <span class="s">'Find'</span> },
+  { <span class="s">'&lt;leader&gt;g'</span>, group = <span class="s">'Git'</span> },
+  { <span class="s">'&lt;leader&gt;s'</span>, group = <span class="s">'Search'</span> },
+  { <span class="s">'&lt;leader&gt;t'</span>, group = <span class="s">'Test'</span> },
+  { <span class="s">'gz'</span>, group = <span class="s">'Surround'</span> },
+}</pre>
+  </div>
+
+  <div class="tip"><b>The skill:</b> don't memorize leaders. Press <kbd>Space</kbd>, read the menu, learn them by doing. The menu IS the cheat sheet.</div>
+</section>
+
+<!-- ============ 07 WINDOWS ============ -->
+<section class="lesson" id="windows" data-mode="normal">
+  <div class="part">Part II · Your setup</div>
+  <h2><span class="no">07</span>Windows &amp; tabs <span class="badge">normal</span></h2>
+  <p class="lede">Your config has its own split vocabulary. Learn it and you'll stop opening a second terminal for everything.</p>
+
+  <div class="krow"><span class="k"><kbd>sh</kbd></span><span class="d"><b>Your config:</b> vertical split — editor side by side (<code>:vsplit</code>).</span></div>
+  <div class="krow"><span class="k"><kbd>sv</kbd></span><span class="d"><b>Your config:</b> horizontal split — one above the other (<code>:split</code>).</span></div>
+  <div class="krow"><span class="k"><kbd>C-w</kbd><kbd>C-w</kbd> <kbd>C-w</kbd><kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd></span><span class="d">Native: cycle splits / jump to the split in a direction.</span></div>
+  <div class="krow"><span class="k"><kbd>C-w</kbd><kbd>=</kbd> <kbd>C-w</kbd><kbd>_</kbd> <kbd>C-w</kbd><kbd>|</kbd></span><span class="d">Equal-size all splits / maximize this one vertically / horizontally.</span></div>
+  <div class="krow"><span class="k"><kbd>C-w</kbd><kbd>q</kbd> <kbd>C-w</kbd><kbd>o</kbd></span><span class="d">Close the split / close all other splits.</span></div>
+  <div class="krow"><span class="k"><kbd>te</kbd> file</span><span class="d"><b>Your config:</b> open in a new tab (<code>:tabedit</code>).</span></div>
+  <div class="krow"><span class="k"><kbd>Tab</kbd> <kbd>S-Tab</kbd></span><span class="d"><b>Your config:</b> next / previous tab.</span></div>
+  <div class="krow"><span class="k"><kbd>Space</kbd><kbd>Tab</kbd><kbd>d</kbd></span><span class="d"><b>Your config:</b> close the current tab.</span></div>
+
+  <div class="yset">
+    <div class="yh"><span class="tag">your config</span> · <code>lua/keymaps.lua</code></div>
+<pre><span class="k">vim.keymap.set</span>(<span class="s">'n'</span>, <span class="s">'sh'</span>, <span class="s">':vsplit&lt;Return&gt;'</span>)   <span class="cm">-- sh = side-by-side split</span>
+<span class="k">vim.keymap.set</span>(<span class="s">'n'</span>, <span class="s">'sv'</span>, <span class="s">':split&lt;Return&gt;'</span>)     <span class="cm">-- sv = stacked split</span>
+<span class="k">vim.keymap.set</span>(<span class="s">'n'</span>, <span class="s">'te'</span>, <span class="s">':tabedit'</span>)
+<span class="k">vim.keymap.set</span>(<span class="s">'n'</span>, <span class="s">'&lt;tab&gt;'</span>, <span class="s">':tabnext&lt;Return&gt;'</span>)
+<span class="k">vim.keymap.set</span>(<span class="s">'n'</span>, <span class="s">'&lt;s-tab&gt;'</span>, <span class="s">':tabprev&lt;Return&gt;'</span>)</pre>
+  </div>
+
+  <div class="tip"><b>tmux tip:</b> in a terminal inside tmux, <kbd>C-h/j/k/l</kbd> hops between nvim and tmux panes seamlessly (your tmux plugin). Run <kbd>Space</kbd><kbd>a</kbd> and your AI agent opens as a real tmux pane on the right.</div>
+</section>
+
+<!-- ============ 08 BUFFERS ============ -->
+<section class="lesson" id="buffers" data-mode="normal">
+  <div class="part">Part II · Your setup</div>
+  <h2><span class="no">08</span>Buffers <span class="badge">normal</span></h2>
+  <p class="lede">Every open file is a <b>buffer</b>. You don't close files to switch — you switch buffers. It's faster than tabs once it clicks.</p>
+
+  <div class="krow"><span class="k"><kbd>]b</kbd> <kbd>[b</kbd></span><span class="d"><b>Your config:</b> next / previous buffer.</span></div>
+  <div class="krow"><span class="k"><kbd>S-h</kbd> <kbd>S-l</kbd></span><span class="d"><b>Your config:</b> same thing — next / previous buffer.</span></div>
+  <div class="krow"><span class="k"><kbd>Space</kbd><kbd>,</kbd></span><span class="d"><b>Your config:</b> pick a buffer from a fuzzy list (most-recently-used first). The primary way to switch.</span></div>
+  <div class="krow"><span class="k"><kbd>Space</kbd><kbd>bd</kbd></span><span class="d"><b>Your config:</b> delete the current buffer (close the file).</span></div>
+  <div class="krow"><span class="k"><kbd>Space</kbd><kbd>bo</kbd></span><span class="d"><b>Your config:</b> delete every other buffer — spring cleaning.</span></div>
+  <div class="krow"><span class="k"><kbd>Space</kbd><kbd>bD</kbd></span><span class="d"><b>Your config:</b> delete buffer and its window.</span></div>
+  <div class="krow"><span class="k"><kbd>:ls</kbd> <kbd>:b</kbd>3</span><span class="d">List all buffers / jump to buffer number 3.</span></div>
+
+  <div class="yset">
+    <div class="yh"><span class="tag">your config</span> · <code>lua/keymaps.lua</code></div>
+<pre><span class="k">vim.keymap.set</span>(<span class="s">'n'</span>, <span class="s">'&lt;S-h&gt;'</span>, <span class="s">'&lt;cmd&gt;bprevious&lt;cr&gt;'</span>, { desc = <span class="s">'Prev Buffer'</span> })
+<span class="k">vim.keymap.set</span>(<span class="s">'n'</span>, <span class="s">'&lt;S-l&gt;'</span>, <span class="s">'&lt;cmd&gt;bnext&lt;cr&gt;'</span>,     { desc = <span class="s">'Next Buffer'</span> })
+<span class="k">vim.keymap.set</span>(<span class="s">'n'</span>, <span class="s">'&lt;leader&gt;bd'</span>, <span class="s">'&lt;cmd&gt;bdelete&lt;CR&gt;'</span>)
+<span class="k">vim.keymap.set</span>(<span class="s">'n'</span>, <span class="s">'&lt;leader&gt;bo'</span>, <span class="k">delete_other_buffers</span>)  <span class="cm">-- keeps only the current one</span></pre>
+  </div>
+
+  <div class="tip"><b>Jump back and forth:</b> <kbd>Space</kbd><kbd>,</kbd> is MRU-sorted, so the file you just left is always one keystroke away. Two files = <kbd>Space</kbd><kbd>,</kbd><kbd>Enter</kbd> toggling.</div>
+</section>
+
+<!-- ============ 09 FIND ============ -->
+<section class="lesson" id="find" data-mode="normal">
+  <div class="part">Part II · Your setup</div>
+  <h2><span class="no">09</span>Find &amp; grep <span class="badge">normal</span></h2>
+  <p class="lede">Telescope is your setup's fuzzy finder — the "everything in 3 keystrokes" plugin. These leaders are worth muscle memory.</p>
+
+  <div class="cards">
+    <div class="card"><kbd>Space</kbd><kbd>ff</kbd><p>Find files by name (hidden files included).</p></div>
+    <div class="card"><kbd>Space</kbd><kbd>fg</kbd><p>Files tracked by git only.</p></div>
+    <div class="card"><kbd>Space</kbd><kbd>sg</kbd><p>Live grep across the project (ripgrep).</p></div>
+    <div class="card"><kbd>Space</kbd><kbd>sb</kbd><p>Fuzzy search inside the current buffer.</p></div>
+    <div class="card"><kbd>Space</kbd><kbd>ss</kbd><p>Symbols in this file (functions, classes).</p></div>
+    <div class="card"><kbd>Space</kbd><kbd>sS</kbd><p>Symbols across the workspace.</p></div>
+    <div class="card"><kbd>Space</kbd><kbd>sd</kbd><p>Diagnostics (errors) in this file.</p></div>
+    <div class="card"><kbd>Space</kbd><kbd>sD</kbd><p>Diagnostics across the whole project.</p></div>
+    <div class="card"><kbd>Space</kbd><kbd>sh</kbd><p>Search vim's own help pages.</p></div>
+    <div class="card"><kbd>Space</kbd><kbd>sk</kbd><p>Search every keymap in your config.</p></div>
+    <div class="card"><kbd>Space</kbd><kbd>sm</kbd><p>Jump to a mark (lesson 14).</p></div>
+    <div class="card"><kbd>Space</kbd><kbd>s"</kbd><p>Paste from any register (lesson 13).</p></div>
+    <div class="card"><kbd>Space</kbd><kbd>sj</kbd><p>Jump list — everywhere your cursor has been.</p></div>
+    <div class="card"><kbd>Space</kbd><kbd>sR</kbd><p>Resume the last picker you closed.</p></div>
+    <div class="card"><kbd>Space</kbd><kbd>sc</kbd><p>Command history. <kbd>Space</kbd><kbd>sC</kbd> = all commands.</p></div>
+    <div class="card"><kbd>Space</kbd><kbd>sq</kbd><p>Quickfix list · <kbd>Space</kbd><kbd>sl</kbd> location list.</p></div>
+    <div class="card"><kbd>Space</kbd><kbd>fr</kbd><p>File ring — recently visited files (harpoon-style).</p></div>
+  </div>
+
+  <div class="tip"><b>In any picker:</b> start typing to filter, <kbd>C-j</kbd>/<kbd>C-k</kbd> to move, <kbd>Enter</kbd> to open. <kbd>Space</kbd><kbd>ff</kbd> is your "open a file" reflex — replace the mouse in the sidebar.</div>
+
+  <div class="yset">
+    <div class="yh"><span class="tag">your config</span> · <code>lua/plugins/editor/telescope.lua</code></div>
+<pre>file_ignore_patterns = { <span class="s">'node_modules'</span>, <span class="s">'.git/'</span> }   <span class="cm">-- pickers skip junk</span>
+find_files = { hidden = <span class="s">true</span>, follow = <span class="s">true</span> }        <span class="cm">-- dotfiles are findable</span>
+buffers    = { sort_mru = <span class="s">true</span> }                      <span class="cm">-- most recent first</span></pre>
+  </div>
+</section>
+
+<!-- ============ 10 TREE ============ -->
+<section class="lesson" id="tree" data-mode="normal">
+  <div class="part">Part II · Your setup</div>
+  <h2><span class="no">10</span>The file tree <span class="badge">normal</span></h2>
+  <p class="lede">A real file explorer lives on the <b>right</b> side (unusual — your choice). It opens automatically when you launch nvim in a folder.</p>
+
+  <div class="krow"><span class="k"><kbd>Space</kbd><kbd>e</kbd></span><span class="d"><b>Your config:</b> toggle the explorer (nvim-tree).</span></div>
+  <div class="krow"><span class="k"><kbd>Enter</kbd></span><span class="d">Open the file under the cursor (closes the tree — "quit on open").</span></div>
+  <div class="krow"><span class="k"><kbd>s</kbd> <kbd>S</kbd></span><span class="d"><b>Your config:</b> open in a vertical / horizontal split.</span></div>
+  <div class="krow"><span class="k"><kbd>P</kbd></span><span class="d"><b>Your config:</b> preview the file without leaving the tree.</span></div>
+  <div class="krow"><span class="k"><kbd>a</kbd> <kbd>d</kbd> <kbd>r</kbd> <kbd>R</kbd></span><span class="d">Native: create file/dir, delete, rename, refresh.</span></div>
+
+  <div class="tip"><b>Note:</b> your docs call the sidebar "NeoTree" but the spec is nvim-tree with icon bloat disabled — same idea. When in doubt, <kbd>Space</kbd><kbd>e</kbd> shows what's actually installed.</div>
+</section>
+
+<!-- ============ 11 OBJECTS ============ -->
+<section class="lesson" id="objects" data-mode="normal">
+  <div class="part">Part III · Editing craft</div>
+  <h2><span class="no">11</span>Text objects &amp; surround <span class="badge">normal</span></h2>
+  <p class="lede">This is the jump from "knowing vim" to "moving through code like a thought". Text objects let you target <i>meaning</i> — a word, a quote, a function body — not characters.</p>
+
+  <div class="krow"><span class="k"><kbd>ciw</kbd> <kbd>caw</kbd></span><span class="d">Change inner / around word.</span></div>
+  <div class="krow"><span class="k"><kbd>ci"</kbd> <kbd>ci'</kbd> <kbd>ci`</kbd></span><span class="d">Change inside quotes — your daily bread.</span></div>
+  <div class="krow"><span class="k"><kbd>ci(</kbd> <kbd>ci{</kbd> <kbd>ci[</kbd> <kbd>cit</kbd></span><span class="d">Change inside parens / braces / brackets / tags. <kbd>di(</kbd> deletes instead.</span></div>
+  <div class="krow"><span class="k"><kbd>viw</kbd> <kbd>yit</kbd> <kbd>da)</kbd></span><span class="d">Select word, yank inside tag, delete around parens (with the parens).</span></div>
+  <div class="krow"><span class="k"><kbd>dip</kbd> <kbd>yip</kbd></span><span class="d">Delete / yank the whole paragraph.</span></div>
+
+  <h3>Surround — your config</h3>
+  <p>Your setup binds surround to the <kbd>gs</kbd> prefix (mini.surround) — group <kbd>gz</kbd> in which-key.</p>
+  <div class="krow"><span class="k"><kbd>gsa</kbd><kbd>"</kbd></span><span class="d"><b>a</b>dd quotes around the selection/word.</span></div>
+  <div class="krow"><span class="k"><kbd>gsd</kbd><kbd>"</kbd></span><span class="d"><b>d</b>elete the quotes.</span></div>
+  <div class="krow"><span class="k"><kbd>gsr</kbd><kbd>'</kbd></span><span class="d"><b>r</b>eplace <code>"..."</code> with <code>'...'</code>.</span></div>
+  <div class="krow"><span class="k"><kbd>gsf</kbd><kbd>{</kbd> <kbd>gsF</kbd><kbd>}</kbd></span><span class="d"><b>f</b>ind the next / previous surrounding pair.</span></div>
+  <div class="krow"><span class="k"><kbd>]f</kbd> <kbd>[f</kbd></span><span class="d"><b>Your config:</b> jump to the next / previous function (treesitter).</span></div>
+
+  <pre class="ex"><span class="cm"># the pattern: operator + i/a + object</span>
+c  i  w        <span class="cm">change inner word       →  ciw</span>
+d  a  )        <span class="cm">delete around parens    →  da)</span>
+y  i  t        <span class="cm">yank inside tag        →  yit</span>
+<span class="out">gsr '  on a "quoted string"  →  'quoted string'</span></pre>
+
+  <div class="yset">
+    <div class="yh"><span class="tag">your config</span> · <code>lua/plugins/editor/mini.lua</code> — mini.surround + mini.ai</div>
+<pre><span class="k">require</span>(<span class="s">'mini.surround'</span>).setup { mappings = {
+  add = <span class="s">'gsa'</span>, delete = <span class="s">'gsd'</span>, replace = <span class="s">'gsr'</span>, find = <span class="s">'gsf'</span>,
+} }
+<span class="k">require</span>(<span class="s">'mini.ai'</span>).setup {
+  n_lines = <span class="s">500</span>,
+  custom_textobjects = {
+    f = gen_spec.treesitter({ a = <span class="s">'@function.outer'</span>, i = <span class="s">'@function.inner'</span> }),
+    c = gen_spec.treesitter({ a = <span class="s">'@class.outer'</span>, i = <span class="s">'@class.inner'</span> }),
+  },
+}   <span class="cm">-- af/if/ac/ic now resolve via treesitter</span></pre>
+  </div>
+</section>
+
+<!-- ============ 12 REPLACE ============ -->
+<section class="lesson" id="replace" data-mode="command">
+  <div class="part">Part III · Editing craft</div>
+  <h2><span class="no">12</span>Search &amp; replace <span class="badge">command</span></h2>
+  <p class="lede">From simple find-replace to regex: the full <code>:s</code> toolkit, plus your <kbd>Space</kbd><kbd>sr</kbd> project-wide replace UI.</p>
+
+  <table class="ref">
+    <tr><th>Command</th><th>What it does</th></tr>
+    <tr><td>:s/old/new/</td><td>Replace on the <b>current line only</b>, first match.</td></tr>
+    <tr><td>:%s/old/new/g</td><td>Replace in the whole file, all matches per line.</td></tr>
+    <tr><td>:%s/old/new/gc</td><td>Same, with <b>c</b>onfirmation for each match.</td></tr>
+    <tr><td>:%s/old/new/gi</td><td>Case-<b>i</b>nsensitive (overrides smartcase for this command).</td></tr>
+    <tr><td>:%s/old/new/gI</td><td>Case-sensitive.</td></tr>
+    <tr><td>:3,12s/x/y/g</td><td>Only lines 3–12. <code>'&lt;,'&gt;</code> = the visual selection.</td></tr>
+    <tr><td>:g/foo/d</td><td>Delete every line containing <code>foo</code>. <code>:g!/foo/d</code> keeps only them.</td></tr>
+    <tr><td>:v/foo/d</td><td>Delete every line <b>not</b> containing <code>foo</code>.</td></tr>
+    <tr><td>:%s/\v(\w+) (\w+)/\2 \1/</td><td>Swap two words using capture groups <code>\1</code> <code>\2</code>.</td></tr>
+  </table>
+
+  <h3>Regex essentials (vimgrep style)</h3>
+  <ul>
+    <li><code>.</code> any char · <code>^</code> line start · <code>$</code> line end · <code>\&lt;</code>/<code>\&gt;</code> word boundaries.</li>
+    <li><code>[abc]</code> one of · <code>[^abc]</code> not one of · <code>\d</code> digit · <code>\s</code> whitespace.</li>
+    <li><code>*</code> zero or more · <code>\+</code> one or more · <code>\?</code> optional · <code>\(...\)</code> capture.</li>
+    <li><code>\v</code> (very magic) makes the pattern read like most regex engines — <code>:s/\vfoo(.+)bar/.../</code>.</li>
+  </ul>
+
+  <div class="tip"><b>Project-wide replace:</b> <kbd>Space</kbd><kbd>sr</kbd> opens <b>grug-far</b> — type, preview every match, replace across files. It pre-fills the file-type filter from your current buffer.</div>
+
+  <div class="yset">
+    <div class="yh"><span class="tag">your config</span> · <code>lua/plugins/editor/grug-far.lua</code></div>
+<pre>keys = { { <span class="s">'&lt;leader&gt;sr'</span>, <span class="k">function</span>() <span class="k">require</span>(<span class="s">'grug-far'</span>).open { transient = <span class="s">true</span> } <span class="k">end</span> } }</pre>
+  </div>
+</section>
+
+<!-- ============ 13 REGISTERS ============ -->
+<section class="lesson" id="registers" data-mode="normal">
+  <div class="part">Part III · Editing craft</div>
+  <h2><span class="no">13</span>Registers: the clipboard you control <span class="badge">normal</span></h2>
+  <p class="lede">Every delete and yank lands in a <b>register</b> — think of them as named clipboards. This unlocks "yank two things, paste both" and turns your system clipboard into a vim citizen.</p>
+
+  <table class="ref">
+    <tr><th>Register</th><th>Contents</th></tr>
+    <tr><td><kbd>"</kbd> (unnamed)</td><td>Last delete/yank. That's what <kbd>p</kbd> pastes.</td></tr>
+    <tr><td><kbd>0</kbd>–<kbd>9</kbd></td><td>Last 10 yanks (0 = most recent). <kbd>"0p</kbd> pastes your last yank even after a delete.</td></tr>
+    <tr><td><kbd>-</kbd></td><td>Small delete (a single char).</td></tr>
+    <tr><td><kbd>a</kbd>–<kbd>z</kbd></td><td>Named registers you control: <kbd>"ayy</kbd> yank line into <code>a</code>, <kbd>"ap</kbd> paste it.</td></tr>
+    <tr><td><kbd>+</kbd> / <kbd>*</kbd></td><td>System clipboard. Because your config sets <code>clipboard=unnamedplus</code>, plain <kbd>y</kbd>/<kbd>p</kbd> already touch it.</td></tr>
+    <tr><td><kbd>_</kbd></td><td>Black hole: <kbd>"_dd</kbd> deletes without clobbering your clipboard.</td></tr>
+    <tr><td><kbd>%</kbd></td><td>Current file name. <kbd>"%p</kbd> pastes it — handy in a script.</td></tr>
+  </table>
+
+  <div class="krow"><span class="k"><kbd>Space</kbd><kbd>s"</kbd></span><span class="d"><b>Your config:</b> open the register picker — see everything, paste with <kbd>Enter</kbd>.</span></div>
+  <div class="krow"><span class="k"><kbd>Space</kbd><kbd>sy</kbd></span><span class="d"><b>Your config:</b> <b>yank history</b> — browse every yank/delete from this session and across restarts (yanky).</span></div>
+  <div class="krow"><span class="k"><kbd>:reg</kbd> <kbd>:reg</kbd> a</span><span class="d">Show all registers / just register <code>a</code>.</span></div>
+  <div class="krow"><span class="k"><kbd>"</kbd>aP</span><span class="d">Paste register <code>a</code> before the cursor. Uppercase <kbd>A</kbd> appends to a register: <kbd>"Ay</kbd>.</span></div>
+
+  <div class="tip"><b>Clipboard is on:</b> <code>clipboard = 'unnamedplus'</code> means <kbd>y</kbd> in nvim and <kbd>Ctrl-C</kbd> in your browser share the same buffer. Paste from the web with <kbd>p</kbd> directly.</div>
+</section>
+
+<!-- ============ 14 MARKS ============ -->
+<section class="lesson" id="marks" data-mode="normal">
+  <div class="part">Part III · Editing craft</div>
+  <h2><span class="no">14</span>Marks &amp; jumps <span class="badge">normal</span></h2>
+  <p class="lede">Bookmarks + a built-in history system. You'll never scroll to find "that place" again.</p>
+
+  <div class="krow"><span class="k"><kbd>m</kbd>a</span><span class="d">Set mark <code>a</code> at the cursor (lowercase = per-file).</span></div>
+  <div class="krow"><span class="k"><kbd>`</kbd>a <kbd>'</kbd>a</span><span class="d">Jump to mark <code>a</code>: backtick = exact column, quote = line start.</span></div>
+  <div class="krow"><span class="k"><kbd>mA</kbd> <kbd>`</kbd>A</span><span class="d">Uppercase marks are <b>global</b> — jump across files in the project.</span></div>
+  <div class="krow"><span class="k"><kbd>Space</kbd><kbd>sm</kbd></span><span class="d"><b>Your config:</b> pick a mark from Telescope.</span></div>
+  <div class="krow"><span class="k"><kbd>``</kbd> <kbd>''</kbd></span><span class="d">Jump back to where you were before the last jump — instant "return to sender".</span></div>
+  <div class="krow"><span class="k"><kbd>C-o</kbd> <kbd>C-i</kbd></span><span class="d">Jumplist: back / forward through your cursor history. <kbd>Space</kbd><kbd>sj</kbd> browses it visually.</span></div>
+  <div class="krow"><span class="k"><kbd>g;</kbd> <kbd>g,</kbd></span><span class="d">Changelist: jump to the last place you <i>edited</i> (not just moved).</span></div>
+
+  <div class="tip"><b>Quick trick:</b> <kbd>`</kbd><kbd>.</kbd> jumps to the last change, <kbd>`</kbd><kbd>[</kbd> to the start of the last change. Great after a big paste or reformat.</div>
+</section>
+
+<!-- ============ 15 MACROS ============ -->
+<section class="lesson" id="macros" data-mode="normal">
+  <div class="part">Part III · Editing craft</div>
+  <h2><span class="no">15</span>Macros: record any edit <span class="badge">normal</span></h2>
+  <p class="lede">A macro records keystrokes into a register, then replays them — the ultimate fix for "I've done this 40 times".</p>
+
+  <div class="krow"><span class="k"><kbd>q</kbd>a</span><span class="d">Start recording into register <code>a</code>.</span></div>
+  <div class="krow"><span class="k"><kbd>q</kbd></span><span class="d">Stop recording.</span></div>
+  <div class="krow"><span class="k"><kbd>@</kbd>a</span><span class="d">Replay register <code>a</code>.</span></div>
+  <div class="krow"><span class="k"><kbd>@@</kbd></span><span class="d">Replay the last macro again.</span></div>
+  <div class="krow"><span class="k"><kbd>100@</kbd>a</span><span class="d">Replay 100 times — it stops at the end of the file, so "just run out of matches" is fine.</span></div>
+
+  <h3>Recipe: repeat on every line</h3>
+  <ol>
+    <li>Go to the first line. <kbd>q</kbd>a — start recording.</li>
+    <li>Do your edit (change word, delete, reorder…).</li>
+    <li><kbd>j</kbd> — move to the next line (so replay lands right).</li>
+    <li><kbd>q</kbd> — stop. Now <kbd>@</kbd>a on every line, or <kbd>100@</kbd>a.</li>
+  </ol>
+
+  <div class="tip"><b>Fix a macro mid-flight:</b> if it goes wrong, <kbd>u</kbd>, then edit the recorded text in a buffer via <kbd>"ap</kbd>, fix it, <kbd>"ay$</kbd> to save it back, replay.</div>
+</section>
+
+<!-- ============ 16 LSP ============ -->
+<section class="lesson" id="lsp" data-mode="normal">
+  <div class="part">Part IV · Languages</div>
+  <h2><span class="no">16</span>LSP &amp; diagnostics <span class="badge">normal</span></h2>
+  <p class="lede">Language servers give nvim IDE powers: go-to-definition, rename, hover docs, errors. Your setup wires up <b>vtsls</b> (TS/JS), <b>gopls</b> (Go), <b>lua_ls</b> (Lua), <b>ruff</b> (Python), <b>eslint</b>, <b>tailwindcss</b>, <b>astro</b>, <b>cssls</b>, <b>dockerls</b> — installed via Mason.</p>
+
+  <table class="ref">
+    <tr><th>Keys</th><th>What it does</th></tr>
+    <tr><td><kbd>gd</kbd></td><td>Go to definition (opens in the current window).</td></tr>
+    <tr><td><kbd>gy</kbd></td><td>Go to type definition.</td></tr>
+    <tr><td><kbd>gr</kbd> / <kbd>grr</kbd></td><td>Find references.</td></tr>
+    <tr><td><kbd>gI</kbd> / <kbd>gri</kbd></td><td>Go to implementations.</td></tr>
+    <tr><td><kbd>K</kbd></td><td>Hover — docs for whatever's under the cursor.</td></tr>
+    <tr><td><kbd>Space</kbd><kbd>cr</kbd></td><td><b>Your config:</b> rename symbol across the project.</td></tr>
+    <tr><td><kbd>Space</kbd><kbd>ca</kbd></td><td><b>Your config:</b> code actions (quick fixes, refactors).</td></tr>
+    <tr><td><kbd>Space</kbd><kbd>th</kbd></td><td><b>Your config:</b> toggle inlay hints (type annotations inline).</td></tr>
+    <tr><td><kbd>]d</kbd> <kbd>[d</kbd></td><td>Jump to next / previous diagnostic.</td></tr>
+    <tr><td><kbd>Space</kbd><kbd>sd</kbd> <kbd>sD</kbd></td><td>List this file's / the project's diagnostics in Telescope.</td></tr>
+    <tr><td><kbd>Space</kbd><kbd>cd</kbd> <kbd>cD</kbd></td><td>Diagnostics in Trouble (navigable list on the left).</td></tr>
+    <tr><td><kbd>Space</kbd><kbd>cs</kbd></td><td>Document symbols in Trouble.</td></tr>
+  </table>
+
+  <div class="yset">
+    <div class="yh"><span class="tag">your config</span> · <code>lua/plugins/coding/lspconfig.lua</code> + <code>lsp/*.lua</code></div>
+<pre><span class="cm">-- servers activated by vim.lsp.enable; per-server overrides live in lsp/</span>
+<span class="k">local</span> servers = { <span class="s">'lua_ls'</span>, <span class="s">'eslint'</span>, <span class="s">'vtsls'</span>, <span class="s">'tailwindcss'</span>, <span class="s">'cssls'</span>, <span class="s">'gopls'</span>, <span class="s">'ruff'</span>, <span class="s">'astro'</span>, <span class="s">'dockerls'</span> } <span class="cm">-- ruff replaces pyright for Python</span>
+<span class="k">vim.lsp.enable</span>(servers)
+
+<span class="cm">-- binaries auto-installed by mason-tool-installer on first launch</span>
+<span class="cm">-- gopls comes from mise (go: backend) so it's already on PATH</span></pre>
+  </div>
+
+  <div class="tip"><b>Is the server even running?</b> <code>:LspInfo</code> shows attached clients, <code>:Mason</code> manages binaries, <code>:LspLog</code> shows errors, <code>:checkhealth</code> sanity-checks everything.</div>
+</section>
+
+<!-- ============ 17 COMPLETION ============ -->
+<section class="lesson" id="completion" data-mode="insert">
+  <div class="part">Part IV · Languages</div>
+  <h2><span class="no">17</span>Completion (blink.cmp) <span class="badge">insert</span></h2>
+  <p class="lede">Your setup uses <b>blink.cmp</b> — completion that suggests as you type in insert mode, fed by LSP + file paths + snippets.</p>
+
+  <table class="ref">
+    <tr><th>Keys</th><th>What it does</th></tr>
+    <tr><td><kbd>C-y</kbd></td><td>Accept the highlighted suggestion.</td></tr>
+    <tr><td><kbd>C-n</kbd> <kbd>C-p</kbd></td><td>Move through the suggestion list.</td></tr>
+    <tr><td><kbd>C-space</kbd></td><td>Open / force the menu, and show documentation.</td></tr>
+    <tr><td><kbd>C-e</kbd></td><td>Dismiss the menu.</td></tr>
+    <tr><td><kbd>Tab</kbd> / <kbd>S-Tab</kbd></td><td>Jump between snippet fields.</td></tr>
+  </table>
+
+  <div class="tip"><b>Edit your own config with superpowers:</b> lazydev feeds completions about <code>vim.*</code> and plugin APIs while you edit <code>lua/</code> — that's how this config gets written with full autocomplete.</div>
+
+  <div class="tip"><b>Snippets are on:</b> <code>friendly-snippets</code> is loaded by blink's native snippet engine, so typing <code>for</code>, <code>fun</code>, <code>clg</code> (console.log) etc. completes into real snippets with tab-jump fields.</div>
+
+  <div class="yset">
+    <div class="yh"><span class="tag">your config</span> · <code>lua/plugins/coding/cmp.lua</code></div>
+<pre>keymap = { preset = <span class="s">'default'</span> }
+sources = { default = { <span class="s">'lsp'</span>, <span class="s">'path'</span>, <span class="s">'snippets'</span>, <span class="s">'lazydev'</span> } }</pre>
+  </div>
+</section>
+
+<!-- ============ 18 FORMAT ============ -->
+<section class="lesson" id="format" data-mode="normal">
+  <div class="part">Part IV · Languages</div>
+  <h2><span class="no">18</span>Format &amp; lint <span class="badge">normal</span></h2>
+  <p class="lede">Formatting is fully automatic in your setup: <b>conform</b> formats on save, and linters run on save too. You basically never format by hand.</p>
+
+  <div class="krow"><span class="k"><kbd>:w</kbd></span><span class="d">Saving runs the formatter. That's the whole workflow.</span></div>
+  <div class="krow"><span class="k">stylua</span><span class="d">Lua formatter (your own config files).</span></div>
+  <div class="krow"><span class="k">biome / prettier</span><span class="d">JS/TS/JSON/CSS — Biome is preferred if <code>biome.json</code> exists, Prettier otherwise.</span></div>
+  <div class="krow"><span class="k">ruff</span><span class="d">Python lint + type-check + format in one (replaces pyright entirely).</span></div>
+  <div class="krow"><span class="k">phpstan</span><span class="d">PHP static analysis, runs via nvim-lint on save.</span></div>
+  <div class="krow"><span class="k"><kbd>Space</kbd><kbd>sd</kbd></span><span class="d">See lint errors in Telescope; the gutter icons are diagnostics.</span></div>
+
+  <div class="yset">
+    <div class="yh"><span class="tag">your config</span> · <code>lua/plugins/formatting/conform.lua</code> + <code>linting/core.lua</code></div>
+<pre>formatters_by_ft = {
+  lua = { <span class="s">'stylua'</span> },
+  javascript = { <span class="s">'biome'</span>, <span class="s">'prettier'</span>, <span class="s">'prettierd'</span> },
+  typescript = { <span class="s">'biome'</span>, <span class="s">'prettier'</span>, <span class="s">'prettierd'</span> },
+  html = { <span class="s">'prettier'</span>, <span class="s">'prettierd'</span> },
+  yaml = { <span class="s">'prettier'</span>, <span class="s">'prettierd'</span> },
+}
+<span class="cm">-- linters: phpstan for PHP (nvim-lint), ESLint via its LSP, ruff for Python</span></pre>
+  </div>
+</section>
+
+<!-- ============ 19 TESTS ============ -->
+<section class="lesson" id="test" data-mode="normal">
+  <div class="part">Part IV · Languages</div>
+  <h2><span class="no">19</span>Tests <span class="badge">normal</span></h2>
+  <p class="lede">Neotest runs your tests inside nvim — vitest, Go, Python, plenary — with failures surfaced in Trouble. The <kbd>Space</kbd><kbd>t</kbd> group is the whole runner.</p>
+
+  <table class="ref">
+    <tr><th>Keys</th><th>What it does</th></tr>
+    <tr><td><kbd>Space</kbd><kbd>tt</kbd></td><td>Run the current test file.</td></tr>
+    <tr><td><kbd>Space</kbd><kbd>tr</kbd></td><td>Run the nearest test (cursor inside it).</td></tr>
+    <tr><td><kbd>Space</kbd><kbd>tT</kbd></td><td>Run all test files in the project.</td></tr>
+    <tr><td><kbd>Space</kbd><kbd>tl</kbd></td><td>Re-run the last test.</td></tr>
+    <tr><td><kbd>Space</kbd><kbd>ts</kbd></td><td>Toggle the test summary tree.</td></tr>
+    <tr><td><kbd>Space</kbd><kbd>to</kbd> <kbd>tO</kbd></td><td>Show output / toggle the output panel.</td></tr>
+    <tr><td><kbd>Space</kbd><kbd>tw</kbd></td><td>Watch mode — re-runs on every save.</td></tr>
+    <tr><td><kbd>Space</kbd><kbd>tS</kbd></td><td>Stop the current run.</td></tr>
+  </table>
+
+  <div class="tip"><b>Failing tests land in Trouble</b> (your config wires that up) — jump straight from the failure list to the line.</div>
+</section>
+
+<!-- ============ 20 DAP ============ -->
+<section class="lesson" id="dap" data-mode="normal">
+  <div class="part">Part IV · Languages</div>
+  <h2><span class="no">20</span>Debugging (nvim-dap) <span class="badge">normal</span></h2>
+  <p class="lede">Full debugger with a UI panel. Adapters auto-install via mason-nvim-dap; launch configs come from <code>.vscode/launch.json</code>. The whole <kbd>Space</kbd><kbd>d</kbd> group is the debugger.</p>
+
+  <table class="ref">
+    <tr><th>Keys</th><th>What it does</th></tr>
+    <tr><td><kbd>Space</kbd><kbd>db</kbd></td><td>Toggle a breakpoint on the current line.</td></tr>
+    <tr><td><kbd>Space</kbd><kbd>dB</kbd></td><td>Set a conditional breakpoint (prompts for the condition).</td></tr>
+    <tr><td><kbd>Space</kbd><kbd>dc</kbd></td><td>Run / continue.</td></tr>
+    <tr><td><kbd>Space</kbd><kbd>da</kbd></td><td>Run with arguments (prompts).</td></tr>
+    <tr><td><kbd>Space</kbd><kbd>dl</kbd></td><td>Re-run the last debug session.</td></tr>
+    <tr><td><kbd>Space</kbd><kbd>do</kbd> <kbd>di</kbd> <kbd>dO</kbd></td><td>Step over / into / out.</td></tr>
+    <tr><td><kbd>Space</kbd><kbd>dC</kbd></td><td>Run to the cursor.</td></tr>
+    <tr><td><kbd>Space</kbd><kbd>de</kbd></td><td>Evaluate an expression (or the visual selection).</td></tr>
+    <tr><td><kbd>Space</kbd><kbd>du</kbd></td><td>Toggle the debug UI panel.</td></tr>
+    <tr><td><kbd>Space</kbd><kbd>dr</kbd></td><td>Toggle the REPL.</td></tr>
+    <tr><td><kbd>Space</kbd><kbd>dk</kbd> <kbd>dj</kbd></td><td>Move up / down the call stack.</td></tr>
+    <tr><td><kbd>Space</kbd><kbd>dw</kbd></td><td>Hover widgets (inspect variables).</td></tr>
+    <tr><td><kbd>Space</kbd><kbd>dt</kbd></td><td>Terminate the session.</td></tr>
+  </table>
+
+  <div class="tip"><b>First debug session:</b> set a breakpoint with <kbd>Space</kbd><kbd>db</kbd>, then <kbd>Space</kbd><kbd>dc</kbd>. The UI panel opens automatically when you hit the breakpoint.</div>
+
+  <div class="tip"><b>Ready to go per language:</b> Python (<code>debugpy</code>), Go (<code>delve</code>), and JS/TS (<code>pwa-node</code>) all have adapters + launch configs wired. On a Go file, <kbd>Space</kbd><kbd>db</kbd> then <kbd>Space</kbd><kbd>dc</kbd> just works.</div>
+</section>
+
+<!-- ============ 21 GIT ============ -->
+<section class="lesson" id="git" data-mode="normal">
+  <div class="part">Part V · Workflow</div>
+  <h2><span class="no">21</span>Git <span class="badge">normal</span></h2>
+  <p class="lede">Two layers: <b>gitsigns</b> paints your diff in the editor, and <b>lazygit</b> gives you a full git TUI when you need staging/committing.</p>
+
+  <div class="krow"><span class="k"><kbd>]c</kbd> <kbd>[c</kbd></span><span class="d"><b>Your config:</b> next / previous changed hunk.</span></div>
+  <div class="krow"><span class="k"><kbd>Space</kbd><kbd>ghs</kbd> <kbd>ghr</kbd> <kbd>ghu</kbd></span><span class="d"><b>Your config:</b> stage / reset / undo-stage the hunk under the cursor (visual selection works too).</span></div>
+  <div class="krow"><span class="k"><kbd>Space</kbd><kbd>ghp</kbd></span><span class="d"><b>Your config:</b> preview the hunk's diff.</span></div>
+  <div class="krow"><span class="k"><kbd>Space</kbd><kbd>gbl</kbd></span><span class="d"><b>Your config:</b> toggle inline blame on the current line.</span></div>
+  <div class="krow"><span class="k"><kbd>Space</kbd><kbd>gdi</kbd> <kbd>gdc</kbd></span><span class="d"><b>Your config:</b> diff against the index / against the last commit.</span></div>
+  <div class="krow"><span class="k"><kbd>Space</kbd><kbd>gds</kbd></span><span class="d"><b>Your config:</b> toggle showing deleted lines.</span></div>
+  <div class="krow"><span class="k"><kbd>Space</kbd><kbd>gg</kbd></span><span class="d"><b>Your config:</b> open lazygit — stage, commit, push, stash, browse history.</span></div>
+  <div class="krow"><span class="k"><kbd>Space</kbd><kbd>gD</kbd> <kbd>gH</kbd> <kbd>gq</kbd></span><span class="d"><b>Your config:</b> diffview — open a branch/commit diff, browse file history, close it. Side-by-side for when lazygit feels shallow.</span></div>
+  <div class="krow"><span class="k"><kbd>Space</kbd><kbd>fg</kbd></span><span class="d"><b>Your config:</b> open a git-tracked file (Telescope).</span></div>
+
+  <div class="yset">
+    <div class="yh"><span class="tag">your config</span> · <code>lua/plugins/editor/gitsigns.lua</code> + <code>lazygit.lua</code></div>
+<pre><span class="cm">-- gutter signs: ▌ added/changed   ▁ deleted</span>
+signs = { add = { text = <span class="s">'▌'</span> }, change = { text = <span class="s">'▌'</span> }, delete = { text = <span class="s">'▁'</span> } }
+
+<span class="cm">-- lazygit on Space-g-g</span>
+keys = { { <span class="s">'&lt;leader&gt;gg'</span>, <span class="s">'&lt;cmd&gt;LazyGit&lt;cr&gt;'</span>, desc = <span class="s">'LazyGit'</span> } }</pre>
+  </div>
+
+  <div class="tip"><b>Your statusline already shows the branch + +/- counts</b> (lualine). When the gutter lights up with <code>▌</code>, you know exactly what you've touched.</div>
+</section>
+
+<!-- ============ 22 FOLD ============ -->
+<section class="lesson" id="fold" data-mode="normal">
+  <div class="part">Part V · Workflow</div>
+  <h2><span class="no">22</span>Folding &amp; context <span class="badge">normal</span></h2>
+  <p class="lede">Two plugins make big files manageable: <b>ufo</b> folds code smartly (treesitter-aware), and <b>treesitter-context</b> pins the enclosing function name at the top of the screen.</p>
+
+  <div class="krow"><span class="k"><kbd>za</kbd></span><span class="d">Toggle the fold under the cursor.</span></div>
+  <div class="krow"><span class="k"><kbd>zR</kbd> <kbd>zM</kbd></span><span class="d"><b>Your config (ufo):</b> open all folds / close all folds.</span></div>
+  <div class="krow"><span class="k"><kbd>zc</kbd> <kbd>zo</kbd></span><span class="d">Close / open one fold.</span></div>
+  <div class="krow"><span class="k"><kbd>K</kbd></span><span class="d"><b>Your config (ufo):</b> peek the folded lines; falls back to LSP hover if nothing's folded.</span></div>
+  <div class="krow"><span class="k">scroll</span><span class="d">As you scroll, the current function's signature stays pinned up top — you always know where you are.</span></div>
+</section>
+
+<!-- ============ 23 TERMINAL ============ -->
+<section class="lesson" id="terminal" data-mode="insert">
+  <div class="part">Part V · Workflow</div>
+  <h2><span class="no">23</span>Terminal &amp; tmux <span class="badge">insert</span></h2>
+  <p class="lede">A full shell can live inside nvim (<code>:term</code>), and when you run nvim inside tmux, your config fuses them into one surface.</p>
+
+  <div class="krow"><span class="k"><kbd>:term</kbd> cmd</span><span class="d">Open a terminal buffer running the shell (or a command).</span></div>
+  <div class="krow"><span class="k"><kbd>C-\</kbd><kbd>C-n</kbd></span><span class="d">In a terminal buffer, escape to Normal mode (then <kbd>q</kbd> closes it, or <kbd>:q</kbd>).</span></div>
+  <div class="krow"><span class="k"><kbd>Space</kbd><kbd>a</kbd></span><span class="d"><b>Your config:</b> launch an AI agent as a tmux pane (or floating window outside tmux).</span></div>
+
+  <h3>tmux integration</h3>
+  <div class="krow"><span class="k"><kbd>C-h</kbd> <kbd>C-j</kbd> <kbd>C-k</kbd> <kbd>C-l</kbd></span><span class="d"><b>Your config:</b> move focus between nvim and tmux panes as if they were one editor.</span></div>
+  <div class="krow"><span class="k"><kbd>C-\</kbd></span><span class="d"><b>Your config:</b> jump to the previous pane.</span></div>
+  <div class="krow"><span class="k">prefix <kbd>C</kbd> + arrows</span><span class="d">tmux.nvim resize bindings.</span></div>
+
+  <div class="tip"><b>The payoff:</b> <kbd>Space</kbd><kbd>a</kbd> for the AI, <kbd>C-l</kbd> back into nvim, tests in another pane — all with the same fingers. That's the whole point of this setup.</div>
+
+  <div class="yset">
+    <div class="yh"><span class="tag">your config</span> · <code>lua/plugins/editor/tmux.lua</code></div>
+<pre>{ <span class="s">'&lt;c-h&gt;'</span>, <span class="s">'&lt;cmd&gt;&lt;C-U&gt;TmuxNavigateLeft&lt;cr&gt;'</span> }
+{ <span class="s">'&lt;c-l&gt;'</span>, <span class="s">'&lt;cmd&gt;&lt;C-U&gt;TmuxNavigateRight&lt;cr&gt;'</span> }
+<span class="cm">-- + aserowy/tmux.nvim for resize (default keybindings enabled)</span></pre>
+  </div>
+</section>
+
+<!-- ============ 24 AI ============ -->
+<section class="lesson" id="ai" data-mode="normal">
+  <div class="part">Part V · Workflow</div>
+  <h2><span class="no">24</span>AI agents <span class="badge">normal</span></h2>
+  <p class="lede">Your setup replaced in-editor AI with <b>CLI agents in a pane</b>: <kbd>Space</kbd><kbd>a</kbd> launches Claude Code or opencode.</p>
+
+  <ul>
+    <li>Inside <b>tmux</b> → opens as a right-hand pane, so all your tmux superpowers apply: <kbd>C-h/l</kbd> to hop, resize with tmux.nvim, scrollback works.</li>
+    <li>Outside tmux → falls back to a floating terminal inside nvim.</li>
+    <li><b>Re-press <kbd>Space</kbd><kbd>a</kbd> to focus the running agent</b> instead of spawning a duplicate pane.</li>
+  </ul>
+
+  <div class="yset">
+    <div class="yh"><span class="tag">your config</span> · <code>lua/plugins/editor/ai-tools.lua</code></div>
+<pre><span class="cm">-- adding a new agent CLI is literally one line:</span>
+tools = {
+  { name = <span class="s">'Claude Code'</span>, cmd = <span class="s">'claude'</span> },
+  { name = <span class="s">'opencode'</span>, cmd = <span class="s">'opencode'</span> },
+  <span class="cm">-- { name = 'Codex', cmd = 'codex' }</span>
+}</pre>
+  </div>
+</section>
+
+<!-- ============ 25 PLUGINS ============ -->
+<section class="lesson" id="plugins" data-mode="normal">
+  <div class="part">Part V · Workflow</div>
+  <h2><span class="no">25</span>Plugins &amp; your config <span class="badge">normal</span></h2>
+  <p class="lede">Everything in this setup is a <b>lazy.nvim</b> spec: one file per plugin under <code>lua/plugins/&lt;category&gt;/</code>, imported by <code>lua/lazy-init.lua</code>. This is the config you'll be editing — know its shape.</p>
+
+  <div class="krow"><span class="k"><kbd>:Lazy</kbd></span><span class="d">Open the plugin manager UI — status, updates, clean.</span></div>
+  <div class="krow"><span class="k"><kbd>:Lazy</kbd><kbd> update</kbd></span><span class="d">Update all plugins.</span></div>
+  <div class="krow"><span class="k"><kbd>:Lazy</kbd><kbd> clean</kbd></span><span class="d">Remove plugins whose specs you deleted.</span></div>
+  <div class="krow"><span class="k"><kbd>:Lazy</kbd><kbd> log</kbd></span><span class="d">Show the update log.</span></div>
+
+  <h3>Adding a plugin (the 3-step ritual)</h3>
+  <ol>
+    <li>Create <code>lua/plugins/&lt;category&gt;/&lt;name&gt;.lua</code> with a spec table.</li>
+    <li>Add <code>{ import = 'plugins.&lt;category&gt;.&lt;name&gt;' }</code> to the spec list in <code>lua/lazy-init.lua</code>.</li>
+    <li>Restart nvim. Removing one? Delete the file, the import line, then run <code>:Lazy clean</code>.</li>
+  </ol>
+
+  <div class="yset">
+    <div class="yh"><span class="tag">your config</span> · boot order in <code>init.lua</code> + layout</div>
+<pre>vim.g.mapleader = <span class="s">' '</span>        <span class="cm">-- 1. leader before anything</span>
+<span class="k">require</span> <span class="s">'globals'</span>       <span class="cm">-- 2. mise shims, diagnostics, netrw off</span>
+<span class="k">require</span> <span class="s">'options'</span>       <span class="cm">-- 3. every vim.opt</span>
+<span class="k">require</span> <span class="s">'keymaps'</span>       <span class="cm">-- 4. custom keys</span>
+<span class="k">require</span> <span class="s">'lazy-init'</span>     <span class="cm">-- 5. bootstrap lazy + all plugin specs</span>
+
+<span class="cm">-- layout:  lua/plugins/&lt;cat&gt;/&lt;name&gt;.lua  +  lsp/&lt;server&gt;.lua  +  docs/</span></pre>
+  </div>
+
+  <div class="tip"><b>Your config has docs.</b> <code>docs/</code> explains every plugin, LSP server, and keymap. When you forget why something exists, start there.</div>
+</section>
+
+<!-- ============ 26 HEALTH ============ -->
+<section class="lesson" id="health" data-mode="command">
+  <div class="part">Part V · Workflow</div>
+  <h2><span class="no">26</span>Help &amp; health <span class="badge">command</span></h2>
+  <p class="lede">When something's off or you want to go deeper, nvim ships its own documentation — and your config has its own.</p>
+
+  <div class="krow"><span class="k"><kbd>:checkhealth</kbd></span><span class="d">Everything in one report — plugins, LSP, tmux. Run this first when things break.</span></div>
+  <div class="krow"><span class="k"><kbd>:help</kbd></span><span class="d">The manual. <code>:help user-manual</code> is a full course; <code>:help key-notation</code> decodes <kbd>&lt;leader&gt;</kbd> etc.</span></div>
+  <div class="krow"><span class="k"><kbd>:help</kbd><kbd> motion</kbd></span><span class="d">Try any topic: <code>:help text-objects</code>, <code>:help windows</code>, <code>:help registers</code>.</span></div>
+  <div class="krow"><span class="k"><kbd>Space</kbd><kbd>sh</kbd></span><span class="d"><b>Your config:</b> fuzzy-search help topics in Telescope.</span></div>
+  <div class="krow"><span class="k">vimtutor</span><span class="d">Interactive 30-minute built-in tutorial — run <code>vimtutor</code> in your terminal.</span></div>
+  <div class="krow"><span class="k">docs/</span><span class="d">Your repo's <code>docs/</code> folder: keymaps.md, plugins.md, lsp.md, architecture.md, cheatsheet.md.</span></div>
+</section>
+
+<!-- ============ 27 POLISH ============ -->
+<section class="lesson" id="polish" data-mode="normal">
+  <div class="part">Part V · Workflow</div>
+  <h2><span class="no">27</span>Dashboard, sessions &amp; polish <span class="badge">normal</span></h2>
+  <p class="lede">The modern layer of your setup: a start screen, session restore, clipboard history, quick file switching — plus the smooth-feel extras running invisibly in the background.</p>
+
+  <h3>Start screen (snacks dashboard)</h3>
+  <p>Launch nvim with no arguments and the dashboard appears: a big ASCII header, one-key actions, recent files, and your saved sessions.</p>
+  <div class="krow"><span class="k"><kbd>f</kbd> <kbd>g</kbd> <kbd>t</kbd></span><span class="d">Dashboard keys: find file / grep / run tests.</span></div>
+  <div class="krow"><span class="k"><kbd>s</kbd></span><span class="d">Restore a session straight from the dashboard.</span></div>
+  <div class="krow"><span class="k"><kbd>a</kbd> <kbd>G</kbd> <kbd>l</kbd></span><span class="d">AI agent / lazygit / lazy plugin manager.</span></div>
+  <div class="krow"><span class="k"><kbd>q</kbd></span><span class="d">Quit.</span></div>
+  <div class="krow"><span class="k">git status</span><span class="d"><b>Your config:</b> the dashboard renders your live <code>git status</code> pane under the key hints.</span></div>
+
+  <h3>Sessions (mini.sessions)</h3>
+  <p>Save and restore your whole layout — buffers, splits, tabs, working directory — per project.</p>
+  <div class="krow"><span class="k"><kbd>Space</kbd><kbd>qq</kbd></span><span class="d"><b>Your config:</b> save the current session.</span></div>
+  <div class="krow"><span class="k"><kbd>Space</kbd><kbd>ql</kbd></span><span class="d"><b>Your config:</b> load the last session.</span></div>
+  <div class="krow"><span class="k"><kbd>Space</kbd><kbd>qs</kbd></span><span class="d"><b>Your config:</b> pick a session from a list.</span></div>
+
+  <h3>Clipboard history (yanky) &amp; file ring</h3>
+  <div class="krow"><span class="k"><kbd>Space</kbd><kbd>sy</kbd></span><span class="d"><b>Your config:</b> browse and paste anything you've ever yanked — survives restarts.</span></div>
+  <div class="krow"><span class="k"><kbd>Space</kbd><kbd>fr</kbd></span><span class="d"><b>Your config:</b> jump between recently visited files (harpoon-style ring).</span></div>
+
+  <h3>Jump anywhere (flash) &amp; buffer tabs (bufferline)</h3>
+  <div class="krow"><span class="k"><kbd>Space</kbd><kbd>fj</kbd></span><span class="d"><b>Your config:</b> type 1–2 letters, jump to any word visible on screen (flash).</span></div>
+  <div class="krow"><span class="k"><kbd>Space</kbd><kbd>ft</kbd> <kbd>R</kbd></span><span class="d"><b>Your config:</b> jump to a treesitter node / treesitter search (visual/operator).</span></div>
+  <div class="krow"><span class="k"><kbd>Space</kbd><kbd>bp</kbd></span><span class="d"><b>Your config:</b> pick a buffer from the tab strip at the top (bufferline).</span></div>
+  <div class="tip"><b>Why not plain <kbd>s</kbd>?</b> Flash's stock key is <kbd>s</kbd> — but <kbd>sh</kbd>/<kbd>sv</kbd> already own it for splits, so flash lives under <kbd>Space</kbd><kbd>f</kbd>.</div>
+
+  <h3>Background polish (snacks)</h3>
+  <ul>
+    <li><b>Smooth scrolling</b> — <kbd>C-d</kbd>/<kbd>C-u</kbd> glide instead of jump.</li>
+    <li><b>Indent guides</b> — thin lines make nesting visible.</li>
+    <li><b>Fancy notifications</b> — toasts replace plain <code>vim.notify</code> messages.</li>
+    <li><b>Dim inactive windows</b> — the split you're not in recedes.</li>
+    <li><b>Word highlight</b> — occurrences of the word under the cursor are marked.</li>
+  </ul>
+
+  <div class="tip"><b>Now automatic:</b> your session is saved on exit and restored when you reopen a project folder (<kbd>nvim .</kbd>) — no keypress needed. Bare <kbd>nvim</kbd> still shows the dashboard.</div>
+</section>
+
+<!-- ============ APPENDIX ============ -->
+<section class="lesson" id="cheatsheet" data-mode="command">
+  <div class="part">Appendix</div>
+  <h2><span class="no">A</span>Full cheat sheet <span class="badge">command</span></h2>
+  <p class="lede">Every binding in your setup, grouped. Print this, or keep it open in a split.</p>
+
+  <h3>Movements &amp; editing (built-in)</h3>
+  <div class="cols">
+    <table class="ref">
+      <tr><th>Move</th><th>Keys</th></tr>
+      <tr><td>char / line</td><td><kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd> · <kbd>0</kbd><kbd>$</kbd><kbd>^</kbd></td></tr>
+      <tr><td>word</td><td><kbd>w</kbd><kbd>b</kbd><kbd>e</kbd> · <kbd>W</kbd><kbd>B</kbd><kbd>E</kbd></td></tr>
+      <tr><td>file</td><td><kbd>gg</kbd> <kbd>G</kbd> · <kbd>12G</kbd></td></tr>
+      <tr><td>search line</td><td><kbd>f</kbd><kbd>x</kbd> <kbd>t</kbd><kbd>x</kbd> <kbd>F</kbd><kbd>x</kbd> <kbd>;</kbd> <kbd>,</kbd></td></tr>
+      <tr><td>search file</td><td><kbd>/</kbd>pat <kbd>n</kbd> <kbd>N</kbd> · <kbd>*</kbd> <kbd>#</kbd></td></tr>
+      <tr><td>scroll / center</td><td><kbd>C-d</kbd> <kbd>C-u</kbd> <kbd>C-f</kbd> <kbd>C-b</kbd> · <kbd>zz</kbd></td></tr>
+      <tr><td>jump back/forth</td><td><kbd>C-o</kbd> <kbd>C-i</kbd> · <kbd>``</kbd> <kbd>''</kbd></td></tr>
+      <tr><td>match bracket</td><td><kbd>%</kbd></td></tr>
+    </table>
+    <table class="ref">
+      <tr><th>Edit</th><th>Keys</th></tr>
+      <tr><td>delete / yank / change</td><td><kbd>d</kbd> <kbd>y</kbd> <kbd>c</kbd> + motion</td></tr>
+      <tr><td>lines</td><td><kbd>dd</kbd> <kbd>yy</kbd> <kbd>cc</kbd> · <kbd>p</kbd> <kbd>P</kbd></td></tr>
+      <tr><td>undo / redo</td><td><kbd>u</kbd> <kbd>C-r</kbd></td></tr>
+      <tr><td>repeat last</td><td><kbd>.</kbd></td></tr>
+      <tr><td>replace / case</td><td><kbd>r</kbd><kbd>x</kbd> <kbd>~</kbd> · <kbd>gu</kbd> <kbd>gU</kbd></td></tr>
+      <tr><td>join / indent</td><td><kbd>J</kbd> · <kbd>=</kbd> <kbd>&gt;</kbd> <kbd>&lt;</kbd></td></tr>
+      <tr><td>record / replay</td><td><kbd>q</kbd>a <kbd>@</kbd>a <kbd>@@</kbd></td></tr>
+      <tr><td>marks</td><td><kbd>m</kbd>a <kbd>`</kbd>a · <kbd>mA</kbd> <kbd>`</kbd>A</td></tr>
+    </table>
+  </div>
+
+  <h3>Leader groups</h3>
+  <table class="ref">
+    <tr><th>Group</th><th>Keys</th></tr>
+    <tr class="grp"><td colspan="2">Find <kbd>Space</kbd>f</td></tr>
+    <tr><td><kbd>ff</kbd></td><td>Find files</td></tr>
+    <tr><td><kbd>fg</kbd></td><td>Git files</td></tr>
+    <tr><td><kbd>fj</kbd> <kbd>ft</kbd></td><td>Flash: jump to word / treesitter node</td></tr>
+    <tr><td><kbd>,</kbd></td><td>Switch buffer (MRU) · <kbd>fb</kbd> same</td></tr>
+    <tr class="grp"><td colspan="2">Search <kbd>Space</kbd>s</td></tr>
+    <tr><td><kbd>sg</kbd></td><td>Live grep</td></tr>
+    <tr><td><kbd>sb</kbd></td><td>Search buffer · <kbd>ss</kbd>/<kbd>sS</kbd> symbols</td></tr>
+    <tr><td><kbd>sd</kbd> / <kbd>sD</kbd></td><td>Diagnostics: file / workspace</td></tr>
+    <tr><td><kbd>sh</kbd> <kbd>sk</kbd></td><td>Help pages / keymaps</td></tr>
+    <tr><td><kbd>sm</kbd> <kbd>sj</kbd> <kbd>s"</kbd> <kbd>sy</kbd></td><td>Marks / jumplist / registers / yank history</td></tr>
+    <tr><td><kbd>sr</kbd></td><td>grug-far: replace across project</td></tr>
+    <tr><td><kbd>sR</kbd> <kbd>sc</kbd></td><td>Resume picker / command history</td></tr>
+    <tr class="grp"><td colspan="2">Buffer <kbd>Space</kbd>b</td></tr>
+    <tr><td><kbd>bd</kbd> <kbd>bo</kbd> <kbd>bD</kbd></td><td>Delete buffer / others / buffer+window</td></tr>
+    <tr class="grp"><td colspan="2">Code <kbd>Space</kbd>c</td></tr>
+    <tr><td><kbd>cr</kbd></td><td>Rename symbol (LSP)</td></tr>
+    <tr><td><kbd>ca</kbd></td><td>Code action</td></tr>
+    <tr><td><kbd>cd</kbd> <kbd>cD</kbd> <kbd>cs</kbd></td><td>Trouble: buffer diagnostics / all / symbols</td></tr>
+    <tr class="grp"><td colspan="2">Git <kbd>Space</kbd>g</td></tr>
+    <tr><td><kbd>gg</kbd></td><td>lazygit</td></tr>
+    <tr><td><kbd>ghs</kbd> <kbd>ghr</kbd> <kbd>ghu</kbd> <kbd>ghp</kbd></td><td>stage / reset / unstage / preview hunk</td></tr>
+    <tr><td><kbd>gbl</kbd> <kbd>gds</kbd></td><td>blame line / toggle deleted</td></tr>
+    <tr><td><kbd>gD</kbd> <kbd>gH</kbd> <kbd>gq</kbd></td><td>diffview: open diff / file history / close</td></tr>
+    <tr class="grp"><td colspan="2">Test <kbd>Space</kbd>t</td></tr>
+    <tr><td><kbd>tt</kbd> <kbd>tr</kbd> <kbd>tT</kbd></td><td>run file / nearest / all</td></tr>
+    <tr><td><kbd>tl</kbd> <kbd>tw</kbd> <kbd>ts</kbd></td><td>last / watch / summary</td></tr>
+    <tr class="grp"><td colspan="2">Debug <kbd>Space</kbd>d</td></tr>
+    <tr><td><kbd>db</kbd> <kbd>dc</kbd> <kbd>do</kbd> <kbd>di</kbd></td><td>breakpoint / run / over / into</td></tr>
+    <tr><td><kbd>du</kbd> <kbd>de</kbd> <kbd>dr</kbd> <kbd>dt</kbd></td><td>UI / eval / REPL / terminate</td></tr>
+    <tr class="grp"><td colspan="2">Overseer <kbd>Space</kbd>o</td></tr>
+    <tr><td><kbd>ot</kbd> <kbd>or</kbd> <kbd>ol</kbd></td><td>toggle list / run / run command</td></tr>
+    <tr class="grp"><td colspan="2">Session <kbd>Space</kbd>q</td></tr>
+    <tr><td><kbd>qq</kbd> <kbd>ql</kbd> <kbd>qs</kbd></td><td>save session / load last / select session</td></tr>
+    <tr class="grp"><td colspan="2">Other</td></tr>
+    <tr><td><kbd>e</kbd></td><td>Toggle file tree</td></tr>
+    <tr><td><kbd>a</kbd></td><td>Open AI agent (Claude Code / opencode)</td></tr>
+    <tr><td><kbd>fr</kbd></td><td>File ring (recent files, harpoon-style)</td></tr>
+    <tr><td><kbd>bp</kbd></td><td>Pick buffer from the tab strip</td></tr>
+    <tr><td><kbd>ut</kbd></td><td>Toggle treesitter-context</td></tr>
+    <tr><td><kbd>th</kbd></td><td>Toggle inlay hints</td></tr>
+    <tr><td><kbd>Space</kbd><kbd>Tab</kbd><kbd>d</kbd></td><td>Close tab</td></tr>
+  </table>
+
+  <h3>Custom plain keys</h3>
+  <table class="ref">
+    <tr><th>Keys</th><th>What it does</th></tr>
+    <tr><td><kbd>sh</kbd> <kbd>sv</kbd></td><td>Vertical / horizontal split</td></tr>
+    <tr><td><kbd>te</kbd> · <kbd>Tab</kbd>/<kbd>S-Tab</kbd></td><td>New tab · next/prev tab</td></tr>
+    <tr><td><kbd>]b</kbd> <kbd>[b</kbd> · <kbd>S-h</kbd> <kbd>S-l</kbd></td><td>Next / previous buffer</td></tr>
+    <tr><td><kbd>C-l</kbd> (insert)</td><td>Skip past closing bracket / quote / comma</td></tr>
+    <tr><td><kbd>H</kbd> <kbd>L</kbd> <kbd>J</kbd> <kbd>K</kbd> (visual)</td><td>Move selection (mini.move)</td></tr>
+    <tr><td><kbd>gsa</kbd> <kbd>gsd</kbd> <kbd>gsr</kbd> <kbd>gsf</kbd></td><td>Surround: add / delete / replace / find</td></tr>
+    <tr><td><kbd>af</kbd> <kbd>if</kbd> <kbd>ac</kbd> <kbd>ic</kbd></td><td>Treesitter text objects: function / class (also <kbd>ab</kbd>/<kbd>ib</kbd> block, <kbd>aa</kbd>/<kbd>ia</kbd> parameter)</td></tr>
+    <tr><td><kbd>]f</kbd> <kbd>[f</kbd></td><td>Next / previous function (treesitter)</td></tr>
+    <tr><td><kbd>R</kbd> (visual/op)</td><td>Flash: treesitter search</td></tr>
+    <tr><td><kbd>Esc</kbd></td><td>Clear search highlight</td></tr>
+    <tr><td><kbd>C-h</kbd> <kbd>C-j</kbd> <kbd>C-k</kbd> <kbd>C-l</kbd></td><td>tmux pane navigation</td></tr>
+  </table>
+
+  <h3>Survival commands</h3>
+  <table class="ref">
+    <tr><th>Command</th><th>What it does</th></tr>
+    <tr><td><kbd>:w</kbd> <kbd>:q</kbd> <kbd>:wq</kbd> <kbd>:q!</kbd></td><td>Save / quit / save+quit / quit without saving</td></tr>
+    <tr><td><kbd>:%s/old/new/g</kbd></td><td>Replace everywhere</td></tr>
+    <tr><td><kbd>:Lazy</kbd> <kbd>:Mason</kbd></td><td>Plugin manager / LSP installer</td></tr>
+    <tr><td><kbd>:checkhealth</kbd> <kbd>:LspInfo</kbd></td><td>Sanity check / attached servers</td></tr>
+    <tr><td><kbd>:help</kbd> topic</td><td>The manual</td></tr>
+  </table>
+
+  <div class="tip"><b>One page, one rule:</b> <kbd>Space</kbd> + pause shows you everything. When you forget, the which-key popup is the cheat sheet.</div>
+</section>
+
+<!-- ============ FOOTER ============ -->
+<footer>
+  <span class="mono">learn-nvim · complete reference for this setup</span>
+  <span>leader = <kbd>Space</kbd> · colors from your wallpaper (matugen)</span>
+  <span class="mono">:checkhealth</span>
+</footer>
+
+</main>
+</div>
+
+<script>
+/* minimal: statusline mode/section + progress. No framework. */
+var lessons = Array.prototype.map.call(document.querySelectorAll('.lesson'), function (s) {
+  return { el: s, id: s.id, mode: s.dataset.mode || 'normal', name: s.querySelector('h2').textContent.replace(/^\d+\s*/, '') };
+});
+var links = Array.prototype.slice.call(document.querySelectorAll('.toc a'));
+var chip = document.getElementById('modeChip');
+var stat = document.getElementById('statline');
+var secName = document.getElementById('secName');
+var bar = document.getElementById('progress');
+
+var MODES = { normal: 'NORMAL', insert: 'INSERT', visual: 'VISUAL', command: 'COMMAND' };
+
+function tick() {
+  var y = window.scrollY + 140;
+  var cur = lessons[0], i = 0;
+  for (i = 0; i < lessons.length; i++) {
+    if (lessons[i].el.offsetTop <= y) cur = lessons[i]; else break;
+  }
+  if (cur) {
+    chip.textContent = MODES[cur.mode];
+    stat.dataset.mode = cur.mode;
+    secName.textContent = cur.name;
+    links.forEach(function (a) {
+      a.classList.toggle('here', a.getAttribute('href') === '#' + cur.id);
+    });
+  }
+  var max = document.documentElement.scrollHeight - window.innerHeight;
+  bar.style.width = (max > 0 ? (window.scrollY / max) * 100 : 0) + '%';
+}
+window.addEventListener('scroll', tick, { passive: true });
+window.addEventListener('resize', tick);
+
+/* clock */
+(function () {
+  var c = document.getElementById('clock');
+  function up() {
+    var d = new Date(), h = d.getHours(), m = d.getMinutes();
+    c.textContent = (h < 10 ? '0' : '') + h + ':' + (m < 10 ? '0' : '') + m;
+  }
+  up(); setInterval(up, 10000);
+})();
+
+tick();
+</script>
+</body>
+</html>

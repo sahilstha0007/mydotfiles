@@ -51,17 +51,18 @@ return {
         },
       },
       integrations = {
-        neo_tree         = true,
-        treesitter       = true,
-        cmp              = true,
-        gitsigns         = true,
-        which_key        = true,
-        telescope        = { enabled = true },
-        mini             = { enabled = true },
-        notify           = true,
-        noice            = true,
-        dashboard        = true,
-        indent_blankline = { enabled = true },
+        neo_tree           = true,
+        treesitter         = true,
+        blink_cmp          = true, -- completion (was `cmp` — dead, nvim-cmp isn't used)
+        gitsigns           = true,
+        which_key          = true,
+        telescope          = { enabled = true },
+        mini               = { enabled = true },
+        snacks             = true, -- picker + dashboard
+        lsp_trouble        = true, -- trouble.nvim
+        treesitter_context = true, -- pinned function/class context
+        ufo                = true, -- folding
+        flash              = true, -- flash jump labels
       },
       highlight_overrides = {
         mocha = function(c)
@@ -81,28 +82,46 @@ return {
             NeoTreeGitUntracked  = { fg = c.mauve },
             NeoTreeIndentMarker  = { fg = c.overlay0 },
 
-            -- Popup: solid so it's visible, but uses your palette
+            -- Popup: frosted — winblend/pumblend (options.lua) blend these
+            -- toward the wallpaper, so the tint + blend reads as glass.
             Pmenu      = { bg = c.surface0, fg = c.text },
             PmenuSel   = { bg = c.surface1, fg = c.blue, bold = true },
             PmenuSbar  = { bg = c.surface1 },
             PmenuThumb = { bg = c.blue },
 
-            -- CMP
-            CmpItemAbbr           = { fg = c.text },
-            CmpItemAbbrMatch      = { fg = c.blue, bold = true },
-            CmpItemAbbrMatchFuzzy = { fg = c.blue },
-            CmpItemMenu           = { fg = c.overlay1 },
-            CmpDoc                = { bg = c.surface0 },
-            CmpDocBorder          = { fg = c.surface1 },
-            CmpItemKindFunction   = { fg = c.blue },
-            CmpItemKindMethod     = { fg = c.blue },
-            CmpItemKindVariable   = { fg = c.red },
-            CmpItemKindConstant   = { fg = c.yellow },
-            CmpItemKindClass      = { fg = c.yellow },
-            CmpItemKindKeyword    = { fg = c.mauve },
-            CmpItemKindSnippet    = { fg = c.green },
-            CmpItemKindText       = { fg = c.subtext0 },
-            CmpItemKindProperty   = { fg = c.subtext0 },
+            -- blink.cmp (same palette intent as the old nvim-cmp Cmp* block,
+            -- which blink.cmp ignores)
+            BlinkCmpLabel         = { fg = c.text },
+            BlinkCmpLabelMatch    = { fg = c.blue, bold = true },
+            BlinkCmpLabelDetail   = { fg = c.overlay1 },
+            BlinkCmpMenuBorder    = { fg = c.surface1 },
+            BlinkCmpMenuSelection = { bg = c.surface1, fg = c.blue, bold = true },
+            BlinkCmpDoc           = { bg = c.surface0 },
+            BlinkCmpDocBorder     = { fg = c.surface1 },
+            BlinkCmpGhostText     = { fg = c.overlay0 },
+            BlinkCmpKindFunction  = { fg = c.blue },
+            BlinkCmpKindMethod    = { fg = c.blue },
+            BlinkCmpKindVariable  = { fg = c.red },
+            BlinkCmpKindConstant  = { fg = c.yellow },
+            BlinkCmpKindClass     = { fg = c.yellow },
+            BlinkCmpKindKeyword   = { fg = c.mauve },
+            BlinkCmpKindSnippet   = { fg = c.green },
+            BlinkCmpKindText      = { fg = c.subtext0 },
+            BlinkCmpKindProperty  = { fg = c.subtext0 },
+
+            -- contrast polish for the dim palette
+            Search      = { bg = c.blue, fg = c.base }, -- cyan search highlight
+            Visual      = { bg = c.surface1 },            -- clearer selection
+            MatchParen  = { bg = c.surface1, fg = c.blue, bold = true },
+            WinSeparator = { fg = c.surface1 },           -- visible split borders
+
+            -- Floating windows (hover, diagnostics popup, dressing): frosted
+            -- glass — tinted body + a slightly lighter border so the rounded
+            -- edges read against the transparent editor. winblend=25 (from
+            -- options.lua) does the see-through; these are the tint layers.
+            FloatBorder = { fg = c.surface2 },
+            NormalFloat = { bg = c.surface0, fg = c.text },
+
           }
         end,
       },

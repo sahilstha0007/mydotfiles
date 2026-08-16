@@ -15,10 +15,34 @@ return {
     opts = {
       -- Default preset: <C-y> accept, <C-n>/<C-p> select, <C-space> open/docs,
       -- <C-e> hide, <C-b>/<C-f> scroll docs, <Tab>/<S-Tab> snippet jump.
-      keymap = { preset = 'default' },
+      keymap = {
+        preset = 'default',
+        -- Space closes the completion menu instead of re-filtering with it
+        -- open — the re-filter caused flicker / cursor jumps / "no matches"
+        -- flashing while typing code. This hides the menu AND inserts the
+        -- space. Two gotchas, learned the hard way:
+        --   * must return the literal ' ' character — expr-mapping results are
+        --     NOT termcode-expanded, so '<Space>' would type "<Space>" text
+        --   * a plain { 'hide', 'fallback' } would EAT the space whenever the
+        --     menu is open, because hide() returns true when it hid something
+        ['<space>'] = {
+          function()
+            require('blink.cmp').hide()
+            return ' '
+          end,
+        },
+      },
       appearance = { nerd_font_variant = 'mono' },
       completion = {
-        documentation = { auto_show = true, auto_show_delay_ms = 200 },
+        -- Frosted menu + docs: blink draws its own windows, so the global
+        -- 'pumblend' option doesn't apply — each window needs its own
+        -- winblend to match the floats (options.lua sets 25 globally).
+        menu = { winblend = 25 },
+        documentation = {
+          auto_show = true,
+          auto_show_delay_ms = 200,
+          window = { winblend = 25 },
+        },
       },
       sources = {
         default = { 'lsp', 'path', 'snippets', 'lazydev' },

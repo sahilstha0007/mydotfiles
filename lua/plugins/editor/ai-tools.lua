@@ -28,15 +28,39 @@ local tools = {
 -- tmux split width % of the layout for the new pane
 local SPLIT_PERCENT = '55'
 
--- floating-window fallback state (only used when not inside tmux)
-local state = { win = nil }
+-- state: win = floating window (non-tmux fallback), pane = tmux pane id
+local state = { win = nil, pane = nil }
 
 local function open_in_tmux(cmd)
-  vim.fn.system({
+  -- -P -F '#{pane_id}' makes split-window print the new pane id (e.g. %12)
+  local out = vim.fn.system({
     'tmux', 'split-window', '-h', '-p', SPLIT_PERCENT,
-    '-c', vim.uv.cwd(), cmd,
+    '-c', vim.uv.cwd(), '-P', '-F', '#{pane_id}', cmd,
   })
-  return vim.v.shell_error == 0
+  if vim.v.shell_error == 0 then
+    state.pane = out:match('%%%d+')
+    return true
+  end
+  return false
+end
+
+-- <leader>a again → focus the already-open agent pane instead of spawning a
+-- second one. Falls back to spawning if the pane was closed or lives elsewhere.
+local function focus_tmux_pane()
+  if not state.pane then
+    return false
+  end
+  local alive = vim.fn.system({
+    'tmux', 'display-message', '-p', '-t', state.pane, '#{pane_id}',
+  })
+  if vim.v.shell_error == 0 and alive:match('%%%d+') then
+    vim.fn.system({ 'tmux', 'select-pane', '-t', state.pane })
+    if vim.v.shell_error == 0 then
+      return true
+    end
+  end
+  state.pane = nil
+  return false
 end
 
 local function open_in_float(cmd)
@@ -68,8 +92,13 @@ local function open_in_float(cmd)
 end
 
 local function open(cmd)
-  if vim.env.TMUX and open_in_tmux(cmd) then
-    return -- tmux pane owns it: full nav/resize/scrollback control
+  if vim.env.TMUX then
+    if focus_tmux_pane() then
+      return -- agent already running: just focus its pane
+    end
+    if open_in_tmux(cmd) then
+      return -- new tmux pane: full nav/resize/scrollback control
+    end
   end
   open_in_float(cmd) -- not in tmux, or tmux call failed
 end
