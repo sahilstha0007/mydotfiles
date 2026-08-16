@@ -53,8 +53,7 @@ require('lazy').setup({
     -- note: plugins/linting/phpstan.lua is NOT a plugin spec — it's a
     -- nvim-lint linter definition loaded via require() from linting/core.lua
     { import = 'plugins.test.core' },
---  { import = 'plugins.ui.colorscheme' },
-    { import = 'plugins.ui.matugen' },         
+    { import = 'plugins.ui.terminal-colors' },
     { import = 'plugins.ui.transparency' },
     { import = 'plugins.ui.dressing' },
     { import = 'plugins.ui.treesitter-context' },

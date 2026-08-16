@@ -1,5 +1,19 @@
 local M = {}
 
+-- mode → palette-slot map, resolved per refresh so the statusline mode
+-- color follows the terminal palette too
+local MODE_SLOTS = {
+  n = 'red', i = 'green', v = 'blue', [''] = 'blue', V = 'blue',
+  c = 'magenta', no = 'red', s = 'orange', S = 'orange', ['\22'] = 'orange',
+  ic = 'yellow', R = 'violet', Rv = 'violet', cv = 'red', ce = 'red',
+  r = 'cyan', rm = 'cyan', ['r?'] = 'cyan', ['!'] = 'red', t = 'red',
+}
+
+-- Populated by refresh(): catppuccin.palettes.get_palette() reads the live
+-- color_overrides, so after a terminal palette change this table carries the
+-- new colors and the mode component (which looks it up per redraw) follows.
+M.mode_colors = {}
+
 local function get_palette()
   local palette = require('catppuccin.palettes').get_palette 'mocha'
 
@@ -19,8 +33,15 @@ local function get_palette()
   }
 end
 
-function M.build_theme()
-  return get_palette()
+-- Rebuild the mode→color map + re-apply highlight groups. Called on startup
+-- and on every ColorScheme (fired when terminal-colors re-applies after a
+-- terminal palette change).
+function M.refresh()
+  local c = get_palette()
+  for mode, slot in pairs(MODE_SLOTS) do
+    M.mode_colors[mode] = c[slot]
+  end
+  M.apply_highlights()
 end
 
 function M.apply_highlights()

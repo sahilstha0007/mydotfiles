@@ -168,13 +168,21 @@ Neotest / test runner setup. Auto-detects most language test frameworks.
 
 ## UI
 
-### `lua/plugins/ui/colorscheme.lua`
-Commented out — colorscheme lives in `matugen.lua` instead. Keep this file
-around as a fallback if matugen ever stops generating.
+### `lua/plugins/ui/terminal-colors.lua`
+Terminal-adopting colorscheme. Queries the host terminal's palette via OSC 4
+(ANSI colors) / OSC 10-11 (fg/bg) and maps it onto catppuccin's semantic
+slots through `color_overrides`, so nvim matches whatever theme the terminal
+is running — and re-tints live when the terminal colorscheme changes (kitty
+and wezterm both push palette updates).
 
-### `lua/plugins/ui/matugen.lua`
-matugen.nvim. Reads wallpaper color (via `matugen` CLI) and derives the
-Material You palette. Recomputes when the wallpaper changes.
+Fallback: inside tmux the OSC queries are eaten (tmux doesn't answer them),
+so the palette is also read directly from the ACTIVE terminal's config file
+— kitty's `~/.config/kitty/colors-matugen.conf` or wezterm's
+`~/.config/wezterm/colors/custom.lua` (ml4w writes both on theme switch).
+The terminal is detected from env vars that survive into tmux
+(`WEZTERM_PANE` / `KITTY_WINDOW_ID`), and the file is polled so theme
+switches re-tint live. If no palette source answers, stock catppuccin mocha
+is used.
 
 ### `lua/plugins/ui/transparency.lua`
 Enables background transparency in supported terminals.

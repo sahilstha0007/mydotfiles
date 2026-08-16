@@ -64,8 +64,9 @@ return {
             indent = 2,
           },
           { icon = ic(0xF02DA), title = 'Recent Files', section = 'recent_files', indent = 2, padding = 1 }, -- md-history
+          -- startup renders the plugin-load stats (startuptime, loaded/count),
+          -- which is what the old `lazy` section used to show
           { section = 'startup' },
-          { section = 'lazy', gap = 1, padding = 1 },
         },
       },
     }

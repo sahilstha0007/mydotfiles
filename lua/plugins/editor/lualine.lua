@@ -8,34 +8,25 @@ return {
       -- Credit: glepnir
       local lualine = require 'lualine'
 
-      require('plugins.editor.lualine-theme').apply_highlights()
+      -- refresh() = build mode colors + apply Lualine* highlight groups
+      require('plugins.editor.lualine-theme').refresh()
 
-      -- Build the palette + mode→color map ONCE, not on every statusline
-      -- redraw. (The mode color component runs on every cursor move / mode
+      -- Re-tint on palette changes: terminal-colors re-runs :colorscheme when
+      -- the terminal theme changes, which fires ColorScheme; refresh() rebuilds
+      -- the Lualine* groups and the mode→color map from the new palette.
+      vim.api.nvim_create_autocmd('ColorScheme', {
+        group = vim.api.nvim_create_augroup('lualine-palette', { clear = true }),
+        callback = function()
+          pcall(require('plugins.editor.lualine-theme').refresh)
+        end,
+      })
+
+      -- Capture the mode→color map once; it's rebuilt in place by refresh()
+      -- on ColorScheme, so lookups stay cheap and stay in sync with palette
+      -- changes. (The mode color component runs on every cursor move / mode
       -- change, so anything computed inside it is a hot path.)
-      local colors = require('plugins.editor.lualine-theme').build_theme()
-      local mode_color = {
-        n = colors.red,
-        i = colors.green,
-        v = colors.blue,
-        [''] = colors.blue,
-        V = colors.blue,
-        c = colors.magenta,
-        no = colors.red,
-        s = colors.orange,
-        S = colors.orange,
-        [''] = colors.orange,
-        ic = colors.yellow,
-        R = colors.violet,
-        Rv = colors.violet,
-        cv = colors.red,
-        ce = colors.red,
-        r = colors.cyan,
-        rm = colors.cyan,
-        ['r?'] = colors.cyan,
-        ['!'] = colors.red,
-        t = colors.red,
-      }
+      local theme = require('plugins.editor.lualine-theme')
+      local mode_color = theme.mode_colors
 
       local conditions = {
         buffer_not_empty = function()
@@ -99,6 +90,9 @@ return {
         color = function()
           -- Cheap per-redraw: a table lookup against the precomputed map.
           -- bg 'NONE' keeps the statusline transparent (see lualine-theme).
+          -- theme.refresh() swaps mode_colors in place on ColorScheme, so the
+          -- module-level table (captured above as mode_color) follows palette
+          -- changes without any lookup cost here.
           return { bg = 'NONE', fg = mode_color[vim.fn.mode()] }
         end,
         padding = { right = 1 },

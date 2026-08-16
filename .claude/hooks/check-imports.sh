@@ -18,7 +18,7 @@ cd "$CLAUDE_PROJECT_DIR" 2>/dev/null || exit 0
 # Spec files deliberately kept WITHOUT an active import (helper modules loaded
 # by a sibling spec, or plugins intentionally commented out). Add here if you
 # intentionally keep a spec that lazy.nvim should not load.
-exceptions="plugins.editor.fzf plugins.editor.lualine-theme plugins.formatting.prettier plugins.languages.laravel plugins.linting.phpstan plugins.ui.colorscheme"
+exceptions="plugins.editor.fzf plugins.editor.lualine-theme plugins.formatting.prettier plugins.languages.laravel plugins.linting.phpstan"
 
 fail=0
 for spec in $(find lua/plugins -name '*.lua' | sort); do

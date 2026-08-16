@@ -62,7 +62,7 @@ in `lua/lazy-init.lua`.
 
 Known exceptions (specs kept without an active import):
 `plugins.editor.fzf`, `plugins.editor.lualine-theme`, `plugins.formatting.prettier`,
-`plugins.languages.laravel`, `plugins.ui.colorscheme`.
+`plugins.languages.laravel`.
 
 Anything else flagged is a spec lazy.nvim will silently never load — fix the
 import or delete the spec.

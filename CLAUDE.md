@@ -34,7 +34,9 @@ and easy to reason about at 3am.
   tailwindcss. Per-server configs in `lsp/`.
 - **File tree:** `file-tree` (neo-tree) via `lua/plugins/editor/file-tree.lua`; the
   NeoTree icon-bloat is disabled in `disable-neotree.lua`.
-- **Colorscheme:** Material You / `matugen` (wallpaper-derived). Keep it defaulted.
+- **Colorscheme:** Terminal-adopting — `lua/plugins/ui/terminal-colors.lua` queries the
+  terminal's palette (OSC 4/10/11) and maps it onto catppuccin, re-tinting live when the
+  terminal theme changes. Falls back to stock catppuccin mocha outside a capable terminal.
 - **Formatting:** `conform` (format-on-save, Prettier for PHP).
 - **Linting:** `linting/core` + `phpstan`.
 - **Test runner:** `plugins/test/core`.

@@ -20,6 +20,6 @@ If you're editing a file and don't remember what it's for, start here.
 - **Editor:** Neovim (kickstart-style layout, **not** LazyVim).
 - **Plugin manager:** `lazy.nvim`, bootstrapped in `lua/lazy-init.lua`.
 - **Leader key:** `<space>` (set in `init.lua` and reaffirmed in `globals.lua`).
-- **Colors:** Material You via `matugen` (derived from your wallpaper).
+- **Colors:** Adopts the terminal's own palette live (OSC color queries via `lua/plugins/ui/terminal-colors.lua`).
 - **LSPs:** vtsls, gopls, lua_ls, ruff, eslint, tailwindcss.
 - **AI:** CLI agents (Claude Code, opencode) launched via `<leader>a` into a tmux pane.

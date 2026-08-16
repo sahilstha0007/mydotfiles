@@ -20,7 +20,7 @@ mistake here breaks the user's whole workflow. Be strict; report every finding.
 3. **Spec/import drift** — every `lua/plugins/<cat>/<name>.lua` needs an active
    `{ import = 'plugins.<cat>.<name>' }` in `lua/lazy-init.lua`. Known exceptions:
    `plugins.editor.fzf`, `plugins.editor.lualine-theme`, `plugins.formatting.prettier`,
-   `plugins.languages.laravel`, `plugins.ui.colorscheme`.
+   `plugins.languages.laravel`.
 4. **Lua syntax** — run `luac -p` on every changed file.
 5. **LSP correctness** — exactly one server per language, no duplicate attach
    (historical bug: pyright + ruff both attaching to Python). If a server list
