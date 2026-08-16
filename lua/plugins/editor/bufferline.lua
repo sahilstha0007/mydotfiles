@@ -1,8 +1,8 @@
--- Frosted-glass tint: with the terminal at <1 opacity, this reads as
--- glass — wallpaper shows through, the strip is a faint tinted layer,
--- and the active tab raises on top. Kept light (25%) so the strip
--- leans transparent; the active tab's surface1 still lifts it clear.
-local function glass_tint(c)
+-- The ACTIVE tab's raised "pill": clearly lighter than the terminal
+-- background so it reads as a raised chip. A whisper of the blue accent
+-- keeps it from feeling flat gray — the file you're on is the one raised
+-- element in the bar.
+local function pill_tint(c)
   local function mix(hex_a, hex_b, t)
     local function to_rgb(hex)
       local h = hex:gsub('#', '')
@@ -17,68 +17,76 @@ local function glass_tint(c)
       math.floor(ab + (bb - ab) * t + 0.5)
     )
   end
-  return mix(c.base, c.surface0, 0.25)
+  return mix(c.surface2, c.blue, 0.08)
 end
 
 -- The full highlight table (shared between opts and the ColorScheme re-tint).
--- c is the live catppuccin palette, glass the tinted strip background.
-local function highlights_from(c, glass)
+-- c is the live catppuccin palette. The strip is fully transparent (bg
+-- NONE) so the terminal's wallpaper shows straight through — only the
+-- ACTIVE tab's pill carries a background, as the one raised element.
+local function highlights_from(c)
+  local pill = pill_tint(c)
   return {
-    -- Frosted-glass strip: a subtle tinted layer (glass) instead of a
-    -- solid band or bare transparency. Only the ACTIVE tab carries a
-    -- raised background, so the file you're editing is the raised core.
-    fill = { fg = c.subtext0, bg = glass },
+    -- transparent strip: the terminal wallpaper shows through; only the
+    -- active tab's pill raises on top
+    fill = { fg = c.subtext0, bg = 'NONE' },
+    background = { bg = 'NONE', fg = c.overlay0 },
     -- thin dividers: subtle tone-on-tone bars (underline off — the
     -- underline indicator would otherwise paint a light line here)
-    separator = { fg = c.surface2, bg = glass, underline = false },
-    separator_selected = { fg = c.surface2, bg = glass, underline = false },
-    separator_visible = { fg = c.surface2, bg = glass, underline = false },
-    tab_separator = { fg = c.surface2, bg = glass, underline = false },
-    tab_separator_selected = { fg = c.surface2, bg = glass, underline = false },
-    -- ACTIVE tab: raised background + bold text. Nothing else — no
-    -- underline, no indicator (that was the boxy bottom line).
+    separator = { fg = c.surface2, bg = 'NONE', underline = false },
+    separator_selected = { fg = c.surface2, bg = 'NONE', underline = false },
+    separator_visible = { fg = c.surface2, bg = 'NONE', underline = false },
+    tab_separator = { fg = c.surface2, bg = 'NONE', underline = false },
+    tab_separator_selected = { fg = c.surface2, bg = 'NONE', underline = false },
+    -- ACTIVE tab: the raised pill — lighter bg, bold text. No underline,
+    -- no boxy indicator; tab_size padding (options) extends the pill bg
+    -- around the name so it reads as a chip floating on the wallpaper.
     buffer_selected = {
-      bg = c.surface1,
+      bg = pill,
       fg = c.text,
       bold = true,
     },
     indicator_selected = {
-      bg = c.surface1,
+      bg = pill,
       fg = c.text,
     },
-    -- INACTIVE tabs: quiet text on the glass
-    buffer = { bg = glass, fg = c.overlay0 },
-    buffer_visible = { bg = glass, fg = c.overlay0 },
-    -- Explorer offset area: same glass, subtle separator
-    offset_separator = { bg = glass, fg = c.surface1 },
+    -- INACTIVE tabs: quiet text straight on the wallpaper
+    buffer = { bg = 'NONE', fg = c.overlay1 },
+    buffer_visible = { bg = 'NONE', fg = c.overlay0 },
+    -- unsaved-changes dot: soft amber, visible on wallpaper and pill
+    modified = { fg = c.yellow, bg = 'NONE' },
+    modified_selected = { fg = c.yellow, bg = pill },
+    modified_visible = { fg = c.yellow, bg = 'NONE' },
+    -- Explorer offset area: transparent, subtle separator
+    offset_separator = { bg = 'NONE', fg = c.surface1 },
     -- Tab diagnostics (error/warn/info icons): bufferline derives these
     -- from the Normal bg, which is transparent here — so pin the fg to
     -- the palette or they'd render in the terminal's default colors.
-    -- Selected variants sit on the raised active tab (surface1).
-    error = { fg = c.red, bg = glass },
-    error_selected = { fg = c.red, bg = c.surface1 },
-    error_visible = { fg = c.red, bg = glass },
-    error_diagnostic = { fg = c.red, bg = glass },
-    error_diagnostic_selected = { fg = c.red, bg = c.surface1 },
-    error_diagnostic_visible = { fg = c.red, bg = glass },
-    warning = { fg = c.yellow, bg = glass },
-    warning_selected = { fg = c.yellow, bg = c.surface1 },
-    warning_visible = { fg = c.yellow, bg = glass },
-    warning_diagnostic = { fg = c.yellow, bg = glass },
-    warning_diagnostic_selected = { fg = c.yellow, bg = c.surface1 },
-    warning_diagnostic_visible = { fg = c.yellow, bg = glass },
-    info = { fg = c.cyan, bg = glass },
-    info_selected = { fg = c.cyan, bg = c.surface1 },
-    info_visible = { fg = c.cyan, bg = glass },
-    info_diagnostic = { fg = c.cyan, bg = glass },
-    info_diagnostic_selected = { fg = c.cyan, bg = c.surface1 },
-    info_diagnostic_visible = { fg = c.cyan, bg = glass },
-    hint = { fg = c.subtext0, bg = glass },
-    hint_selected = { fg = c.subtext0, bg = c.surface1 },
-    hint_visible = { fg = c.subtext0, bg = glass },
-    hint_diagnostic = { fg = c.subtext0, bg = glass },
-    hint_diagnostic_selected = { fg = c.subtext0, bg = c.surface1 },
-    hint_diagnostic_visible = { fg = c.subtext0, bg = glass },
+    -- Selected variants sit on the raised active tab (the pill).
+    error = { fg = c.red, bg = 'NONE' },
+    error_selected = { fg = c.red, bg = pill },
+    error_visible = { fg = c.red, bg = 'NONE' },
+    error_diagnostic = { fg = c.red, bg = 'NONE' },
+    error_diagnostic_selected = { fg = c.red, bg = pill },
+    error_diagnostic_visible = { fg = c.red, bg = 'NONE' },
+    warning = { fg = c.yellow, bg = 'NONE' },
+    warning_selected = { fg = c.yellow, bg = pill },
+    warning_visible = { fg = c.yellow, bg = 'NONE' },
+    warning_diagnostic = { fg = c.yellow, bg = 'NONE' },
+    warning_diagnostic_selected = { fg = c.yellow, bg = pill },
+    warning_diagnostic_visible = { fg = c.yellow, bg = 'NONE' },
+    info = { fg = c.cyan, bg = 'NONE' },
+    info_selected = { fg = c.cyan, bg = pill },
+    info_visible = { fg = c.cyan, bg = 'NONE' },
+    info_diagnostic = { fg = c.cyan, bg = 'NONE' },
+    info_diagnostic_selected = { fg = c.cyan, bg = pill },
+    info_diagnostic_visible = { fg = c.cyan, bg = 'NONE' },
+    hint = { fg = c.subtext0, bg = 'NONE' },
+    hint_selected = { fg = c.subtext0, bg = pill },
+    hint_visible = { fg = c.subtext0, bg = 'NONE' },
+    hint_diagnostic = { fg = c.subtext0, bg = 'NONE' },
+    hint_diagnostic_selected = { fg = c.subtext0, bg = pill },
+    hint_diagnostic_visible = { fg = c.subtext0, bg = 'NONE' },
   }
 end
 
@@ -92,7 +100,6 @@ return {
     },
     opts = function()
       local c = require('catppuccin.palettes').get_palette 'mocha'
-      local glass = glass_tint(c)
 
       return {
         options = {
@@ -100,17 +107,24 @@ return {
           -- tab strip always visible so the file title stays on top
           always_show_bufferline = true,
           show_close_icon = false,
-          -- clean: no x buttons on every tab, no per-tab diagnostic counts
-          -- (errors/warnings live in the statusline where they're readable)
+          -- clean: no x buttons on every tab (BufferLinePick / ]b cover
+          -- closing; right-mouse still deletes)
           show_buffer_close_icons = false,
           -- clean thin dividers — no slanted boxes/triangles between tabs
           separator_style = 'thin',
           -- NO indicator: no underline, no bar, no blob under/on the active
-          -- tab — the raised background alone marks the current file (the
+          -- tab — the raised pill alone marks the current file (the
           -- "underline" style drew a boxy bottom line, ponytail: gone)
           indicator = { style = 'icon', icon = '' },
-          -- no green unsaved-changes dot on tabs
-          modified_icon = '',
+          -- soft dot on tabs with unsaved changes
+          modified_icon = '●',
+          -- VS Code-style ordering: a newly-opened buffer appears right
+          -- after the current one, so the strip reads as "recently used"
+          -- instead of a fixed buffer-number order
+          sort_by = 'insert_after_current',
+          -- a little breathing room around each name so the active tab's
+          -- bg reads as a padded pill rather than a tight label
+          tab_size = 20,
           offsets = {
             {
               filetype = 'NvimTree',
@@ -120,17 +134,18 @@ return {
             },
           },
         },
-        -- Design system (translated from the design skills): an Apple-style
-        -- frosted-glass strip — a subtle tinted layer (glass), with the
-        -- terminal's opacity showing the wallpaper through it. The active tab
-        -- is the ONE raised element (surface1); inactive tabs are quiet text
-        -- on the glass. Tone-on-tone dividers, no boxes/borders.
+        -- Design system (translated from the design skills): the tab strip
+        -- is fully transparent — the terminal's wallpaper shows straight
+        -- through. The active tab is the ONE raised element: a lighter pill
+        -- (pill_tint) with bold text, padded by tab_size so it reads as a
+        -- chip floating on the wallpaper. Inactive tabs are quiet text
+        -- without any background. Tone-on-tone dividers, no boxes/borders.
         --
         -- NOTE: the theme sets `Normal` bg to transparent, so bufferline
         -- derives nil colors for several groups (they'd render in the
         -- terminal's default white) — every fg below is pinned to a
         -- palette tone on purpose.
-        highlights = highlights_from(c, glass),
+        highlights = highlights_from(c),
       }
     end,
     config = function(_, opts)
@@ -143,9 +158,8 @@ return {
         group = vim.api.nvim_create_augroup('bufferline-palette', { clear = true }),
         callback = function()
           local c = require('catppuccin.palettes').get_palette 'mocha'
-          local glass = glass_tint(c)
           local hl = require('bufferline.highlights')
-          for name, attrs in pairs(highlights_from(c, glass)) do
+          for name, attrs in pairs(highlights_from(c)) do
             vim.api.nvim_set_hl(0, hl.generate_name(name), attrs)
           end
         end,

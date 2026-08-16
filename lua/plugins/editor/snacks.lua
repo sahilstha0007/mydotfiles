@@ -2,6 +2,39 @@ return {
   'folke/snacks.nvim',
   priority = 1000,
   lazy = false,
+  keys = {
+    {
+      '<leader>l',
+      function()
+        -- Smart popup for lazy.nvim: pick an action instead of typing :Lazy
+        -- subcommands. The dashboard's `l` key still opens the full Lazy UI.
+        local actions = {
+          { name = 'Sync',    desc = 'Install & update pinned plugins', cmd = ':Lazy sync' },
+          { name = 'Install', desc = 'Install missing plugins',         cmd = ':Lazy install' },
+          { name = 'Update',  desc = 'Update installed plugins',        cmd = ':Lazy update' },
+          { name = 'Clean',   desc = 'Remove unused plugins',           cmd = ':Lazy clean' },
+          { name = 'Check',   desc = 'Validate plugin specs',           cmd = ':Lazy check' },
+          { name = 'Restore', desc = 'Restore plugins from lockfile',   cmd = ':Lazy restore' },
+          { name = 'Profile', desc = 'Startup / load profiling',        cmd = ':Lazy profile' },
+          { name = 'Health',  desc = 'Run :checkhealth for a plugin',   cmd = ':Lazy health' },
+          { name = 'Log',     desc = 'Open the lazy.nvim log',          cmd = ':Lazy log' },
+          { name = 'Debug',   desc = 'Debug lazy.nvim loading',         cmd = ':Lazy debug' },
+          { name = 'Open UI', desc = 'Open the lazy.nvim dashboard',    cmd = ':Lazy' },
+        }
+        Snacks.picker.select(actions, {
+          prompt = 'Lazy actions',
+          format_item = function(action)
+            return action.name .. '  ' .. action.desc
+          end,
+        }, function(action)
+          if action then
+            vim.cmd(action.cmd)
+          end
+        end)
+      end,
+      desc = 'Lazy actions (sync, update, clean, ...)',
+    },
+  },
   ---@type snacks.Config
   opts = function()
     -- Icons: every codepoint verified against the installed Nerd Fonts 3.5.0

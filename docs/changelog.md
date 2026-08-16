@@ -1,5 +1,28 @@
 # Changelog
 
+## overlays: colored glass, not gray (terminal-colors.lua)
+
+- **Every overlay now shares one colored glass language** (glassmorphism
+  skill, translated to the terminal palette) instead of gray surfaces:
+  `FloatBorder` is a luminous blue-tinted rim (`surface2`→`blue` blend) that
+  cascades through catppuccin's links to telescope, snacks picker, which-key,
+  hover docs, and dressing; the selected row everywhere is a raised blue-tinted
+  pill (`surface1`→`blue`); bodies stay transparent so the wallpaper glows
+  through (winblend frosts).
+- **Telescope:** selection = pill, match text = bold blue, prompt prefix =
+  flamingo, corner titles = blue/lavender/green per section.
+- **Snacks picker:** same language as telescope (selection pill, blue match,
+  flamingo prompt, per-section titles).
+- **Notifications:** each level is a tinted glass card — faint blue/yellow/
+  red/peach/rosewater body (readable text on top) under catppuccin's full-
+  color icon/title/border.
+- **Completion (Pmenu + blink.cmp):** body is a faint blue-tinted glass
+  instead of gray `surface0`; selected row is the blue pill; borders/scroll
+  bars tinted blue to match the floats.
+- Verified headless: `FloatBorder fg=#6e6e7f`, `TelescopeSelection bg`=pill,
+  `SnacksNotifierInfo bg`=blue-tinted card; all Lua parses, no keymap
+  collisions, .bak untouched.
+
 ## ponytail: kill the boxy line + unify footer colors
 
 - **Header (`bufferline.lua`):** the "thin horizontal line" under the active tab was the underline indicator (`indicator.style='underline'` + `sp`/`underline` in the highlights) — it read as the bottom edge of a rectangle, the boxy look from before. Deleted it: `indicator = { style='icon', icon='' }` and no `underline`/`sp` on `buffer_selected`. Active tab is now just a raised background + bold text. Verified: `BufferLineBufferSelected=#dee3e6/#243e46` with no underline flag.

@@ -199,6 +199,14 @@ local function catppuccin_opts()
     },
     highlight_overrides = {
       mocha = function(c)
+        -- Overlay design (glassmorphism, translated from the design skills):
+        -- every float — telescope, snacks picker, which-key, hover docs,
+        -- dressing, completion — shares ONE colored language instead of a
+        -- gray one. Bodies stay transparent (wallpaper glows through, winblend
+        -- frosts), rims are a luminous blue-tinted edge, and the selected row
+        -- is a raised blue-tinted pill.
+        local rim = mix(c.surface2, c.blue, 0.35) -- luminous blue float border
+        local pill = mix(c.surface1, c.blue, 0.2) -- raised selection pill
         return {
           -- Explorer blends with terminal
           NeoTreeNormal        = { bg = 'NONE', fg = c.text },
@@ -215,21 +223,43 @@ local function catppuccin_opts()
           NeoTreeGitUntracked  = { fg = c.mauve },
           NeoTreeIndentMarker  = { fg = c.overlay0 },
 
-          -- Popup: frosted — winblend/pumblend (options.lua) blend these
-          -- toward the terminal background, so the tint + blend reads as glass.
-          Pmenu      = { bg = c.surface0, fg = c.text },
-          PmenuSel   = { bg = c.surface1, fg = c.blue, bold = true },
-          PmenuSbar  = { bg = c.surface1 },
+          -- Completion popup: frosted, never fully transparent — a completion
+          -- list overlays the code you're typing, so bg NONE (inheriting the
+          -- transparent editor Normal) made it look like a broken see-through
+          -- box while writing. The body is a faint blue-tinted glass (not
+          -- gray surface0) and the selected row lifts as the blue pill.
+          Pmenu      = { bg = mix(c.surface0, c.blue, 0.06), fg = c.text },
+          PmenuSel   = { bg = pill, fg = c.blue, bold = true },
+          PmenuSbar  = { bg = mix(c.surface0, c.blue, 0.06) },
           PmenuThumb = { bg = c.blue },
 
-          -- blink.cmp
+          -- blink.cmp overlays: frosted glass with a blue-tinted rim. The
+          -- menu MUST have a real background — its window maps Normal →
+          -- BlinkCmpMenu, so without a bg here it inherits the transparent
+          -- editor Normal and the candidate list floats unreadably over the
+          -- code. surface0 + the window's own winblend (25) reads as frosted
+          -- glass: readable, but the wallpaper still glows through. The
+          -- border lifts a whisper of blue so the rounded corners read as a
+          -- glass edge instead of vanishing into the dark.
+          BlinkCmpMenu          = { bg = c.surface0, fg = c.text },
+          -- border bg pinned to the menu body so the rounded corners read as
+          -- clean curves, not dark notches (default linked to Pmenu's darker
+          -- bg would paint the corner cells)
+          BlinkCmpMenuBorder    = { fg = rim, bg = mix(c.surface0, c.blue, 0.06) },
+          BlinkCmpMenuSelection = {
+            bg = pill,
+            fg = c.text,
+            bold = true,
+          },
+          BlinkCmpScrollBarThumb  = { bg = mix(c.surface2, c.blue, 0.4) },
+          BlinkCmpScrollBarGutter = { bg = mix(c.surface0, c.blue, 0.06) },
           BlinkCmpLabel         = { fg = c.text },
           BlinkCmpLabelMatch    = { fg = c.blue, bold = true },
           BlinkCmpLabelDetail   = { fg = c.overlay1 },
-          BlinkCmpMenuBorder    = { fg = c.surface1 },
-          BlinkCmpMenuSelection = { bg = c.surface1, fg = c.blue, bold = true },
-          BlinkCmpDoc           = { bg = c.surface0 },
-          BlinkCmpDocBorder     = { fg = c.surface1 },
+          BlinkCmpDoc           = { bg = mix(c.surface0, c.blue, 0.06) },
+          BlinkCmpDocBorder     = { fg = rim, bg = mix(c.surface0, c.blue, 0.06) },
+          BlinkCmpSignatureHelp = { bg = mix(c.surface0, c.blue, 0.06) },
+          BlinkCmpSignatureHelpBorder = { fg = rim, bg = mix(c.surface0, c.blue, 0.06) },
           BlinkCmpGhostText     = { fg = c.overlay0 },
           BlinkCmpKindFunction  = { fg = c.blue },
           BlinkCmpKindMethod    = { fg = c.blue },
@@ -247,12 +277,52 @@ local function catppuccin_opts()
           MatchParen  = { bg = c.surface1, fg = c.blue, bold = true },
           WinSeparator = { fg = c.surface1 },
 
-          -- Floating windows (hover, diagnostics popup, dressing): frosted
-          -- glass — tinted body + a slightly lighter border so the rounded
-          -- edges read against the transparent editor. winblend=25 (from
-          -- options.lua) does the see-through; these are the tint layers.
-          FloatBorder = { fg = c.surface2 },
-          NormalFloat = { bg = c.surface0, fg = c.text },
+          -- Floating windows (hover, diagnostics popup, dressing, which-key):
+          -- fully transparent body — the wallpaper shows through, with the
+          -- luminous blue-tinted rim so the rounded edges read as colored
+          -- glass, not a gray line. winblend (options.lua) frosts the rest.
+          FloatBorder = { fg = rim, bg = 'NONE' },
+          FloatTitle = { fg = c.blue, bg = 'NONE' },
+          NormalFloat = { bg = 'NONE', fg = c.text },
+
+          -- -----------------------------------------------------------------
+          -- Telescope picker — colored glass, not gray
+          -- -----------------------------------------------------------------
+          -- Border/body link FloatBorder/NormalFloat above (catppuccin
+          -- integration), so the rim is already blue; these pin the selection
+          -- pill, match text, and prompt prefix that would otherwise sit on
+          -- gray surface0.
+          TelescopeSelection = { bg = pill, fg = c.text, bold = true },
+          TelescopeSelectionCaret = { fg = c.flamingo, bg = pill },
+          TelescopeMatching = { fg = c.blue, bold = true },
+          TelescopePromptPrefix = { fg = c.flamingo },
+          TelescopeTitle = { fg = c.blue, bg = 'NONE' },
+          TelescopePromptTitle = { fg = c.blue, bg = 'NONE' },
+          TelescopeResultsTitle = { fg = c.lavender, bg = 'NONE' },
+          TelescopePreviewTitle = { fg = c.green, bg = 'NONE' },
+
+          -- -----------------------------------------------------------------
+          -- Snacks picker — same language as telescope
+          -- -----------------------------------------------------------------
+          SnacksPickerSelected = { bg = pill, fg = c.text, bold = true },
+          SnacksPickerMatch = { fg = c.blue, bold = true },
+          SnacksPickerPrompt = { fg = c.flamingo },
+          SnacksPickerTitle = { fg = c.blue, bg = 'NONE' },
+          SnacksPickerInputTitle = { fg = c.blue, bg = 'NONE' },
+          SnacksPickerListTitle = { fg = c.lavender, bg = 'NONE' },
+          SnacksPickerPreviewTitle = { fg = c.green, bg = 'NONE' },
+
+          -- -----------------------------------------------------------------
+          -- Notifications — colored glass cards, one hue per level
+          -- -----------------------------------------------------------------
+          -- Body is a faint tint of the level color (readable text on top);
+          -- catppuccin already paints the icon/title/border in the full
+          -- level color, so each card reads as a tinted glass chip.
+          SnacksNotifierInfo  = { fg = c.text, bg = mix(c.base, c.blue, 0.1) },
+          SnacksNotifierWarn  = { fg = c.text, bg = mix(c.base, c.yellow, 0.08) },
+          SnacksNotifierError = { fg = c.text, bg = mix(c.base, c.red, 0.08) },
+          SnacksNotifierDebug = { fg = c.text, bg = mix(c.base, c.peach, 0.08) },
+          SnacksNotifierTrace = { fg = c.text, bg = mix(c.base, c.rosewater, 0.08) },
         }
       end,
     },
@@ -498,25 +568,32 @@ local function read_wezterm_palette()
   return true
 end
 
--- Read the active terminal's palette file into pal.
+-- Read the active terminal's palette file into pal. Tries the detected
+-- terminal first, then the other one as a fallback — a missing/broken file
+-- in one terminal should never leave the editor on stock mocha.
 local function read_terminal_palette()
   local term = detect_terminal()
   if term == 'wezterm' then
-    return read_wezterm_palette()
+    return read_wezterm_palette() or read_kitty_palette()
   end
   -- kitty (or unknown terminal): try kitty's file; wezterm's as a last resort
   return read_kitty_palette() or read_wezterm_palette()
 end
 
--- Re-read the palette file and report whether any ANSI color changed.
+-- Re-read the palette file and report whether any color changed — the 16
+-- ANSI colors plus fg/bg (a theme switch may alter only the background).
 local function poll_palette_file()
-  local before = vim.deepcopy(pal.ansi)
+  local before_ansi = vim.deepcopy(pal.ansi)
+  local before_fg, before_bg = pal.fg, pal.bg
   local ok = read_terminal_palette()
   if not ok then
     return false
   end
+  if pal.fg ~= before_fg or pal.bg ~= before_bg then
+    return true
+  end
   for i = 0, 15 do
-    if pal.ansi[i] ~= before[i] then
+    if pal.ansi[i] ~= before_ansi[i] then
       return true
     end
   end
@@ -524,7 +601,10 @@ local function poll_palette_file()
 end
 
 -- Poll the palette file every few seconds while inside tmux (where OSC is
--- dead) so theme switches re-tint live without needing focus changes.
+-- dead) so theme switches re-tint live without needing focus changes. Runs
+-- regardless of whether the initial boot read succeeded — a transient read
+-- failure at startup gets recovered by the next poll instead of leaving the
+-- editor stuck on stock mocha forever.
 local watch_timer
 local function start_palette_watch()
   if not vim.env.TMUX then
@@ -535,7 +615,7 @@ local function start_palette_watch()
   end
   watch_timer = vim.uv.new_timer()
   watch_timer:start(3000, 3000, vim.schedule_wrap(function()
-    if palette_file and poll_palette_file() and complete() then
+    if poll_palette_file() and complete() then
       apply()
     end
   end))
@@ -552,17 +632,21 @@ local function setup()
     callback = on_termresponse,
   })
 
-  -- Paint immediately with the fallback palette so startup never flashes raw
-  -- nvim defaults, then ask the terminal for its palette. The responses fire
-  -- as TermResponse events (processed during vim.wait) and re-tint within a
-  -- few tens of milliseconds.
+  -- Read the terminal's config file FIRST (fast, works inside tmux) so the
+  -- very first paint already uses the terminal palette — the editor never
+  -- flashes stock mocha at boot. ml4w keeps the palette in these files, so
+  -- this is the authoritative source even before OSC answers.
+  read_terminal_palette()
+
+  -- Paint immediately with whatever we have: the terminal palette when the
+  -- file read above succeeded, stock mocha as a last resort.
   apply()
   query()
+
+  -- Direct-terminal case: OSC answers refine/confirm the palette within ~300ms.
+  -- If the file read already filled everything, complete() is true and this
+  -- returns immediately (no boot delay).
   vim.wait(300, complete, 5)
-  if not complete() then
-    -- tmux eats OSC queries; fall back to reading the terminal's config file.
-    read_terminal_palette()
-  end
   if complete() then
     apply()
   end

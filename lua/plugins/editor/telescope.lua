@@ -52,6 +52,56 @@ local get_kind_filter = function(buf)
     or nil
 end
 
+-- telescope 0.1.5 (pinned tag) still calls the OLD nvim-treesitter API —
+-- parsers.ft_to_lang / parsers.get_parser, configs.is_enabled / get_module,
+-- locals.get_definitions. The `main`-branch nvim-treesitter (see
+-- plugins/coding/treesitter.lua) rewrote all of that away, so those calls
+-- crash the previewer with "attempt to call field 'ft_to_lang' (a nil value)".
+-- Shim the old modules onto the native vim.treesitter API instead.
+local function shim_old_nvim_treesitter_api()
+  -- parsers.lua still exists in the rewrite but is a plain metadata table —
+  -- patch the missing functions onto it (shared module table, so telescope
+  -- sees them).
+  local ok, parsers = pcall(require, 'nvim-treesitter.parsers')
+  if ok and type(parsers) == 'table' then
+    parsers.ft_to_lang = function(ft)
+      return vim.treesitter.language.get_lang(ft)
+    end
+    parsers.get_parser = function(bufnr, lang)
+      return vim.treesitter.get_parser(bufnr, lang)
+    end
+    parsers.has_parser = function(lang)
+      return lang ~= nil and pcall(vim.treesitter.get_parser, 0, lang) or false
+    end
+    parsers.get_buf_lang = function(bufnr)
+      return vim.treesitter.language.get_lang(vim.bo[bufnr].filetype)
+    end
+  end
+
+  -- configs.lua and locals.lua were deleted entirely — provide them.
+  package.loaded['nvim-treesitter.configs'] = {
+    is_enabled = function(_, lang, bufnr)
+      -- "highlight enabled" ≈ the language has a usable parser in this buffer
+      return lang ~= nil and pcall(vim.treesitter.get_parser, bufnr, lang)
+    end,
+    get_module = function()
+      -- telescope reads additional_vim_regex_highlighting; keep it off, the
+      -- native highlighter already does the work
+      return { additional_vim_regex_highlighting = false }
+    end,
+  }
+  -- treesitter symbol picker (builtin.treesitter): no direct native
+  -- equivalent — degrade to an empty result rather than crashing
+  package.loaded['nvim-treesitter.locals'] = {
+    get_definitions = function()
+      return {}
+    end,
+    get_local_nodes = function()
+      return {}
+    end,
+  }
+end
+
 return {
   {
     'nvim-telescope/telescope.nvim',
@@ -65,6 +115,7 @@ return {
       },
     },
     config = function()
+      shim_old_nvim_treesitter_api()
       local telescope = require 'telescope'
       local actions = require 'telescope.actions'
 

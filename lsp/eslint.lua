@@ -10,7 +10,9 @@ return {
     vim.api.nvim_buf_create_user_command(bufnr, 'EslintFixAll', function()
       client:exec_cmd {
         command = 'eslint.applyAllFixes',
-        arguments = { { uri = vim.uri_from_bufnr(bufnr) } },
+        arguments = {
+          { uri = vim.uri_from_bufnr(bufnr), version = vim.lsp.util.buf_versions[bufnr] },
+        },
       }
     end, { desc = 'ESLint: Fix all autofixable problems' })
   end,

@@ -100,7 +100,7 @@ require('lazy').setup({
 vim.api.nvim_create_autocmd("LspAttach", {
   callback = function(ev)
     local client = vim.lsp.get_client_by_id(ev.data.client_id)
-    if client and not client.supports_method("textDocument/codeAction") then
+    if client and not client:supports_method("textDocument/codeAction") then
       pcall(vim.keymap.del, "n", "<leader>ca", { buffer = ev.buf })
       pcall(vim.keymap.del, "v", "<leader>ca", { buffer = ev.buf })
     end
