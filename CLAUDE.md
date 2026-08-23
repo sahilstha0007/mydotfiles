@@ -53,15 +53,8 @@ and easy to reason about at 3am.
 - `[b` / `]b` or `<S-h>` / `<S-l>` — prev/next buffer
 - `<leader>bd` / `<leader>bo` / `<leader>bD` — delete buffer / delete others / delete buffer+window
 - `<C-l>` (insert) — skip past closing brackets/quotes/commas
-- `<leader>a` (normal; leader=space ⇒ **Space+a**) — pick & open an AI agent CLI
-  (Claude Code / opencode). Inside tmux it opens as a **right tmux pane** so
-  vim-tmux-navigator hopping, tmux.nvim resize, and pane scrollback work on it;
-  outside tmux it falls back to a floating nvim terminal. Sources list:
-  `lua/plugins/editor/ai-tools.lua`.
-  **To add a new agent CLI**, copy ONE line from the `TEMPLATE` block in that
-  file into the `tools` table — the whole integration is that one line.
-
-- avante.nvim / AI plugins were removed (see git history). Don't re-add AI tooling
-  unless asked.
+- **No AI tooling by design:** all AI features were removed at the user's request
+  (2026-08: ai-tools.lua launcher, copilot spec, avante earlier — see git history).
+  No chat, no completion-assist beyond stock LSP. Do not re-add AI plugins.
 </content>
 </invoke>

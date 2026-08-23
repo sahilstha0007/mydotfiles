@@ -101,6 +101,7 @@ Bound buffer-local on `LspAttach` (`lua/plugins/coding/lspconfig.lua`) unless no
 | `<leader>gbl` | Toggle blame on current line |
 | `<leader>gdi` / `<leader>gdc` | Diff vs index / vs commit |
 | `<leader>gds` | Toggle deleted lines |
+| `<leader>l` | Lazy actions picker (sync / update / clean / …) |
 | `<leader>gg` | LazyGit |
 | `<leader>gD` / `<leader>gH` | Diffview: open diff / file history |
 | `<leader>gq` | Diffview: close |
@@ -143,7 +144,6 @@ Bound buffer-local on `LspAttach` (`lua/plugins/coding/lspconfig.lua`) unless no
 |------|--------|--------|
 | `<leader>e` | Toggle file tree (nvim-tree) | file-tree.lua |
 | `P` / `s` / `S` | Tree: preview / vertical / horizontal open | file-tree.lua |
-| `<leader>a` | Pick & open AI agent (Claude Code / opencode) | ai-tools.lua |
 | `<leader>ot` / `or` / `ol` | Overseer: toggle list / run / run command | overseer.lua |
 | `<leader>oq` / `oa` | Overseer: quick action / task action | overseer.lua |
 | `gsa` / `gsd` / `gsr` / `gsf` | Surround: add / delete / replace / find | mini.lua |

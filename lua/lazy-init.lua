@@ -30,7 +30,6 @@ require('lazy').setup({
     { import = 'plugins.editor.file-tree' },
     { import = 'plugins.editor.flash' },
     { import = 'plugins.editor.disable-neotree' },
-    { import = 'plugins.editor.ai-tools' },
     { import = 'plugins.editor.bufferline' },
     { import = 'plugins.editor.diffview' },
     { import = 'plugins.editor.overseer' },
