@@ -32,9 +32,6 @@ vim.opt.breakindent = true
 -- Save undo history
 vim.opt.undofile = true
 
--- Allow switching away from modified buffers (no E37 when cycling with ]b / <S-h>)
-vim.opt.hidden = true
-
 -- Reload files changed on disk (checked again on focus regain)
 vim.opt.autoread = true
 
@@ -67,9 +64,10 @@ vim.opt.listchars = { tab = '» ', trail = '·', nbsp = '␣' }
 -- Preview substitutions live, as you type!
 vim.opt.inccommand = 'split'
 
--- No cursorline: the current line stays clean, nothing gets a dark
--- background (relative numbers still show you where you are).
-vim.opt.cursorline = false
+-- Cursorline: the active line gets a faint surface tint (defined in
+-- terminal-colors' highlight_overrides so it follows theme switches and
+-- never paints an opaque bar over the transparent background).
+vim.opt.cursorline = true
 
 -- Smooth scroll (wheel/paging): glides instead of jumping line-by-line
 vim.opt.smoothscroll = true
@@ -89,13 +87,14 @@ vim.opt.laststatus = 3
 -- Window border style
 vim.o.winborder = 'rounded'
 
--- Frosted glass: floating windows (telescope, hover docs, snacks picker,
+-- Frosted glass: floating windows (snacks picker, hover docs, dressing,
 -- trouble) and the completion menu blend toward the wallpaper behind them
 -- instead of painting opaque boxes. 0 = opaque, 100 = fully see-through.
--- The editor bg itself is transparent via catppuccin's
--- transparent_background; these two options frost everything on top of it.
-vim.opt.winblend = 25
-vim.opt.pumblend = 20
+-- FULL TRANSPARENCY (user preference): winblend low so float bodies barely
+-- frost at all; the editor bg itself is transparent via catppuccin's
+-- transparent_background.
+vim.opt.winblend = 10
+vim.opt.pumblend = 10
 
 -- No "Press ENTER or type command to continue" pauses: long messages scroll
 -- through instead of blocking the editor. Full history still in :messages.
@@ -108,11 +107,27 @@ vim.opt.more = false
 vim.opt.shortmess:append 'aAcFIst'
 
 -- Re-check buffers when the terminal regains focus, so edits made in another
--- program (git, AI agents, formatters) appear without a manual :e!.
+-- program (git, formatters) appear without a manual :e!.
 -- Pairs with `set -g focus-events on` in tmux.
 vim.api.nvim_create_autocmd('FocusGained', {
   group = vim.api.nvim_create_augroup('autoreload-on-focus', { clear = true }),
   callback = function()
     pcall(vim.cmd, 'checktime')
+  end,
+})
+
+-- Auto-save: flush to disk when you stop typing (updatetime = 250 ms) or
+-- leave a buffer. `update` only writes when the buffer is actually modified,
+-- so it's a no-op on clean buffers and on quickfix/help/picker windows.
+-- Toggle off mid-session with :let g:disable_autosave = 1
+vim.api.nvim_create_autocmd({ 'CursorHold', 'InsertLeave', 'BufLeave' }, {
+  group = vim.api.nvim_create_augroup('autosave', { clear = true }),
+  callback = function()
+    if vim.g.disable_autosave then
+      return
+    end
+    if vim.bo.buftype == '' and vim.bo.modifiable and not vim.bo.readonly then
+      pcall(vim.cmd, 'silent! update')
+    end
   end,
 })

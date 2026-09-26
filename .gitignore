@@ -1,4 +1,3 @@
-
 tags
 test.sh
 .luarc.json
@@ -7,3 +6,15 @@ nvim
 spell/
 lazy-lock.json
 
+# ml4w/git renames .git -> .git.bak-mydotfiles when it takes ownership of a
+# directory. That stranded 620KB of history shows as untracked and would be
+# swept into a commit. Never tracked, never pushed.
+.git.bak-mydotfiles/
+
+# agent tooling config, not neovim config — 11 files were tracked here
+.claude/
+.agents/
+
+.DS_Store
+*.log
+node_modules/

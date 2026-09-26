@@ -19,7 +19,8 @@
 --     terminal's config file — kitty's colors-*.conf or wezterm's
 --     colors/custom.lua (ml4w writes both on theme switch). The file is
 --     detected from env vars (KITTY_WINDOW_ID / WEZTERM_PANE, which survive
---     into tmux) and polled for live re-tints. If no palette source answers,
+--     into tmux) and FILE-WATCHED for instant live re-tints (a slow poll
+--     remains only as a safety net). If no palette source answers,
 --     we keep stock catppuccin mocha — the config degrades gracefully.
 
 local M = {}
@@ -88,6 +89,61 @@ local function mix(a, b, t)
   return '#' .. ch(ar, br) .. ch(ag, bg) .. ch(ab, bb)
 end
 
+-- Perceived luminance (0..1) of a '#rrggbb' color. Used ONLY to pick the theme
+-- direction from the wallpaper: bright background -> light theme (dark text),
+-- dark -> dark theme (bright text). This mirrors the rule in wezterm's
+-- colors/custom.lua and tmux's colors-from-matugen.sh so all three flip
+-- together. Token readability is a separate question, answered by contrast()
+-- below — this brightness approximation is not a readability measure.
+local function luminance(hex)
+  local r = tonumber(hex:sub(2, 3), 16) or 0
+  local g = tonumber(hex:sub(4, 5), 16) or 0
+  local b = tonumber(hex:sub(6, 7), 16) or 0
+  return (0.299 * r + 0.587 * g + 0.114 * b) / 255
+end
+
+local function is_light_bg()
+  local bg = pal.bg
+  return bg and bg:match '^#[%x][%x][%x][%x][%x][%x]$' and luminance(bg) >= 0.5
+end
+
+-- WCAG relative luminance + contrast ratio. The readability gate used to be a
+-- hand-picked cut on `luminance()` (0.40 dark / 0.63 light), which is a display-
+-- brightness approximation rather than a readability measure — it let #6e6e6a
+-- (3.64:1) and #787878 (4.20:1) through as readable on a near-black bg. Same
+-- rule and same constant in wezterm's colors/custom.lua and tmux's
+-- colors-from-matugen.sh; keep the three in sync.
+local MIN_CONTRAST = 4.5 -- WCAG AA for normal text
+
+local function channel(c)
+  c = c / 255
+  if c <= 0.04045 then
+    return c / 12.92
+  end
+  return ((c + 0.055) / 1.055) ^ 2.4
+end
+
+---WCAG relative luminance (0..1) of a '#rrggbb' colour.
+---@param hex string
+---@return number
+local function rel_lum(hex)
+  local r = tonumber(hex:sub(2, 3), 16) or 0
+  local g = tonumber(hex:sub(4, 5), 16) or 0
+  local b = tonumber(hex:sub(6, 7), 16) or 0
+  return 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b)
+end
+
+---WCAG contrast ratio (1..21) between two colours; symmetric, so it covers
+---both a dark token on a light bg and a light token on a dark one.
+---@param a string
+---@param b string
+---@return number
+local function contrast(a, b)
+  local la, lb = rel_lum(a), rel_lum(b)
+  local hi, lo = la > lb and la or lb, la < lb and la or lb
+  return (hi + 0.05) / (lo + 0.05)
+end
+
 -- Saturation (0..1) of a '#rrggbb' color. Terminal palettes occasionally map
 -- accent slots to grays — ml4w's kitty theme uses #e0e2e8 for green AND cyan,
 -- which washes the whole UI out gray when adopted wholesale. We only adopt an
@@ -107,17 +163,100 @@ end
 -- Pick an accent from an ANSI pair (base + bright). Prefers the bright variant
 -- (terminals design those to read on dark backgrounds), falling back to the
 -- base variant when only that one is colorful. Returns nil when both are gray
--- — the caller then keeps catppuccin's own accent.
+-- or fail the MIN_CONTRAST check against the adopted background — the caller
+-- then keeps catppuccin's own accent. (Saturation alone passed this wallpaper's
+-- dark olive success token as "green" code text; it reads at 2.87:1.)
 local ACCENT_MIN_SAT = 0.2
 local function acc(idx, bright)
   local base, bv = pal.ansi[idx], pal.ansi[bright]
-  if bv and saturation(bv) >= ACCENT_MIN_SAT then
+  local bg = pal.bg
+  local function readable(hex)
+    if not hex then
+      return false
+    end
+    if not bg then
+      return true
+    end
+    return contrast(hex, bg) >= MIN_CONTRAST
+  end
+  if readable(bv) and saturation(bv) >= ACCENT_MIN_SAT then
     return bv
   end
-  if base and saturation(base) >= ACCENT_MIN_SAT then
+  if readable(base) and saturation(base) >= ACCENT_MIN_SAT then
     return base
   end
   return nil
+end
+
+-- Hue (0..360) of a '#rrggbb' color; -1 for achromatic grays (never passed
+-- here — acc() already filters those out).
+local function hue(hex)
+  local r = tonumber(hex:sub(2, 3), 16) / 255
+  local g = tonumber(hex:sub(4, 5), 16) / 255
+  local b = tonumber(hex:sub(6, 7), 16) / 255
+  local max, min = math.max(r, g, b), math.min(r, g, b)
+  local d = max - min
+  if d == 0 then
+    return -1
+  end
+  local h
+  if max == r then
+    h = ((g - b) / d) % 6
+  elseif max == g then
+    h = (b - r) / d + 2
+  else
+    h = (r - g) / d + 4
+  end
+  return h * 60
+end
+
+-- Circular hue distance in degrees.
+local function hue_dist(a, b)
+  local d = math.abs(a - b)
+  return math.min(d, 360 - d)
+end
+
+-- Adopt terminal accents with GUARANTEED hue separation so code syntax keeps
+-- IDE-style contrast even on monochromatic wallpapers. The wallpaper's primary
+-- hue always owns the blue slot (UI chrome, links, functions stay themed), but
+-- every other accent is adopted only when its hue is far enough from every
+-- accent already taken — otherwise that slot falls back to catppuccin's fixed
+-- syntax palette. An all-warm wallpaper therefore yields gold chrome + the
+-- stock mint/green/red/lavender code palette, never everything-gold.
+local MIN_HUE_SEP = 40
+local function pick_accents()
+  local chosen = {} -- slot -> hex
+  local taken = {}  -- accepted hues
+
+  local primary = acc(4, 12) -- wallpaper primary -> blue slot, always
+  if primary then
+    chosen.blue = primary
+    taken[#taken + 1] = hue(primary)
+  end
+
+  local candidates = {
+    { 'lavender', 4, 12 }, { 'sapphire', 6, 14 }, { 'sky', 6, 14 }, { 'teal', 6, 14 },
+    { 'green', 2, 10 }, { 'yellow', 3, 11 }, { 'peach', 3, 11 }, { 'red', 1, 9 },
+    { 'maroon', 1, 9 }, { 'mauve', 5, 13 }, { 'pink', 5, 13 }, { 'flamingo', 1, 9 },
+  }
+  for _, c in ipairs(candidates) do
+    local hex = acc(c[2], c[3])
+    if hex then
+      local h = hue(hex)
+      local distinct = h >= 0
+      for _, other in ipairs(taken) do
+        if not distinct or hue_dist(h, other) < MIN_HUE_SEP then
+          distinct = false
+          break
+        end
+      end
+      if distinct then
+        chosen[c[1]] = hex
+        taken[#taken + 1] = h
+      end
+    end
+  end
+  return chosen
 end
 
 -- ---------------------------------------------------------------------------
@@ -132,11 +271,120 @@ local MOCHA_DEFAULTS = {
   flamingo = '#f2cdcd', rosewater = '#f5e0dc',
 }
 
--- Build catppuccin `color_overrides` from the collected terminal palette.
--- Falls back to catppuccin's own mocha defaults for any slot we never learned.
+-- Light (latte) defaults — used when the adopted background is bright, so
+-- gray ANSI slots fall back to colors that actually read on light surfaces.
+local LATTE_DEFAULTS = {
+  base = '#eff1f5', text = '#4c4f69', surface0 = '#ccd0da', surface1 = '#bcc0cc',
+  surface2 = '#acb0be', overlay0 = '#9ca0b0', overlay1 = '#8c8fa1', overlay2 = '#7c7f93',
+  blue = '#1e66f5', lavender = '#7287fd', sapphire = '#209fb5', sky = '#04a5e5',
+  teal = '#179299', green = '#40a02b', yellow = '#df8e1d', peach = '#fe640b',
+  red = '#d20f39', maroon = '#e64553', mauve = '#8839ef', pink = '#ea76cb',
+  flamingo = '#dd7878', rosewater = '#dc8a78',
+}
+
+-- HSLUV-space helpers via catppuccin's bundled lib: perceptually uniform
+-- hue rotation (unlike naive RGB hue math) so derived accents keep the same
+-- perceived lightness/saturation as the ones the wallpaper provided.
+local hsluv = require 'catppuccin.lib.hsluv'
+
+-- Hue (HSLUV space) of a hex color.
+local function hsluv_hue(hex)
+  local h, s, l = unpack(hsluv.hex_to_hsluv(hex))
+  return h
+end
+
+-- Rebuild a hex color keeping HSLUV saturation+lightness, changing hue.
+local function hsluv_rehue(hex, new_hue)
+  local _, s, l = unpack(hsluv.hex_to_hsluv(hex))
+  return hsluv.hsluv_to_hex { new_hue, s, l }
+end
+
+-- Perceptual hue distance (degrees, circular).
+local function hsluv_dist(a, b)
+  local d = math.abs(a - b) % 360
+  return math.min(d, 360 - d)
+end
+
+-- Derive a full, FUNCTIONALLY DISTINCT accent set for code syntax.
+--
+-- Why: a monochromatic wallpaper (this one is all warm red/orange) collapses
+-- most terminal accent slots onto 1-2 hues, so pick_accents() adopts only 2-3
+-- of them and every other syntax slot silently falls back to catppuccin
+-- defaults — a half-mixed palette where functions/strings/types barely
+-- differ from the wallpaper-primary chrome.
+--
+-- Strategy: whatever pick_accents() failed to adopt gets SYNTHESIZED at a
+-- guaranteed hue, spaced evenly around the wheel (golden-angle offsets from
+-- the primary hue), while keeping the wallpaper's own saturation/lightness
+-- (HSLUV) so everything reads as one family. Result: every functional group
+-- of code — comments, strings, numbers, keywords, operators, types,
+-- functions, members, params — has its own distinguishable hue, always.
+-- @param chosen table from pick_accents (slot -> hex, partial)
+-- @param primary_hex the wallpaper-primary hex (blue slot, always adopted)
+-- @param D defaults table (provides s/l reference when primary is missing)
+local function derive_accents(chosen, primary_hex, D)
+  -- hue offsets (degrees, HSLUV space) per slot, measured from the primary/
+  -- blue hue. Even ~36° spacing puts every functional role on its own hue:
+  -- functions(blue=primary) / types(yellow) / strings(green) / operators(sky)
+  -- / escapes(pink) / params(maroon) / keywords(mauve) / members(lavender) /
+  -- builtins(red) / numbers(peach). At the wallpaper's saturation+lightness
+  -- a 36° HSLUV step is a clearly visible color change (deltaE >> JND).
+  local OFFSETS = {
+    blue = 0,
+    yellow = 40,
+    green = 76,
+    sky = 112,
+    pink = 148,
+    maroon = 184,
+    mauve = 220,
+    lavender = 256,
+    red = 292,
+    peach = 328,
+    teal = 94,
+    sapphire = 130,
+    flamingo = 58,
+    rosewater = 20,
+  }
+  -- reference color for s/l: the wallpaper primary if we have it, else the
+  -- slot's own default (keeps light/dark themes both sane). Saturation
+  -- capped at 55 (user: s85+ reads as too bright/harsh) — soft, easy-on-the-
+  -- eyes hues close to stock catppuccin's own chroma; lightness 78 keeps
+  -- contrast ≥10:1 on the dark transparent bg.
+  local ref = primary_hex or D.blue
+  local base_hue = hsluv_hue(ref)
+  local _, s, l = unpack(hsluv.hex_to_hsluv(ref))
+  s = math.min(s or 55, 55)
+  l = math.min(l or 80, 78)
+  for slot, offset in pairs(OFFSETS) do
+    if not chosen[slot] and ref then
+      chosen[slot] = hsluv.hsluv_to_hex { (base_hue + offset) % 360, s, l }
+    end
+  end
+  return chosen
+end
+
 local function build_overrides()
-  local base = pal.bg or MOCHA_DEFAULTS.base
-  local text = pal.fg or MOCHA_DEFAULTS.text
+  local D = is_light_bg() and LATTE_DEFAULTS or MOCHA_DEFAULTS
+  local A = pick_accents()
+  -- guarantee FULL functional variation: synthesize any accent the terminal
+  -- palette couldn't provide (monochromatic wallpaper case), hue-spaced
+  -- around the primary so no two code roles share a color
+  derive_accents(A, A.blue, D)
+  -- Normalize EVERY accent (adopted + derived) to the same softness target:
+  -- s55 / l78 HSLUV. Adopted ones keep their natural hue but lose any neon
+  -- oversaturation — all 10 roles render at the same gentle chroma (user:
+  -- saturation was too bright). Dark themes only; light themes keep
+  -- guard-checked tokens as-is.
+  if not is_light_bg() then
+    for slot, hex in pairs(A) do
+      local h = hsluv_hue(hex)
+      if h >= 0 then
+        A[slot] = hsluv.hsluv_to_hex { h, 55, 78 }
+      end
+    end
+  end
+  local base = pal.bg or D.base
+  local text = pal.fg or D.text
   -- Surfaces are derived from bg/fg blends, never from ANSI slots: ml4w puts a
   -- light gray (#e0e2e8) in slot 8, which made menus/popups look like washed-
   -- out gray boxes when adopted as surface0.
@@ -155,22 +403,24 @@ local function build_overrides()
     text = text,
     subtext0 = mix(text, base, 0.3),
     subtext1 = mix(text, base, 0.15),
-    -- accents straight from the terminal — but only when actually colorful;
-    -- gray slots fall back to catppuccin mocha's own accents (see acc above)
-    blue = acc(4, 12) or MOCHA_DEFAULTS.blue,
-    lavender = acc(4, 12) or MOCHA_DEFAULTS.lavender,
-    sapphire = acc(6, 14) or MOCHA_DEFAULTS.sapphire,
-    sky = acc(6, 14) or MOCHA_DEFAULTS.sky,
-    teal = acc(6, 14) or MOCHA_DEFAULTS.teal,
-    green = acc(2, 10) or MOCHA_DEFAULTS.green,
-    yellow = acc(3, 11) or MOCHA_DEFAULTS.yellow,
-    peach = acc(3, 11) or MOCHA_DEFAULTS.peach,
-    red = acc(1, 9) or MOCHA_DEFAULTS.red,
-    maroon = acc(1, 9) or MOCHA_DEFAULTS.maroon,
-    mauve = acc(5, 13) or MOCHA_DEFAULTS.mauve,
-    pink = acc(5, 13) or MOCHA_DEFAULTS.pink,
-    flamingo = acc(1, 9) or MOCHA_DEFAULTS.flamingo,
-    rosewater = MOCHA_DEFAULTS.rosewater,
+    -- Accents: wallpaper primary owns blue (chrome + functions stay themed);
+    -- every other accent is adopted only when hue-distinct (pick_accents), so
+    -- monochromatic wallpapers fall back to catppuccin's spread-out syntax
+    -- palette — code never collapses into one color.
+    blue = A.blue or D.blue,
+    lavender = A.lavender or D.lavender,
+    sapphire = A.sapphire or D.sapphire,
+    sky = A.sky or D.sky,
+    teal = A.teal or D.teal,
+    green = A.green or D.green,
+    yellow = A.yellow or D.yellow,
+    peach = A.peach or D.peach,
+    red = A.red or D.red,
+    maroon = A.maroon or D.maroon,
+    mauve = A.mauve or D.mauve,
+    pink = A.pink or D.pink,
+    flamingo = A.flamingo or D.flamingo,
+    rosewater = D.rosewater,
   }
 end
 
@@ -179,17 +429,22 @@ end
 -- colors are sourced from the terminal instead of a wallpaper).
 -- ---------------------------------------------------------------------------
 local function catppuccin_opts()
+  -- Wallpaper direction decides the flavour: latte on bright backgrounds
+  -- (dark text), mocha on dark ones. vim.o.background must flip BEFORE the
+  -- scheme compiles — plugins and syntax files branch on it.
+  local light = is_light_bg()
+  local flavour = light and 'latte' or 'mocha'
+  vim.o.background = light and 'light' or 'dark'
   return {
-    flavour = 'mocha',
+    flavour = flavour,
     transparent_background = true, -- let kitty/wezterm opacity show through
-    color_overrides = { mocha = build_overrides() },
+    color_overrides = { [flavour] = build_overrides() },
     integrations = {
-      neo_tree           = true,
+      nvimtree           = true,
       treesitter         = true,
       blink_cmp          = true,
       gitsigns           = true,
       which_key          = true,
-      telescope          = { enabled = true },
       mini               = { enabled = true },
       snacks             = true,
       lsp_trouble        = true,
@@ -198,68 +453,61 @@ local function catppuccin_opts()
       flash              = true,
     },
     highlight_overrides = {
-      mocha = function(c)
-        -- Overlay design (glassmorphism, translated from the design skills):
-        -- every float — telescope, snacks picker, which-key, hover docs,
-        -- dressing, completion — shares ONE colored language instead of a
-        -- gray one. Bodies stay transparent (wallpaper glows through, winblend
-        -- frosts), rims are a luminous blue-tinted edge, and the selected row
-        -- is a raised blue-tinted pill.
+      [flavour] = function(c)
+        -- Overlay design (full transparency edition): every float — snacks
+        -- picker, which-key, hover docs, dressing, completion — has a fully
+        -- transparent body; rims are a luminous blue-tinted edge; selected
+        -- rows are marked with bold + underline accent fg, never a fill.
         local rim = mix(c.surface2, c.blue, 0.35) -- luminous blue float border
-        local pill = mix(c.surface1, c.blue, 0.2) -- raised selection pill
+        -- Octo's *Dark* tokens want a deeper tone on dark themes and a
+        -- softened tone on light ones (same luminance rule as the rest).
+        local darken = is_light_bg() and function(hex) return mix(hex, c.base, 0.45) end
+          or function(hex) return mix(hex, '#000000', 0.45) end
         return {
-          -- Explorer blends with terminal
-          NeoTreeNormal        = { bg = 'NONE', fg = c.text },
-          NeoTreeNormalNC      = { bg = 'NONE' },
-          NeoTreeEndOfBuffer   = { bg = 'NONE' },
-          NeoTreeWinSeparator  = { fg = c.surface1, bg = 'NONE' },
-          NeoTreeRootName      = { fg = c.blue, bold = true },
-          NeoTreeDirectoryName = { fg = c.blue },
-          NeoTreeDirectoryIcon = { fg = c.blue },
-          NeoTreeFileName      = { fg = c.text },
-          NeoTreeFileIcon      = { fg = c.subtext0 },
-          NeoTreeGitAdded      = { fg = c.green },
-          NeoTreeGitModified   = { fg = c.yellow },
-          NeoTreeGitUntracked  = { fg = c.mauve },
-          NeoTreeIndentMarker  = { fg = c.overlay0 },
+          -- Comments: catppuccin uses overlay0 (#6c7086, ~3.8:1 on this
+          -- background) which reads as barely-there gray. overlay1 keeps
+          -- the "receded" feel but clears the WCAG AA bar (~4.9:1).
+          Comment = { fg = c.overlay1, italic = true },
 
-          -- Completion popup: frosted, never fully transparent — a completion
-          -- list overlays the code you're typing, so bg NONE (inheriting the
-          -- transparent editor Normal) made it look like a broken see-through
-          -- box while writing. The body is a faint blue-tinted glass (not
-          -- gray surface0) and the selected row lifts as the blue pill.
-          Pmenu      = { bg = mix(c.surface0, c.blue, 0.06), fg = c.text },
-          PmenuSel   = { bg = pill, fg = c.blue, bold = true },
-          PmenuSbar  = { bg = mix(c.surface0, c.blue, 0.06) },
+          -- Explorer blends with terminal. nvim-tree.lua is the active tree
+          -- (neo-tree is disabled in editor/disable-neotree.lua), so these are
+          -- NvimTree* groups; catppuccin's nvimtree integration themes the rest.
+          NvimTreeNormal       = { bg = 'NONE', fg = c.text },
+          NvimTreeNormalNC     = { bg = 'NONE' },
+          NvimTreeEndOfBuffer  = { bg = 'NONE' },
+          NvimTreeWinSeparator = { fg = c.surface1, bg = 'NONE' },
+
+          -- Completion popup: FULL TRANSPARENCY (user preference) — body is
+          -- NONE like every other float; active row = blue bold underline.
+          Pmenu      = { bg = 'NONE', fg = c.text },
+          PmenuSel   = { bg = 'NONE', fg = c.blue, bold = true, underline = true },
+          PmenuMatchSel = { bg = 'NONE', fg = c.blue, bold = true },
+          PmenuKindSel = { bg = 'NONE', fg = c.blue, bold = true },
+          PmenuExtraSel = { bg = 'NONE', fg = c.text, bold = true },
+          PmenuSbar  = { bg = 'NONE' },
           PmenuThumb = { bg = c.blue },
 
-          -- blink.cmp overlays: frosted glass with a blue-tinted rim. The
-          -- menu MUST have a real background — its window maps Normal →
-          -- BlinkCmpMenu, so without a bg here it inherits the transparent
-          -- editor Normal and the candidate list floats unreadably over the
-          -- code. surface0 + the window's own winblend (25) reads as frosted
-          -- glass: readable, but the wallpaper still glows through. The
-          -- border lifts a whisper of blue so the rounded corners read as a
-          -- glass edge instead of vanishing into the dark.
-          BlinkCmpMenu          = { bg = c.surface0, fg = c.text },
-          -- border bg pinned to the menu body so the rounded corners read as
-          -- clean curves, not dark notches (default linked to Pmenu's darker
-          -- bg would paint the corner cells)
-          BlinkCmpMenuBorder    = { fg = rim, bg = mix(c.surface0, c.blue, 0.06) },
+          -- blink.cmp overlays: FULL TRANSPARENCY — body NONE so the menu
+          -- floats directly over the wallpaper; active row = underline.
+          BlinkCmpMenu          = { bg = 'NONE', fg = c.text },
+          -- border bg pinned to transparent so the rounded corners read as
+          -- clean curves over the wallpaper
+          BlinkCmpMenuBorder    = { fg = rim, bg = 'NONE' },
           BlinkCmpMenuSelection = {
-            bg = pill,
-            fg = c.text,
+            bg = 'NONE',
+            fg = c.blue,
             bold = true,
+            underline = true,
           },
-          BlinkCmpScrollBarThumb  = { bg = mix(c.surface2, c.blue, 0.4) },
-          BlinkCmpScrollBarGutter = { bg = mix(c.surface0, c.blue, 0.06) },
+          BlinkCmpScrollBarThumb  = { bg = c.blue },
+          BlinkCmpScrollBarGutter = { bg = 'NONE' },
           BlinkCmpLabel         = { fg = c.text },
           BlinkCmpLabelMatch    = { fg = c.blue, bold = true },
           BlinkCmpLabelDetail   = { fg = c.overlay1 },
-          BlinkCmpDoc           = { bg = mix(c.surface0, c.blue, 0.06) },
-          BlinkCmpDocBorder     = { fg = rim, bg = mix(c.surface0, c.blue, 0.06) },
-          BlinkCmpSignatureHelp = { bg = mix(c.surface0, c.blue, 0.06) },
-          BlinkCmpSignatureHelpBorder = { fg = rim, bg = mix(c.surface0, c.blue, 0.06) },
+          BlinkCmpDoc           = { bg = 'NONE' },
+          BlinkCmpDocBorder     = { fg = rim, bg = 'NONE' },
+          BlinkCmpSignatureHelp = { bg = 'NONE' },
+          BlinkCmpSignatureHelpBorder = { fg = rim, bg = 'NONE' },
           BlinkCmpGhostText     = { fg = c.overlay0 },
           BlinkCmpKindFunction  = { fg = c.blue },
           BlinkCmpKindMethod    = { fg = c.blue },
@@ -271,11 +519,19 @@ local function catppuccin_opts()
           BlinkCmpKindText      = { fg = c.subtext0 },
           BlinkCmpKindProperty  = { fg = c.subtext0 },
 
-          -- contrast polish for dim palettes
-          Search      = { bg = c.blue, fg = c.base },
-          Visual      = { bg = c.surface1 },
-          MatchParen  = { bg = c.surface1, fg = c.blue, bold = true },
+          -- contrast polish — underline/fg based, no filled boxes (full
+          -- transparency: wallpaper visible through everything)
+          Search      = { bg = 'NONE', fg = c.blue, bold = true, underline = true },
+          CurSearch   = { bg = 'NONE', fg = c.yellow, bold = true, underline = true },
+          Visual      = { bg = 'NONE', fg = c.text, bold = true },
+          MatchParen  = { bg = 'NONE', fg = c.blue, bold = true, underline = true },
+          IncSearch   = { bg = 'NONE', fg = c.peach, bold = true, underline = true },
           WinSeparator = { fg = c.surface1 },
+
+          -- Active line: NO bg (full transparency) — the cursor row is
+          -- marked by the blue bold line number alone.
+          CursorLine   = { bg = 'NONE' },
+          CursorLineNr = { fg = c.blue, bold = true },
 
           -- Floating windows (hover, diagnostics popup, dressing, which-key):
           -- fully transparent body — the wallpaper shows through, with the
@@ -286,25 +542,9 @@ local function catppuccin_opts()
           NormalFloat = { bg = 'NONE', fg = c.text },
 
           -- -----------------------------------------------------------------
-          -- Telescope picker — colored glass, not gray
+          -- Snacks picker — the single picker (telescope removed)
           -- -----------------------------------------------------------------
-          -- Border/body link FloatBorder/NormalFloat above (catppuccin
-          -- integration), so the rim is already blue; these pin the selection
-          -- pill, match text, and prompt prefix that would otherwise sit on
-          -- gray surface0.
-          TelescopeSelection = { bg = pill, fg = c.text, bold = true },
-          TelescopeSelectionCaret = { fg = c.flamingo, bg = pill },
-          TelescopeMatching = { fg = c.blue, bold = true },
-          TelescopePromptPrefix = { fg = c.flamingo },
-          TelescopeTitle = { fg = c.blue, bg = 'NONE' },
-          TelescopePromptTitle = { fg = c.blue, bg = 'NONE' },
-          TelescopeResultsTitle = { fg = c.lavender, bg = 'NONE' },
-          TelescopePreviewTitle = { fg = c.green, bg = 'NONE' },
-
-          -- -----------------------------------------------------------------
-          -- Snacks picker — same language as telescope
-          -- -----------------------------------------------------------------
-          SnacksPickerSelected = { bg = pill, fg = c.text, bold = true },
+          SnacksPickerSelected = { bg = 'NONE', fg = c.blue, bold = true, underline = true },
           SnacksPickerMatch = { fg = c.blue, bold = true },
           SnacksPickerPrompt = { fg = c.flamingo },
           SnacksPickerTitle = { fg = c.blue, bg = 'NONE' },
@@ -313,21 +553,43 @@ local function catppuccin_opts()
           SnacksPickerPreviewTitle = { fg = c.green, bg = 'NONE' },
 
           -- -----------------------------------------------------------------
-          -- Notifications — colored glass cards, one hue per level
+          -- Notifications — accent-colored text, transparent body
           -- -----------------------------------------------------------------
-          -- Body is a faint tint of the level color (readable text on top);
-          -- catppuccin already paints the icon/title/border in the full
-          -- level color, so each card reads as a tinted glass chip.
-          SnacksNotifierInfo  = { fg = c.text, bg = mix(c.base, c.blue, 0.1) },
-          SnacksNotifierWarn  = { fg = c.text, bg = mix(c.base, c.yellow, 0.08) },
-          SnacksNotifierError = { fg = c.text, bg = mix(c.base, c.red, 0.08) },
-          SnacksNotifierDebug = { fg = c.text, bg = mix(c.base, c.peach, 0.08) },
-          SnacksNotifierTrace = { fg = c.text, bg = mix(c.base, c.rosewater, 0.08) },
+          -- Notifications — accent-colored text, transparent body
+          SnacksNotifierInfo  = { fg = c.blue },
+          SnacksNotifierWarn  = { fg = c.yellow },
+          SnacksNotifierError = { fg = c.red },
+          SnacksNotifierDebug = { fg = c.peach },
+          SnacksNotifierTrace = { fg = c.rosewater },
+
+          -- -----------------------------------------------------------------
+          -- Octo — GitHub issues/PRs/discussions (gh CLI backend)
+          -- -----------------------------------------------------------------
+          -- Octo's semantic colors map onto the wallpaper palette: status
+          -- dots, timeline markers, and merge-state chips all re-tint when
+          -- the wallpaper changes (catppuccin re-applies this table).
+          OctoWhite      = { fg = c.text },
+          OctoGrey       = { fg = c.overlay1 },
+          OctoBlack      = { fg = c.base },
+          OctoRed        = { fg = c.red },
+          OctoDarkRed    = { fg = darken(c.red) },
+          OctoGreen      = { fg = c.green },
+          OctoDarkGreen  = { fg = darken(c.green) },
+          OctoYellow     = { fg = c.yellow },
+          OctoDarkYellow = { fg = darken(c.yellow) },
+          OctoBlue       = { fg = c.blue },
+          OctoDarkBlue   = { fg = darken(c.blue) },
+          OctoPurple     = { fg = c.mauve },
+          -- merge-state chips: filled pills (text flips to the surface color)
+          OctoStateOpen   = { fg = c.base, bg = c.green },
+          OctoStateClosed = { fg = c.base, bg = c.red },
+          OctoStateMerged = { fg = c.base, bg = c.mauve },
         }
       end,
     },
   }
 end
+
 
 -- ---------------------------------------------------------------------------
 -- Terminal query + live update
@@ -349,6 +611,12 @@ local function apply()
   local ok, err = pcall(function()
     require('catppuccin').setup(opts)
     vim.cmd.colorscheme 'catppuccin'
+    -- Hierarchy rides on the SAME re-tint. It was its own lazy spec once and
+    -- that was the bug: two specs naming one plugin cannot agree on `dir`
+    -- (this file renames it to 'catppuccin', a bare 'catppuccin/nvim' resolves
+    -- to lazy/nvim) and lazy rejects the second with "Plugin changed dir". One
+    -- owner for the palette; the hierarchy is just the last step of it.
+    require('plugins.ui.hierarchy').apply()
   end)
   if not ok then
     vim.notify('terminal-colors: ' .. tostring(err), vim.log.levels.ERROR)
@@ -575,9 +843,13 @@ local function read_terminal_palette()
   local term = detect_terminal()
   if term == 'wezterm' then
     return read_wezterm_palette() or read_kitty_palette()
+  elseif term == 'kitty' then
+    return read_kitty_palette() or read_wezterm_palette()
   end
-  -- kitty (or unknown terminal): try kitty's file; wezterm's as a last resort
-  return read_kitty_palette() or read_wezterm_palette()
+  -- Unknown terminal (headless, plain ssh, ...): prefer the wallpaper-synced
+  -- wezterm palette — colors/custom.lua is the source of truth sync-wallpaper.sh
+  -- writes — before kitty's (which ml4w may leave stale).
+  return read_wezterm_palette() or read_kitty_palette()
 end
 
 -- Re-read the palette file and report whether any color changed — the 16
@@ -600,25 +872,62 @@ local function poll_palette_file()
   return false
 end
 
--- Poll the palette file every few seconds while inside tmux (where OSC is
--- dead) so theme switches re-tint live without needing focus changes. Runs
--- regardless of whether the initial boot read succeeded — a transient read
--- failure at startup gets recovered by the next poll instead of leaving the
--- editor stuck on stock mocha forever.
-local watch_timer
-local function start_palette_watch()
-  if not vim.env.TMUX then
-    return -- OSC live updates already cover the direct-terminal case
+-- Debounced re-read of the palette file after a filesystem change: the
+-- wallpaper sync may rewrite the palette in a burst, so collapse events
+-- within ~200ms, then re-read and re-tint once (no-op when colors unchanged).
+local refresh_timer
+local function refresh_from_file()
+  if refresh_timer then
+    refresh_timer:stop()
+  else
+    refresh_timer = vim.uv.new_timer()
   end
+  refresh_timer:start(200, 0, vim.schedule_wrap(function()
+    if poll_palette_file() and complete() then
+      apply()
+    end
+  end))
+end
+
+-- Live palette updates when OSC is dead (inside tmux, or over ssh where no
+-- terminal answers queries): watch the palette FILE instead of waiting out a
+-- poll interval. An fs event fires the instant the wallpaper sync rewrites
+-- the palette, so nvim re-tints ~instantly instead of up to 3s later.
+-- A slow poll is kept as a safety net for sources that miss fs events
+-- (e.g. atomic renames that some watchers don't surface).
+local watch_timer
+local watch_handle
+local function start_palette_watch()
   if watch_timer then
     return
   end
+  if not palette_file then
+    return -- colors came from OSC only; live updates arrive via TermResponse
+  end
+
   watch_timer = vim.uv.new_timer()
   watch_timer:start(3000, 3000, vim.schedule_wrap(function()
     if poll_palette_file() and complete() then
       apply()
     end
   end))
+
+  local handle = vim.uv.new_fs_event()
+  if not handle then
+    return
+  end
+  watch_handle = handle
+  local dir = vim.fs.dirname(palette_file) or vim.env.HOME or '/'
+  local ok_start = watch_handle:start(dir, {}, vim.schedule_wrap(function(err2)
+    if err2 then
+      return
+    end
+    refresh_from_file()
+  end))
+  if not ok_start then
+    watch_handle:close()
+    watch_handle = nil
+  end
 end
 
 -- ---------------------------------------------------------------------------
@@ -671,6 +980,13 @@ local function setup()
 end
 
 M.setup = setup
+-- Re-assert the current palette. Exposed for plugins that define their own
+-- highlight groups at setup time and clobber ours (Octo does). Re-running
+-- `colorscheme catppuccin` directly would rebuild the cache from the LAST
+-- color_overrides we set — which is only correct while nothing else has
+-- re-run it since. Going through apply() guarantees catppuccin.setup() sees
+-- the palette as it is right now.
+M.reassert = apply
 
 -- ---------------------------------------------------------------------------
 -- lazy.nvim spec
@@ -684,9 +1000,5 @@ return {
     config = function()
       setup()
     end,
-  },
-  {
-    'LazyVim/LazyVim',
-    opts = { colorscheme = 'catppuccin-mocha' },
   },
 }

@@ -26,19 +26,20 @@ Printable one-page summary. Leader = `Space`. Full detail in [`keymaps.md`](keym
 | `u C-r` · `.` | Undo/redo · repeat last change |
 | `ciw ci" ci( ci{` | Change inside word/quote/parens/braces |
 | `gsa gsd gsr` | Surround add/delete/replace |
+| `gsn` | Surround: set N lines (re-detect range) |
 
 ## Windows, tabs, buffers
 
 | Keys | What |
 |------|------|
-| `sh` / `sv` | Vertical / horizontal split |
+| `sh` / `sv` | `:vsplit` side-by-side / `:split` stacked (watch out: named for the split line, not the layout) |
 | `C-w h/j/k/l` · `C-w =` | Jump splits · equalize |
-| `te` · `<Tab>` `<S-Tab>` | New tab · next/prev tab |
+| `gt` `gT` | next/prev tab (native; `:tabnew` for a new tab — no custom map; `<Tab>` unmapped: it would kill `<C-i>` jumplist-forward) |
 | `]b` `[b` (or `S-h` `S-l`) | Next/prev buffer |
 | `Space ,` / `Space fb` | Switch buffer (MRU) |
 | `Space bd` `Space bo` `Space bD` | Delete buffer / others / +window |
 
-## Find (Telescope)
+## Find (snacks.picker)
 
 | Keys | What |
 |------|------|
@@ -49,6 +50,7 @@ Printable one-page summary. Leader = `Space`. Full detail in [`keymaps.md`](keym
 | `Space ss` `Space sS` | Symbols file / workspace |
 | `Space sh` `Space sk` | Help / all keymaps |
 | `Space e` | File tree toggle |
+| `gd gr gy gI` | Def / refs / type-def / impl |
 
 ## LSP
 
@@ -77,7 +79,6 @@ Printable one-page summary. Leader = `Space`. Full detail in [`keymaps.md`](keym
 | `Space tr` `Space tt` `Space tT` | Test: nearest / file / all |
 | `Space db` `Space dc` `Space do` | Debug: breakpoint / run / step over |
 | `Space du` | Debug UI toggle |
-| `Space a` | AI agent (Claude Code / opencode) |
 
 ## Survive
 
@@ -85,4 +86,4 @@ Printable one-page summary. Leader = `Space`. Full detail in [`keymaps.md`](keym
 
 ## Key plugins
 
-lazy.nvim · telescope · blink.cmp · nvim-treesitter · nvim-lspconfig · mason · conform · nvim-lint · neotest · nvim-dap · gitsigns · lazygit · nvim-tree · which-key · mini.surround/mini.ai/mini.move · ufo · overseer · trouble · ai-tools
+lazy.nvim · snacks.nvim (picker/dashboard) · blink.cmp · nvim-treesitter · nvim-lspconfig · mason · conform · nvim-lint · neotest · nvim-dap · gitsigns · lazygit · nvim-tree · which-key · mini.surround/mini.ai/mini.move · ufo · overseer · trouble

@@ -28,7 +28,19 @@ return {
     opts = {
       reload_on_bufenter = true,
       hijack_cursor = true,
-      hijack_netrw = true,
+      -- nvim-tree clears netrw's FileExplorer augroup on setup
+      -- (nvim-tree/config.lua:534-536, gated on `hijack_netrw`). This config
+      -- disables netrwPlugin (lazy-init.lua:80), and netrwPlugin.vim is the
+      -- ONLY thing that creates that group -- so the clear runs against a
+      -- group that does not exist and startup dies with
+      --   E216: No such group or event: FileExplorer *
+      -- The `silent!` nvim-tree wraps it in does not help: that suppresses
+      -- errors from *running* a command, not the E216 raised while *parsing*
+      -- it. nvim-tree already owns the directory (hijack_directories, <leader>e),
+      -- so the netrw hijack has nothing left to do -- turning it off is also
+      -- the correct behaviour, not just a way to dodge the error.
+      hijack_netrw = false,
+      disable_netrw = true,
       sync_root_with_cwd = true,
       hijack_unnamed_buffer_when_opening = true,
       auto_reload_on_write = true,
@@ -61,7 +73,10 @@ return {
           enable = false,
         },
         root_folder_label = ':t',
-        highlight_git = true,
+        -- Collapse single-child directory chains (lua/nvim-tree -> one node).
+        -- Toggle at runtime with 'L'.
+        group_empty = true,
+        highlight_git = 'name', -- string form; boolean true here is deprecated
       },
       filters = {
         dotfiles = false,
@@ -71,7 +86,6 @@ return {
       },
       git = {
         enable = true,
-        ignore = false,
         timeout = 1000,
       },
     },
@@ -96,17 +110,19 @@ return {
 
         -- custom mappings
         vim.keymap.set('n', 'P', api.node.open.preview, ops 'Preview')
+        -- api names are "vertical"/"horizontal" = the split line, so
+        -- vertical = side-by-side windows, horizontal = stacked windows.
         vim.keymap.set(
           'n',
           's',
           api.node.open.vertical_no_picker,
-          ops 'Open Horizontal'
+          ops 'Open Side-by-side (vsplit)'
         )
         vim.keymap.set(
           'n',
           'S',
           api.node.open.horizontal_no_picker,
-          ops 'Open Vertical'
+          ops 'Open Stacked (split)'
         )
       end
 

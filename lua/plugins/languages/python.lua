@@ -1,70 +1,7 @@
-local lsp = 'ruff'
-local ruff = 'ruff'
-
 return {
   {
     'nvim-treesitter/nvim-treesitter',
     opts = { ensure_installed = { 'ninja', 'rst' } },
-  },
-  {
-    'neovim/nvim-lspconfig',
-    opts = {
-      servers = {
-        ruff = {
-          cmd_env = { RUFF_TRACE = 'messages' },
-          init_options = {
-            settings = {
-              logLevel = 'error',
-            },
-          },
-          keys = {
-            {
-              '<leader>co',
-              function()
-                vim.lsp.buf.code_action({
-                  apply = true,
-                  context = {
-                    only = { 'source.organizeImports' },
-                    diagnostics = {},
-                  },
-                })
-              end,
-              desc = 'Organize Imports',
-            },
-          },
-        },
-        ruff_lsp = {
-          keys = {
-            {
-              '<leader>co',
-              function()
-                vim.lsp.buf.code_action({
-                  apply = true,
-                  context = {
-                    only = { 'source.organizeImports' },
-                    diagnostics = {},
-                  },
-                })
-              end,
-              desc = 'Organize Imports',
-            },
-          },
-        },
-      },
-      -- ruff is the single Python server (lint + type-checking + format).
-      -- No setup needed — it replaces pyright entirely.
-    },
-  },
-  {
-    'neovim/nvim-lspconfig',
-    opts = function(_, opts)
-      local servers =
-        { 'pyright', 'basedpyright', 'ruff', 'ruff_lsp', ruff, lsp }
-      for _, server in ipairs(servers) do
-        opts.servers[server] = opts.servers[server] or {}
-        opts.servers[server].enabled = server == lsp or server == ruff
-      end
-    end,
   },
   {
     'nvim-neotest/neotest',
@@ -72,19 +9,8 @@ return {
     dependencies = {
       'nvim-neotest/neotest-python',
     },
-    opts = {
-      adapters = {
-        ['neotest-python'] = {},
-      },
-    },
-  },
-  {
-    'hrsh7th/nvim-cmp',
-    optional = true,
-    opts = function(_, opts)
-      opts.auto_brackets = opts.auto_brackets or {}
-      table.insert(opts.auto_brackets, 'python')
-    end,
+    -- NOTE: no `opts.adapters` entry here — neotest-python is already wired
+    -- in plugins/test/core.lua; adding it again registered the adapter twice.
   },
   {
     'mfussenegger/nvim-dap',
@@ -125,10 +51,14 @@ return {
     branch = 'regexp',
     dependencies = {
       'neovim/nvim-lspconfig',
-      'nvim-telescope/telescope.nvim',
       'mfussenegger/nvim-dap-python',
     },
-    opts = {},
+    opts = {
+      options = {
+        -- deterministic UI: snacks.picker (telescope removed)
+        picker = 'snacks',
+      },
+    },
     keys = {
       { '<leader>vs', '<cmd>VenvSelect<cr>' },
       { '<leader>vc', '<cmd>VenvSelectCached<cr>' },

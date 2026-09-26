@@ -21,6 +21,8 @@ return {
           scss = { 'prettier', 'prettierd' },
           vue = { 'prettier', 'prettierd' },
           yaml = { 'prettier', 'prettierd' },
+          php = { 'pint' },
+          blade = { 'blade-formatter' },
         },
       }
 

@@ -1,7 +1,7 @@
 -- The ACTIVE tab's raised "pill": clearly lighter than the terminal
--- background so it reads as a raised chip. A whisper of the blue accent
--- keeps it from feeling flat gray — the file you're on is the one raised
--- element in the bar.
+-- background so it reads as a raised chip. It borrows the same blue accent
+-- wezterm's tab bar / tmux's window pill use (raised 0.08 -> 0.28 so the
+-- shared accent is actually visible) while keeping light text readable.
 local function pill_tint(c)
   local function mix(hex_a, hex_b, t)
     local function to_rgb(hex)
@@ -17,7 +17,7 @@ local function pill_tint(c)
       math.floor(ab + (bb - ab) * t + 0.5)
     )
   end
-  return mix(c.surface2, c.blue, 0.08)
+  return mix(c.surface2, c.blue, 0.28)
 end
 
 -- The full highlight table (shared between opts and the ColorScheme re-tint).
@@ -90,6 +90,10 @@ local function highlights_from(c)
   }
 end
 
+-- <leader>bs toggle state: the buffer ids in MRU (pre-directory-sort)
+-- order, saved before switching to directory grouping so it can be put back.
+local mru_snapshot = nil
+
 return {
   {
     'akinsho/bufferline.nvim',
@@ -97,9 +101,45 @@ return {
     dependencies = { 'nvim-tree/nvim-web-devicons' },
     keys = {
       { '<leader>bp', '<cmd>BufferLinePick<CR>', desc = 'Pick Buffer (tabs)' },
+      {
+        '<leader>bs',
+        function()
+          -- Toggle: MRU (insert_after_current, the default) <-> directory.
+          -- Gotchas learned from the source (verified headless):
+          --  - sort_by('directory') records a one-shot order in
+          --    state.custom_sort; config.options.sort_by is NOT changed.
+          --  - insert_after_current "respects the current order", so simply
+          --    clearing custom_sort does NOT restore MRU — the directory
+          --    order would persist. Instead: snapshot ids before sorting,
+          --    and restore the snapshot via state.custom_sort on toggle-back.
+          --  - persist_buffer_sort=true (plugin default) keeps any custom
+          --    order across refreshes, which is exactly what we want here.
+          local state = require 'bufferline.state'
+          if not mru_snapshot then
+            local ids = {}
+            for _, c in ipairs(state.components or {}) do
+              table.insert(ids, c.id)
+            end
+            if #ids == 0 then
+              return vim.notify('bufferline: no buffers to sort', vim.log.levels.WARN)
+            end
+            mru_snapshot = ids
+            require('bufferline').sort_by 'directory'
+            vim.notify('bufferline: directory order', vim.log.levels.INFO)
+          else
+            -- custom_sort drives get_updated_buffers on every refresh,
+            -- so restoring the snapshot puts the strip back to MRU order
+            require('bufferline.state').custom_sort = mru_snapshot
+            require('bufferline.ui').refresh()
+            mru_snapshot = nil
+            vim.notify('bufferline: MRU order', vim.log.levels.INFO)
+          end
+        end,
+        desc = 'Toggle Buffer Sort (MRU / directory)',
+      },
     },
     opts = function()
-      local c = require('catppuccin.palettes').get_palette 'mocha'
+      local c = require('utils.theme').palette()
 
       return {
         options = {
@@ -157,7 +197,7 @@ return {
       vim.api.nvim_create_autocmd('ColorScheme', {
         group = vim.api.nvim_create_augroup('bufferline-palette', { clear = true }),
         callback = function()
-          local c = require('catppuccin.palettes').get_palette 'mocha'
+          local c = require('utils.theme').palette()
           local hl = require('bufferline.highlights')
           for name, attrs in pairs(highlights_from(c)) do
             vim.api.nvim_set_hl(0, hl.generate_name(name), attrs)

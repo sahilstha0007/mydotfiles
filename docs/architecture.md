@@ -26,7 +26,6 @@ duplicate) means it never gets missed, even if someone reorders later.
 ├── lazy-lock.json            # pinned plugin versions
 ├── lazyvim.json              # lazy.nvim settings
 ├── stylua.toml               # Lua formatting config
-├── CLAUDE.md                 # project-level Claude context (auto-loaded)
 ├── docs/                     # you are here
 ├── lsp/                      # per-language-server configs
 │   ├── eslint.lua
@@ -92,22 +91,12 @@ The full architecture and the per-server reasoning is in [`lsp.md`](lsp.md).
 Every keymap is defined either in `lua/keymaps.lua` (custom bindings not
 belonging to a specific plugin) or inline in a plugin spec (bindings that
 should only be active when that plugin is loaded — `which-key`, snacks,
-overseer, telescope, etc.).
+overseer, etc.).
 
 See [`keymaps.md`](keymaps.md) for the full list grouped by purpose.
-
-## AI agents
-
-`lua/plugins/editor/ai-tools.lua` defines a picker bound to `<leader>a` that
-launches Claude Code or opencode. Inside tmux it opens as a real pane so all
-existing tmux features apply to it.
-
-See [`ai-tools.md`](ai-tools.md) for how to add a new agent CLI.
 
 ## What's intentionally NOT here
 
 - **No LazyVim.** This is a Kickstart-style layout: each plugin gets its own
   small spec. Bigger than LazyVim to maintain, smaller and easier to reason
   about at 3am. The trade is documented.
-- **No in-editor AI assistant.** avante.nvim was removed (commit history).
-  The replacement is CLI agents + tmux panes — see `ai-tools.md`.

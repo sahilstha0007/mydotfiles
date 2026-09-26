@@ -31,8 +31,6 @@ them. Note: this file has uncommitted edits; review before modifying.
 trouble.nvim. Replaces the default quickfix/location list with a richer UI
 that you can navigate like a file tree.
 
-> AI plugin (`avante.nvim`) was removed from this folder — see commit history.
-
 ## DAP
 
 ### `lua/plugins/dap/core.lua`
@@ -41,9 +39,6 @@ adapter entrypoints. Per-language adapter setup lives in `lsp/` style files
 or directly inside this spec when added.
 
 ## Editor
-
-### `lua/plugins/editor/ai-tools.lua`
-AI coding-agent CLI launcher. See [`ai-tools.md`](ai-tools.md) for full doc.
 
 ### `lua/plugins/editor/bufferline.lua`
 bufferline.nvim. Browser-style tab strip of open buffers on top. `<leader>bp`
@@ -60,9 +55,6 @@ to override defaults.
 ### `lua/plugins/editor/diffview.lua`
 diffview.nvim. Side-by-side branch / commit / PR diffs (lazygit is quick,
 this is thorough). `<leader>gD` open, `<leader>gH` file history, `<leader>gq` close.
-
-### `lua/plugins/editor/fzf.lua`
-fzf-lua. Commented out — `telescope` is the picker. Uncomment if you want both.
 
 ### `lua/plugins/editor/flash.lua`
 flash.nvim. Jump to any visible word by typing 1–2 letters: `<leader>fj`
@@ -94,14 +86,13 @@ overseer.nvim. Run build / test tasks as Neovim jobs. Keymaps live in this
 spec under `<leader>o*` (toggle, run, save bundle, etc.).
 
 ### `lua/plugins/editor/snacks.lua`
-snacks.nvim. The modern-quality-of-life hub: picker (file/grep/help),
-smooth scrolling, thin indent guides, fancy notifications, word
-highlighting, dimmed unfocused windows, subtle UI animations, **and the
-dashboard start screen** (recent files + session restore + key hints).
-
-### `lua/plugins/editor/telescope.lua`
-telescope.nvim. Fuzzy finder. The "everything-you-need-in-2-keystrokes"
-plugin. Bindings defined inline in this spec.
+snacks.nvim. The modern-quality-of-life hub: **the single picker system**
+(file/grep/help/buffers/diagnostics — telescope was fully removed), smooth
+scrolling, thin indent guides, fancy notifications, word highlighting,
+dimmed unfocused windows, subtle UI animations, **and the dashboard start
+screen** (recent files + session restore + key hints). Bindings live in
+this spec under `<leader>s*` / `<leader>ff` etc. LSP navigation (`gd`/`gr`/
+`gI`/`gy`) is wired to snacks in `pickers.lua`.
 
 ### `lua/plugins/editor/tmux.lua`
 tmux integration: `aserowy/tmux.nvim` for resize and `christoomey/vim-tmux-navigator`
@@ -117,7 +108,8 @@ keymap a `desc = '…'` and it shows up here.
 
 ### `lua/plugins/editor/yanky.lua`
 yanky.nvim. Clipboard history — every yank/delete is kept in a ring that
-survives restarts. `<leader>sy` opens the history picker in Telescope.
+survives restarts. `<leader>sy` opens the history picker via `vim.ui.select`
+(snacks).
 
 ### `lua/plugins/editor/mini.lua`
 mini.nvim grab-bag: `mini.ai` (text objects — `af`/`if`/`ac`/`ic`/`ab`/`ib`/

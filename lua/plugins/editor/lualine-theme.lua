@@ -15,7 +15,7 @@ local MODE_SLOTS = {
 M.mode_colors = {}
 
 local function get_palette()
-  local palette = require('catppuccin.palettes').get_palette 'mocha'
+  local palette = require('utils.theme').palette()
 
   return {
     bg = palette.base,

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Learn Neovim — complete coding reference for your setup</title>
-<meta name="description" content="A basic-to-intermediate complete reference for Neovim, built around Sahil's actual config: keymaps, leader, telescope, LSP, git, DAP, tests, plugins.">
+<meta name="description" content="A basic-to-intermediate complete reference for Neovim, built around Sahil's actual config: keymaps, leader, snacks.picker, LSP, git, DAP, tests, plugins.">
 <style>
 /* ------------------------------------------------------------------ *
  *  Learn Neovim — complete coding reference for Sahil's setup.
@@ -270,10 +270,9 @@ footer .mono{color:var(--muted)}
   <a href="#git"><span class="n">21</span>Git</a>
   <a href="#fold"><span class="n">22</span>Folding</a>
   <a href="#terminal"><span class="n">23</span>Terminal &amp; tmux</a>
-  <a href="#ai"><span class="n">24</span>AI agents</a>
-  <a href="#plugins"><span class="n">25</span>Plugins &amp; config</a>
-  <a href="#health"><span class="n">26</span>Help &amp; health</a>
-  <a href="#polish"><span class="n">27</span>Dashboard &amp; polish</a>
+  <a href="#plugins"><span class="n">24</span>Plugins &amp; config</a>
+  <a href="#health"><span class="n">25</span>Help &amp; health</a>
+  <a href="#polish"><span class="n">26</span>Dashboard &amp; polish</a>
 
   <h2>Appendix</h2>
   <a href="#cheatsheet"><span class="n">A</span>Full cheat sheet</a>
@@ -331,10 +330,10 @@ the <span class="k">keyboard</span> is the whole <span class="m">editor</span>.
 plugins     = <span class="s">lazy.nvim</span>       <span class="cm">-- lua/lazy-init.lua, one spec per file</span>
 colors      = <span class="s">matugen</span>          <span class="cm">-- Material You, from your wallpaper</span>
 completion  = <span class="s">blink.cmp</span>       <span class="cm">-- + friendly-snippets</span>
-finding     = <span class="s">telescope</span> + <span class="s">ripgrep</span>
+finding     = <span class="s">snacks.picker</span> + <span class="s">ripgrep</span>   <span class="cm">-- single picker system</span>
 LSP         = <span class="s">vim.lsp</span> (native) + <span class="s">mason</span> installs
 statusline  = <span class="s">lualine</span>          <span class="cm">-- this page's header is modeled on it</span>
-dashboard   = <span class="s">snacks</span>           <span class="cm">-- start screen + smooth UX (lesson 27)</span>
+dashboard   = <span class="s">snacks</span>           <span class="cm">-- start screen + smooth UX (lesson 26)</span>
 sessions    = <span class="s">mini.sessions</span>    <span class="cm">-- Space q q / l / s</span></pre>
   </div>
 </section>
@@ -384,7 +383,8 @@ vim.opt.scrolloff = <span class="s">10</span></pre>
   <div class="krow"><span class="k"><kbd>x</kbd> <kbd>X</kbd></span><span class="d">Delete char under / before the cursor.</span></div>
   <div class="krow"><span class="k"><kbd>dd</kbd> <kbd>yy</kbd> <kbd>p</kbd> <kbd>P</kbd></span><span class="d">Delete line, copy line, paste <b>after</b> cursor, paste <b>before</b>. <kbd>3dd</kbd> cuts three lines.</span></div>
   <div class="krow"><span class="k"><kbd>dw</kbd> <kbd>d$</kbd> <kbd>d0</kbd></span><span class="d">Delete word, to end of line, to start of line.</span></div>
-  <div class="krow"><span class="k"><kbd>u</kbd> <kbd>C-r</kbd></span><span class="d">Undo / redo. Your undo <b>survives restarts</b> (undofile is on).</span></div>
+  <div class="krow"><span class="k"><kbd>u</kbd> <kbd>U</kbd></span><span class="d">Undo / redo (<kbd>U</kbd> is your mapping; native <kbd>C-r</kbd> still works too). Your undo <b>survives restarts</b> (undofile is on).</span></div>
+  <div class="krow"><span class="k"><kbd>gc</kbd><kbd>c</kbd> <kbd>gc</kbd><kbd>i</kbd><kbd>p</kbd></span><span class="d">Toggle comment on a line / an inner paragraph (mini.comment). Works in visual too.</span></div>
   <div class="krow"><span class="k"><kbd>.</kbd></span><span class="d">Repeat the last change. <kbd>dd</kbd> then <kbd>.</kbd> <kbd>.</kbd> <kbd>.</kbd> deletes line after line. The most powerful key in vim.</span></div>
   <div class="krow"><span class="k"><kbd>r</kbd><kbd>x</kbd> <kbd>~</kbd></span><span class="d">Replace one char with <code>x</code>; flip case of a char.</span></div>
   <div class="krow"><span class="k"><kbd>J</kbd></span><span class="d">Join the next line onto this one.</span></div>
@@ -435,7 +435,9 @@ vim.opt.clipboard = <span class="s">'unnamedplus'</span>  <span class="cm">-- ya
 <span class="k">vim.keymap.set</span>(<span class="s">'i'</span>, <span class="s">'&lt;C-l&gt;'</span>, <span class="k">function</span>() <span class="cm">-- returns '&lt;Right&gt;' if on a closing char</span> <span class="k">end</span>, { expr = <span class="s">true</span> })
 
 <span class="cm">-- nvim-autopairs closes brackets for you</span>
-<span class="k">type</span> <span class="s">(</span>  →  <span class="s">()</span>  <span class="cm">cursor lands inside</span></pre>
+<span class="k">type</span> <span class="s">(</span>  →  <span class="s">()</span>  <span class="cm">cursor lands inside</span>
+<span class="k">type</span> <span class="s">&lt;</span>  →  <span class="s">&lt;&gt;</span>  <span class="cm">in html/xml/vue/svelte/astro/php/blade — markup filetypes only; code keeps &lt; as an operator</span>
+<span class="cm">-- nvim-ts-autotag: typing &gt; after &lt;p inserts &lt;p&gt;&lt;/p&gt; (cursor inside); editing an opening tag name renames its closing twin</span></pre>
   </div>
 
   <div class="tip"><b>Escape early, escape often.</b> The moment your thought is typed, <kbd>Esc</kbd> and move on. Speed in vim comes from <i>not</i> living in insert.</div>
@@ -519,7 +521,7 @@ vim.opt.cmdheight = <span class="s">0</span>        <span class="cm">-- the : li
     <div class="card"><kbd>Space</kbd><kbd>q</kbd><p>Session group: save / load last / select (mini.sessions).</p></div>
   </div>
 
-  <div class="tip"><b>Your setup now has a start screen.</b> Launch nvim with no arguments and the snacks <b>dashboard</b> appears — press <kbd>f</kbd> to find a file, <kbd>g</kbd> to grep, <kbd>s</kbd> to restore a session, <kbd>a</kbd> for an AI agent. Full tour in lesson 27.</div>
+  <div class="tip"><b>Your setup now has a start screen.</b> Launch nvim with no arguments and the snacks <b>dashboard</b> appears — press <kbd>f</kbd> to find a file, <kbd>g</kbd> to grep, <kbd>s</kbd> to restore a session. Full tour in lesson 26.</div>
 
   <div class="yset">
     <div class="yh"><span class="tag">your config</span> · <code>lua/globals.lua</code> + <code>lua/plugins/editor/which-key.lua</code></div>
@@ -548,25 +550,27 @@ spec = {
   <h2><span class="no">07</span>Windows &amp; tabs <span class="badge">normal</span></h2>
   <p class="lede">Your config has its own split vocabulary. Learn it and you'll stop opening a second terminal for everything.</p>
 
-  <div class="krow"><span class="k"><kbd>sh</kbd></span><span class="d"><b>Your config:</b> vertical split — editor side by side (<code>:vsplit</code>).</span></div>
-  <div class="krow"><span class="k"><kbd>sv</kbd></span><span class="d"><b>Your config:</b> horizontal split — one above the other (<code>:split</code>).</span></div>
+  <div class="krow"><span class="k"><kbd>Space</kbd><kbd>|</kbd></span><span class="d"><b>Your config:</b> vertical split — editor side by side (<code>:vsplit</code>). The key matches the split line (LazyVim convention; <kbd>sh</kbd> legacy alias).</span></div>
+  <div class="krow"><span class="k"><kbd>Space</kbd><kbd>-</kbd></span><span class="d"><b>Your config:</b> horizontal split — one above the other (<code>:split</code>). tmux mirrors this: <kbd>C-a</kbd><kbd>|</kbd> / <kbd>C-a</kbd><kbd>-</kbd>.</span></div>
+  <div class="krow"><span class="k"><kbd>Space</kbd><kbd>wd</kbd></span><span class="d"><b>Your config:</b> delete (close) the current window.</span></div>
+  <div class="krow"><span class="k"><kbd>Space</kbd><kbd>wm</kbd></span><span class="d"><b>Your config:</b> maximize (zoom) the current window — same engine as <kbd>Space</kbd><kbd>Z</kbd>.</span></div>
+  <div class="krow"><span class="k"><kbd>C-↑/↓/←/→</kbd></span><span class="d"><b>Your config:</b> resize window ±2 (LazyVim convention).</span></div>
   <div class="krow"><span class="k"><kbd>C-w</kbd><kbd>C-w</kbd> <kbd>C-w</kbd><kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd></span><span class="d">Native: cycle splits / jump to the split in a direction.</span></div>
   <div class="krow"><span class="k"><kbd>C-w</kbd><kbd>=</kbd> <kbd>C-w</kbd><kbd>_</kbd> <kbd>C-w</kbd><kbd>|</kbd></span><span class="d">Equal-size all splits / maximize this one vertically / horizontally.</span></div>
   <div class="krow"><span class="k"><kbd>C-w</kbd><kbd>q</kbd> <kbd>C-w</kbd><kbd>o</kbd></span><span class="d">Close the split / close all other splits.</span></div>
-  <div class="krow"><span class="k"><kbd>te</kbd> file</span><span class="d"><b>Your config:</b> open in a new tab (<code>:tabedit</code>).</span></div>
-  <div class="krow"><span class="k"><kbd>Tab</kbd> <kbd>S-Tab</kbd></span><span class="d"><b>Your config:</b> next / previous tab.</span></div>
+  <div class="krow"><span class="k"><kbd>gt</kbd> / <kbd>gT</kbd></span><span class="d">Native: next / previous tab. (<b>Tab is intentionally unmapped</b> — it would kill <kbd>Ctrl+i</kbd>, jumplist-forward; Tab and Ctrl+i are the same byte in terminals.)</span></div>
+  <div class="krow"><span class="k"><kbd>:tabedit</kbd> file</span><span class="d">Native: open file in a new tab.</span></div>
   <div class="krow"><span class="k"><kbd>Space</kbd><kbd>Tab</kbd><kbd>d</kbd></span><span class="d"><b>Your config:</b> close the current tab.</span></div>
 
   <div class="yset">
     <div class="yh"><span class="tag">your config</span> · <code>lua/keymaps.lua</code></div>
-<pre><span class="k">vim.keymap.set</span>(<span class="s">'n'</span>, <span class="s">'sh'</span>, <span class="s">':vsplit&lt;Return&gt;'</span>)   <span class="cm">-- sh = side-by-side split</span>
-<span class="k">vim.keymap.set</span>(<span class="s">'n'</span>, <span class="s">'sv'</span>, <span class="s">':split&lt;Return&gt;'</span>)     <span class="cm">-- sv = stacked split</span>
-<span class="k">vim.keymap.set</span>(<span class="s">'n'</span>, <span class="s">'te'</span>, <span class="s">':tabedit'</span>)
-<span class="k">vim.keymap.set</span>(<span class="s">'n'</span>, <span class="s">'&lt;tab&gt;'</span>, <span class="s">':tabnext&lt;Return&gt;'</span>)
-<span class="k">vim.keymap.set</span>(<span class="s">'n'</span>, <span class="s">'&lt;s-tab&gt;'</span>, <span class="s">':tabprev&lt;Return&gt;'</span>)</pre>
+<pre><span class="k">vim.keymap.set</span>(<span class="s">'n'</span>, <span class="s">'&lt;leader&gt;|'</span>, <span class="s">':vsplit&lt;Return&gt;'</span>) <span class="cm">-- Space+| side-by-side (LazyVim)</span>
+<span class="k">vim.keymap.set</span>(<span class="s">'n'</span>, <span class="s">'&lt;leader&gt;-'</span>, <span class="s">':split&lt;Return&gt;'</span>)   <span class="cm">-- Space+- stacked (LazyVim)</span>
+<span class="k">vim.keymap.set</span>(<span class="s">'n'</span>, <span class="s">'&lt;leader&gt;wd'</span>, <span class="s">'&lt;C-w&gt;c'</span>)          <span class="cm">-- Space+wd delete window</span>
+<span class="k">vim.keymap.set</span>(<span class="s">'n'</span>, <span class="s">'&lt;C-Up&gt;'</span>, <span class="s">'&lt;cmd&gt;resize +2&lt;CR&gt;'</span>)     <span class="cm">-- C-arrows resize ±2</span></pre>
   </div>
 
-  <div class="tip"><b>tmux tip:</b> in a terminal inside tmux, <kbd>C-h/j/k/l</kbd> hops between nvim and tmux panes seamlessly (your tmux plugin). Run <kbd>Space</kbd><kbd>a</kbd> and your AI agent opens as a real tmux pane on the right.</div>
+  <div class="tip"><b>tmux tip:</b> in a terminal inside tmux, <kbd>C-h/j/k/l</kbd> hops between nvim and tmux panes seamlessly (your tmux plugin).</div>
 </section>
 
 <!-- ============ 08 BUFFERS ============ -->
@@ -598,7 +602,7 @@ spec = {
 <section class="lesson" id="find" data-mode="normal">
   <div class="part">Part II · Your setup</div>
   <h2><span class="no">09</span>Find &amp; grep <span class="badge">normal</span></h2>
-  <p class="lede">Telescope is your setup's fuzzy finder — the "everything in 3 keystrokes" plugin. These leaders are worth muscle memory.</p>
+  <p class="lede">The snacks picker is your setup2019s fuzzy finder 2014 the "everything in 3 keystrokes" system. These leaders are worth muscle memory.</p>
 
   <div class="cards">
     <div class="card"><kbd>Space</kbd><kbd>ff</kbd><p>Find files by name (hidden files included).</p></div>
@@ -623,10 +627,9 @@ spec = {
   <div class="tip"><b>In any picker:</b> start typing to filter, <kbd>C-j</kbd>/<kbd>C-k</kbd> to move, <kbd>Enter</kbd> to open. <kbd>Space</kbd><kbd>ff</kbd> is your "open a file" reflex — replace the mouse in the sidebar.</div>
 
   <div class="yset">
-    <div class="yh"><span class="tag">your config</span> · <code>lua/plugins/editor/telescope.lua</code></div>
-<pre>file_ignore_patterns = { <span class="s">'node_modules'</span>, <span class="s">'.git/'</span> }   <span class="cm">-- pickers skip junk</span>
-find_files = { hidden = <span class="s">true</span>, follow = <span class="s">true</span> }        <span class="cm">-- dotfiles are findable</span>
-buffers    = { sort_mru = <span class="s">true</span> }                      <span class="cm">-- most recent first</span></pre>
+    <div class="yh"><span class="tag">your config</span> · <code>lua/plugins/editor/snacks.lua</code></div>
+<pre>picker = { enabled = <span class="s">true</span> }   <span class="cm">-- one line: snacks.picker IS the picker system</span>
+<span class="cm">-- ~25 &lt;leader&gt; bindings open it: ff files, sg grep, sh help, ...</span></pre>
   </div>
 </section>
 
@@ -638,7 +641,7 @@ buffers    = { sort_mru = <span class="s">true</span> }                      <sp
 
   <div class="krow"><span class="k"><kbd>Space</kbd><kbd>e</kbd></span><span class="d"><b>Your config:</b> toggle the explorer (nvim-tree).</span></div>
   <div class="krow"><span class="k"><kbd>Enter</kbd></span><span class="d">Open the file under the cursor (closes the tree — "quit on open").</span></div>
-  <div class="krow"><span class="k"><kbd>s</kbd> <kbd>S</kbd></span><span class="d"><b>Your config:</b> open in a vertical / horizontal split.</span></div>
+  <div class="krow"><span class="k"><kbd>s</kbd> <kbd>S</kbd></span><span class="d"><b>Your config:</b> open in a side-by-side (<code>:vsplit</code>) / stacked (<code>:split</code>) window.</span></div>
   <div class="krow"><span class="k"><kbd>P</kbd></span><span class="d"><b>Your config:</b> preview the file without leaving the tree.</span></div>
   <div class="krow"><span class="k"><kbd>a</kbd> <kbd>d</kbd> <kbd>r</kbd> <kbd>R</kbd></span><span class="d">Native: create file/dir, delete, rename, refresh.</span></div>
 
@@ -755,7 +758,7 @@ y  i  t        <span class="cm">yank inside tag        →  yit</span>
   <div class="krow"><span class="k"><kbd>m</kbd>a</span><span class="d">Set mark <code>a</code> at the cursor (lowercase = per-file).</span></div>
   <div class="krow"><span class="k"><kbd>`</kbd>a <kbd>'</kbd>a</span><span class="d">Jump to mark <code>a</code>: backtick = exact column, quote = line start.</span></div>
   <div class="krow"><span class="k"><kbd>mA</kbd> <kbd>`</kbd>A</span><span class="d">Uppercase marks are <b>global</b> — jump across files in the project.</span></div>
-  <div class="krow"><span class="k"><kbd>Space</kbd><kbd>sm</kbd></span><span class="d"><b>Your config:</b> pick a mark from Telescope.</span></div>
+  <div class="krow"><span class="k"><kbd>Space</kbd><kbd>sm</kbd></span><span class="d"><b>Your config:</b> pick a mark from the snacks picker.</span></div>
   <div class="krow"><span class="k"><kbd>``</kbd> <kbd>''</kbd></span><span class="d">Jump back to where you were before the last jump — instant "return to sender".</span></div>
   <div class="krow"><span class="k"><kbd>C-o</kbd> <kbd>C-i</kbd></span><span class="d">Jumplist: back / forward through your cursor history. <kbd>Space</kbd><kbd>sj</kbd> browses it visually.</span></div>
   <div class="krow"><span class="k"><kbd>g;</kbd> <kbd>g,</kbd></span><span class="d">Changelist: jump to the last place you <i>edited</i> (not just moved).</span></div>
@@ -803,7 +806,7 @@ y  i  t        <span class="cm">yank inside tag        →  yit</span>
     <tr><td><kbd>Space</kbd><kbd>ca</kbd></td><td><b>Your config:</b> code actions (quick fixes, refactors).</td></tr>
     <tr><td><kbd>Space</kbd><kbd>th</kbd></td><td><b>Your config:</b> toggle inlay hints (type annotations inline).</td></tr>
     <tr><td><kbd>]d</kbd> <kbd>[d</kbd></td><td>Jump to next / previous diagnostic.</td></tr>
-    <tr><td><kbd>Space</kbd><kbd>sd</kbd> <kbd>sD</kbd></td><td>List this file's / the project's diagnostics in Telescope.</td></tr>
+    <tr><td><kbd>Space</kbd><kbd>sd</kbd> <kbd>sD</kbd></td><td>List this file2019s / the project2019s diagnostics in the snacks picker.</td></tr>
     <tr><td><kbd>Space</kbd><kbd>cd</kbd> <kbd>cD</kbd></td><td>Diagnostics in Trouble (navigable list on the left).</td></tr>
     <tr><td><kbd>Space</kbd><kbd>cs</kbd></td><td>Document symbols in Trouble.</td></tr>
   </table>
@@ -858,7 +861,7 @@ sources = { default = { <span class="s">'lsp'</span>, <span class="s">'path'</sp
   <div class="krow"><span class="k">biome / prettier</span><span class="d">JS/TS/JSON/CSS — Biome is preferred if <code>biome.json</code> exists, Prettier otherwise.</span></div>
   <div class="krow"><span class="k">ruff</span><span class="d">Python lint + type-check + format in one (replaces pyright entirely).</span></div>
   <div class="krow"><span class="k">phpstan</span><span class="d">PHP static analysis, runs via nvim-lint on save.</span></div>
-  <div class="krow"><span class="k"><kbd>Space</kbd><kbd>sd</kbd></span><span class="d">See lint errors in Telescope; the gutter icons are diagnostics.</span></div>
+  <div class="krow"><span class="k"><kbd>Space</kbd><kbd>sd</kbd></span><span class="d">See lint errors in the snacks picker; the gutter icons are diagnostics.</span></div>
 
   <div class="yset">
     <div class="yh"><span class="tag">your config</span> · <code>lua/plugins/formatting/conform.lua</code> + <code>linting/core.lua</code></div>
@@ -936,7 +939,7 @@ sources = { default = { <span class="s">'lsp'</span>, <span class="s">'path'</sp
   <div class="krow"><span class="k"><kbd>Space</kbd><kbd>gds</kbd></span><span class="d"><b>Your config:</b> toggle showing deleted lines.</span></div>
   <div class="krow"><span class="k"><kbd>Space</kbd><kbd>gg</kbd></span><span class="d"><b>Your config:</b> open lazygit — stage, commit, push, stash, browse history.</span></div>
   <div class="krow"><span class="k"><kbd>Space</kbd><kbd>gD</kbd> <kbd>gH</kbd> <kbd>gq</kbd></span><span class="d"><b>Your config:</b> diffview — open a branch/commit diff, browse file history, close it. Side-by-side for when lazygit feels shallow.</span></div>
-  <div class="krow"><span class="k"><kbd>Space</kbd><kbd>fg</kbd></span><span class="d"><b>Your config:</b> open a git-tracked file (Telescope).</span></div>
+  <div class="krow"><span class="k"><kbd>Space</kbd><kbd>fg</kbd></span><span class="d"><b>Your config:</b> open a git-tracked file (snacks picker).</span></div>
 
   <div class="yset">
     <div class="yh"><span class="tag">your config</span> · <code>lua/plugins/editor/gitsigns.lua</code> + <code>lazygit.lua</code></div>
@@ -971,50 +974,26 @@ keys = { { <span class="s">'&lt;leader&gt;gg'</span>, <span class="s">'&lt;cmd&g
 
   <div class="krow"><span class="k"><kbd>:term</kbd> cmd</span><span class="d">Open a terminal buffer running the shell (or a command).</span></div>
   <div class="krow"><span class="k"><kbd>C-\</kbd><kbd>C-n</kbd></span><span class="d">In a terminal buffer, escape to Normal mode (then <kbd>q</kbd> closes it, or <kbd>:q</kbd>).</span></div>
-  <div class="krow"><span class="k"><kbd>Space</kbd><kbd>a</kbd></span><span class="d"><b>Your config:</b> launch an AI agent as a tmux pane (or floating window outside tmux).</span></div>
 
   <h3>tmux integration</h3>
   <div class="krow"><span class="k"><kbd>C-h</kbd> <kbd>C-j</kbd> <kbd>C-k</kbd> <kbd>C-l</kbd></span><span class="d"><b>Your config:</b> move focus between nvim and tmux panes as if they were one editor.</span></div>
-  <div class="krow"><span class="k"><kbd>C-\</kbd></span><span class="d"><b>Your config:</b> jump to the previous pane.</span></div>
   <div class="krow"><span class="k">prefix <kbd>C</kbd> + arrows</span><span class="d">tmux.nvim resize bindings.</span></div>
 
   <div class="tip"><b>The payoff:</b> <kbd>Space</kbd><kbd>a</kbd> for the AI, <kbd>C-l</kbd> back into nvim, tests in another pane — all with the same fingers. That's the whole point of this setup.</div>
 
   <div class="yset">
     <div class="yh"><span class="tag">your config</span> · <code>lua/plugins/editor/tmux.lua</code></div>
-<pre>{ <span class="s">'&lt;c-h&gt;'</span>, <span class="s">'&lt;cmd&gt;&lt;C-U&gt;TmuxNavigateLeft&lt;cr&gt;'</span> }
-{ <span class="s">'&lt;c-l&gt;'</span>, <span class="s">'&lt;cmd&gt;&lt;C-U&gt;TmuxNavigateRight&lt;cr&gt;'</span> }
-<span class="cm">-- + aserowy/tmux.nvim for resize (default keybindings enabled)</span></pre>
+<pre>{ <span class="s">'&lt;c-h&gt;'</span>, <span class="s">'&lt;cmd&gt;lua require"tmux".move_left()&lt;cr&gt;'</span> }
+{ <span class="s">'&lt;c-l&gt;'</span>, <span class="s">'&lt;cmd&gt;lua require"tmux".move_right()&lt;cr&gt;'</span> }
+<span class="cm">-- aserowy/tmux.nvim, resize default keybindings enabled</span></pre>
   </div>
 </section>
 
-<!-- ============ 24 AI ============ -->
-<section class="lesson" id="ai" data-mode="normal">
-  <div class="part">Part V · Workflow</div>
-  <h2><span class="no">24</span>AI agents <span class="badge">normal</span></h2>
-  <p class="lede">Your setup replaced in-editor AI with <b>CLI agents in a pane</b>: <kbd>Space</kbd><kbd>a</kbd> launches Claude Code or opencode.</p>
-
-  <ul>
-    <li>Inside <b>tmux</b> → opens as a right-hand pane, so all your tmux superpowers apply: <kbd>C-h/l</kbd> to hop, resize with tmux.nvim, scrollback works.</li>
-    <li>Outside tmux → falls back to a floating terminal inside nvim.</li>
-    <li><b>Re-press <kbd>Space</kbd><kbd>a</kbd> to focus the running agent</b> instead of spawning a duplicate pane.</li>
-  </ul>
-
-  <div class="yset">
-    <div class="yh"><span class="tag">your config</span> · <code>lua/plugins/editor/ai-tools.lua</code></div>
-<pre><span class="cm">-- adding a new agent CLI is literally one line:</span>
-tools = {
-  { name = <span class="s">'Claude Code'</span>, cmd = <span class="s">'claude'</span> },
-  { name = <span class="s">'opencode'</span>, cmd = <span class="s">'opencode'</span> },
-  <span class="cm">-- { name = 'Codex', cmd = 'codex' }</span>
-}</pre>
-  </div>
-</section>
 
 <!-- ============ 25 PLUGINS ============ -->
 <section class="lesson" id="plugins" data-mode="normal">
   <div class="part">Part V · Workflow</div>
-  <h2><span class="no">25</span>Plugins &amp; your config <span class="badge">normal</span></h2>
+  <h2><span class="no">24</span>Plugins &amp; your config <span class="badge">normal</span></h2>
   <p class="lede">Everything in this setup is a <b>lazy.nvim</b> spec: one file per plugin under <code>lua/plugins/&lt;category&gt;/</code>, imported by <code>lua/lazy-init.lua</code>. This is the config you'll be editing — know its shape.</p>
 
   <div class="krow"><span class="k"><kbd>:Lazy</kbd></span><span class="d">Open the plugin manager UI — status, updates, clean.</span></div>
@@ -1047,13 +1026,13 @@ tools = {
 <!-- ============ 26 HEALTH ============ -->
 <section class="lesson" id="health" data-mode="command">
   <div class="part">Part V · Workflow</div>
-  <h2><span class="no">26</span>Help &amp; health <span class="badge">command</span></h2>
+  <h2><span class="no">25</span>Help &amp; health <span class="badge">command</span></h2>
   <p class="lede">When something's off or you want to go deeper, nvim ships its own documentation — and your config has its own.</p>
 
   <div class="krow"><span class="k"><kbd>:checkhealth</kbd></span><span class="d">Everything in one report — plugins, LSP, tmux. Run this first when things break.</span></div>
   <div class="krow"><span class="k"><kbd>:help</kbd></span><span class="d">The manual. <code>:help user-manual</code> is a full course; <code>:help key-notation</code> decodes <kbd>&lt;leader&gt;</kbd> etc.</span></div>
   <div class="krow"><span class="k"><kbd>:help</kbd><kbd> motion</kbd></span><span class="d">Try any topic: <code>:help text-objects</code>, <code>:help windows</code>, <code>:help registers</code>.</span></div>
-  <div class="krow"><span class="k"><kbd>Space</kbd><kbd>sh</kbd></span><span class="d"><b>Your config:</b> fuzzy-search help topics in Telescope.</span></div>
+  <div class="krow"><span class="k"><kbd>Space</kbd><kbd>sh</kbd></span><span class="d"><b>Your config:</b> fuzzy-search help topics in the snacks picker.</span></div>
   <div class="krow"><span class="k">vimtutor</span><span class="d">Interactive 30-minute built-in tutorial — run <code>vimtutor</code> in your terminal.</span></div>
   <div class="krow"><span class="k">docs/</span><span class="d">Your repo's <code>docs/</code> folder: keymaps.md, plugins.md, lsp.md, architecture.md, cheatsheet.md.</span></div>
 </section>
@@ -1061,14 +1040,14 @@ tools = {
 <!-- ============ 27 POLISH ============ -->
 <section class="lesson" id="polish" data-mode="normal">
   <div class="part">Part V · Workflow</div>
-  <h2><span class="no">27</span>Dashboard, sessions &amp; polish <span class="badge">normal</span></h2>
+  <h2><span class="no">26</span>Dashboard, sessions &amp; polish <span class="badge">normal</span></h2>
   <p class="lede">The modern layer of your setup: a start screen, session restore, clipboard history, quick file switching — plus the smooth-feel extras running invisibly in the background.</p>
 
   <h3>Start screen (snacks dashboard)</h3>
   <p>Launch nvim with no arguments and the dashboard appears: a big ASCII header, one-key actions, recent files, and your saved sessions.</p>
   <div class="krow"><span class="k"><kbd>f</kbd> <kbd>g</kbd> <kbd>t</kbd></span><span class="d">Dashboard keys: find file / grep / run tests.</span></div>
   <div class="krow"><span class="k"><kbd>s</kbd></span><span class="d">Restore a session straight from the dashboard.</span></div>
-  <div class="krow"><span class="k"><kbd>a</kbd> <kbd>G</kbd> <kbd>l</kbd></span><span class="d">AI agent / lazygit / lazy plugin manager.</span></div>
+  <div class="krow"><span class="k"><kbd>G</kbd> <kbd>l</kbd></span><span class="d">LazyGit / lazy plugin manager.</span></div>
   <div class="krow"><span class="k"><kbd>q</kbd></span><span class="d">Quit.</span></div>
   <div class="krow"><span class="k">git status</span><span class="d"><b>Your config:</b> the dashboard renders your live <code>git status</code> pane under the key hints.</span></div>
 
@@ -1086,7 +1065,7 @@ tools = {
   <div class="krow"><span class="k"><kbd>Space</kbd><kbd>fj</kbd></span><span class="d"><b>Your config:</b> type 1–2 letters, jump to any word visible on screen (flash).</span></div>
   <div class="krow"><span class="k"><kbd>Space</kbd><kbd>ft</kbd> <kbd>R</kbd></span><span class="d"><b>Your config:</b> jump to a treesitter node / treesitter search (visual/operator).</span></div>
   <div class="krow"><span class="k"><kbd>Space</kbd><kbd>bp</kbd></span><span class="d"><b>Your config:</b> pick a buffer from the tab strip at the top (bufferline).</span></div>
-  <div class="tip"><b>Why not plain <kbd>s</kbd>?</b> Flash's stock key is <kbd>s</kbd> — but <kbd>sh</kbd>/<kbd>sv</kbd> already own it for splits, so flash lives under <kbd>Space</kbd><kbd>f</kbd>.</div>
+  <div class="tip"><b>Flash on plain <kbd>s</kbd>:</b> splits moved to <kbd>Space</kbd><kbd>|</kbd> / <kbd>Space</kbd><kbd>-</kbd> (LazyVim convention, 2026-09-09), which freed plain <kbd>s</kbd> — so flash now jumps from <kbd>s</kbd> directly. Extra lives under <kbd>Space</kbd><kbd>f</kbd>.</div>
 
   <h3>Background polish (snacks)</h3>
   <ul>
@@ -1171,10 +1150,10 @@ tools = {
     <tr><td><kbd>qq</kbd> <kbd>ql</kbd> <kbd>qs</kbd></td><td>save session / load last / select session</td></tr>
     <tr class="grp"><td colspan="2">Other</td></tr>
     <tr><td><kbd>e</kbd></td><td>Toggle file tree</td></tr>
-    <tr><td><kbd>a</kbd></td><td>Open AI agent (Claude Code / opencode)</td></tr>
     <tr><td><kbd>l</kbd></td><td>Lazy actions picker (sync, update, clean, …)</td></tr>
     <tr><td><kbd>fr</kbd></td><td>File ring (recent files, harpoon-style)</td></tr>
     <tr><td><kbd>bp</kbd></td><td>Pick buffer from the tab strip</td></tr>
+    <tr><td><kbd>a</kbd></td><td>Pick AI agent (Claude Code / opencode) — right tmux pane inside tmux</td></tr>
     <tr><td><kbd>ut</kbd></td><td>Toggle treesitter-context</td></tr>
     <tr><td><kbd>th</kbd></td><td>Toggle inlay hints</td></tr>
     <tr><td><kbd>Space</kbd><kbd>Tab</kbd><kbd>d</kbd></td><td>Close tab</td></tr>
@@ -1184,7 +1163,7 @@ tools = {
   <table class="ref">
     <tr><th>Keys</th><th>What it does</th></tr>
     <tr><td><kbd>sh</kbd> <kbd>sv</kbd></td><td>Vertical / horizontal split</td></tr>
-    <tr><td><kbd>te</kbd> · <kbd>Tab</kbd>/<kbd>S-Tab</kbd></td><td>New tab · next/prev tab</td></tr>
+    <tr><td><kbd>gt</kbd>/<kbd>gT</kbd> · <kbd>:tabedit</kbd></td><td>Next/prev tab · new tab (native)</td></tr>
     <tr><td><kbd>]b</kbd> <kbd>[b</kbd> · <kbd>S-h</kbd> <kbd>S-l</kbd></td><td>Next / previous buffer</td></tr>
     <tr><td><kbd>C-l</kbd> (insert)</td><td>Skip past closing bracket / quote / comma</td></tr>
     <tr><td><kbd>H</kbd> <kbd>L</kbd> <kbd>J</kbd> <kbd>K</kbd> (visual)</td><td>Move selection (mini.move)</td></tr>

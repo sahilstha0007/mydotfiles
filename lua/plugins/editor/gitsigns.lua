@@ -22,15 +22,17 @@ return {
         topdelete = { text = '▔' },
         changedelete = { text = '▌' },
       }
-      -- Higher-contrast gutter colors (GitHub-dark diff palette), kept
-      -- applied across colorscheme reloads so Catppuccin can't pastel them.
+      -- Gutter signs ADOPT the live palette (same wallpaper-synced accents
+      -- wezterm/tmux/nvim share) instead of pinned GitHub-dark hexes. Read
+      -- fresh on every colorscheme reload so a terminal theme switch re-tints
+      -- them like every other highlight.
       local function gitsigns_hl()
-        local add, change, delete = '#56d364', '#e3b341', '#f85149'
-        vim.api.nvim_set_hl(0, 'GitSignsAdd', { fg = add })
-        vim.api.nvim_set_hl(0, 'GitSignsChange', { fg = change })
-        vim.api.nvim_set_hl(0, 'GitSignsDelete', { fg = delete })
-        vim.api.nvim_set_hl(0, 'GitSignsTopdelete', { fg = delete })
-        vim.api.nvim_set_hl(0, 'GitSignsChangedelete', { fg = change })
+        local c = require('utils.theme').palette()
+        vim.api.nvim_set_hl(0, 'GitSignsAdd', { fg = c.green })
+        vim.api.nvim_set_hl(0, 'GitSignsChange', { fg = c.yellow })
+        vim.api.nvim_set_hl(0, 'GitSignsDelete', { fg = c.red })
+        vim.api.nvim_set_hl(0, 'GitSignsTopdelete', { fg = c.red })
+        vim.api.nvim_set_hl(0, 'GitSignsChangedelete', { fg = c.yellow })
       end
       gitsigns_hl()
       vim.api.nvim_create_autocmd('ColorScheme', { callback = gitsigns_hl })
@@ -96,6 +98,11 @@ return {
           gitsigns.toggle_current_line_blame,
           { desc = 'Blame Line' }
         )
+        -- Full commit blame popup (like fugitive :Git blame): shows author,
+        -- date, and full commit message for the current line.
+        map('n', '<leader>gB', function()
+          gitsigns.blame_line { full = true }
+        end, { desc = 'Blame Line Popup (full)' })
         map(
           'n',
           '<leader>gds',

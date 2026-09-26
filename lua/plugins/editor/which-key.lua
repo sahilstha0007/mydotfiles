@@ -42,6 +42,31 @@ return {
       -- Document existing key chains
       spec = {
         {
+          '<leader>a',
+          group = 'AI Agent',
+          icon = { icon = '󰊩', color = 'green' },
+        },
+        {
+          '<leader>d',
+          group = 'Debug (DAP)',
+          icon = { icon = '󰃭', color = 'red' },
+        },
+        {
+          '<leader>e',
+          group = 'Explorer',
+          icon = { icon = '󰉋', color = 'blue' },
+        },
+        {
+          '<leader>v',
+          group = 'Venv',
+          icon = { icon = '󰆄', color = 'green' },
+        },
+        {
+          '<leader>l',
+          group = 'Lazy',
+          icon = { icon = '󰒲', color = 'blue' },
+        },
+        {
           '<leader>b',
           group = 'Buffers',
           icon = { icon = '', color = 'yellow' },
@@ -89,8 +114,28 @@ return {
         },
         {
           '<leader>t',
-          group = 'Test',
+          group = 'Test / Toggle',
           icon = { icon = '󰙨', color = 'purple' },
+        },
+        {
+          '<leader>u',
+          group = 'UI Toggles',
+          icon = { icon = '󰛉', color = 'cyan' },
+        },
+        {
+          '<leader>o',
+          group = 'Overseer Tasks',
+          icon = { icon = '󰁯', color = 'azure' },
+        },
+        {
+          '<leader>p',
+          group = 'GitHub (Octo)',
+          icon = { icon = '󰈉', color = 'grey' },
+        },
+        {
+          '<leader>w',
+          group = 'Window',
+          icon = { icon = '󰓩', color = 'blue' },
         },
         {
           'gz',

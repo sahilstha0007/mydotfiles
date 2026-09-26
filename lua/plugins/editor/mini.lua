@@ -19,6 +19,20 @@ return {
         },
       }
 
+      -- Toggle comments: `gc` operator (gcc = line, gcip = paragraph,
+      -- visual gc). Default mappings — no custom keymap needed. Comment
+      -- strings come from treesitter (already installed), so they're
+      -- correct per-language, not regex guesses.
+      require('mini.comment').setup()
+
+      -- Indent guides: scope-aware (brighter band around the current
+      -- indent scope, follows treesitter-aware indent). try_as_border keeps
+      -- the first column clean against statuscol/gitsigns.
+      require('mini.indentscope').setup {
+        symbol = '│',
+        options = { try_as_border = true },
+      }
+
       require('mini.surround').setup {
         mappings = {
           add = 'gsa',
@@ -27,9 +41,16 @@ return {
           find_left = 'gsF',
           highlight = 'gsh',
           replace = 'gsr',
-          update_n_lines = 'gsn',
         },
       }
+      -- mini.surround never maps `update_n_lines` itself (the config key is
+      -- silently ignored), so bind it explicitly.
+      vim.keymap.set(
+        'n',
+        'gsn',
+        '<cmd>lua MiniSurround.update_n_lines()<CR>',
+        { desc = 'Surround: Set N Lines' }
+      )
 
       require('mini.move').setup {
         mappings = {

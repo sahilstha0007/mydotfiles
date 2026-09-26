@@ -165,8 +165,17 @@ return {
         function()
           return os.date '%H:%M'
         end,
-        icon = '',
+        icon = '',
         color = 'LualineDiagnosticsWarn',
+      }
+
+      -- OpenCode connection status (server + session state). pcall-guarded:
+      -- renders nothing when the bridge plugin isn't installed.
+      ins_right {
+        function()
+          local ok, opencode = pcall(require, 'opencode')
+          return ok and opencode.statusline() or ''
+        end,
       }
 
       lualine.setup(config)

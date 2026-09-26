@@ -7,10 +7,11 @@ Every custom keybinding in this config, grouped by purpose. Leader = `Space`.
 | Keys | Mode | Action |
 |------|------|--------|
 | `<Esc>` | n | Clear search highlight |
-| `sh` | n | Vertical split (`:vsplit`) |
-| `sv` | n | Horizontal split (`:split`) |
-| `te` | n | New tab (`:tabedit`) |
-| `<Tab>` / `<S-Tab>` | n | Next / previous tab |
+| `<leader>|` | n | Vertical split, side-by-side (`:vsplit`) — key matches the split line. Native `<C-w>v` also works |
+| `<leader>-` | n | Horizontal split, stacked (`:split`). Native `<C-w>s` also works |
+| `]q` / `[q` | n | Quickfix next / previous (wraps at list ends) |
+| `]l` / `[l` | n | Loclist next / previous (wraps at list ends) |
+| `gt` / `gT` | n | Next / previous tab (native; `<Tab>` deliberately unmapped — it is `<C-i>` jumplist-forward) |
 | `<leader><tab>d` | n | Close tab |
 | `<leader>cr` | n | LSP rename |
 | `<S-h>` / `<S-l>` | n | Previous / next buffer |
@@ -59,9 +60,13 @@ Every custom keybinding in this config, grouped by purpose. Leader = `Space`.
 | `<leader>ss` / `<leader>sS` | Symbols: document / workspace |
 | `<leader>sy` | Yank history (clipboard ring) |
 | `<leader>sr` | grug-far: replace across project |
-| `<leader>fj` / `<leader>ft` | Flash: jump to any visible word / treesitter node |
+| `s` (n/x/o) | **Flash: jump to any visible word** (1 key) |
+| `S` (o/x) | Flash: treesitter node jump (visual/operator) |
 | `R` (op/visual) | Flash: treesitter search |
 | `<C-s>` (cmdline) | Flash: toggle search highlighting |
+| `]p` / `[p` | Cycle last put through yank ring (yanky) — use right after `p` |
+| `<C-/>` or `<C-_>` | n, t | Toggle terminal (snacks.terminal); t-mode map closes it from inside |
+| `<leader>ft` / `<leader>fT` | Toggle terminal: cwd / git root |
 
 ## Code / LSP
 
@@ -69,7 +74,7 @@ Bound buffer-local on `LspAttach` (`lua/plugins/coding/lspconfig.lua`) unless no
 
 | Keys | Action |
 |------|--------|
-| `gd` / `gr` / `gI` / `gy` | Definition / references / impl / type def (telescope, global) |
+| `gd` / `gr` / `gI` / `gy` | Definition / references / impl / type def (snacks, global) |
 | `K` | Hover (nvim 0.11 default) |
 | `grn` / `gra` | Rename / code action (nvim 0.11 default) |
 | `grr` / `gri` / `gO` | References / impl / outline (nvim 0.11 default) |
@@ -77,7 +82,7 @@ Bound buffer-local on `LspAttach` (`lua/plugins/coding/lspconfig.lua`) unless no
 | `<leader>ca` | Code action |
 | `<leader>cr` | Rename |
 | `<leader>th` | Toggle inlay hints |
-| `<leader>cd` / `<leader>cD` | Buffer / workspace diagnostics (trouble) |
+| `<leader>xx` / `<leader>cd` / `<leader>cD` | Trouble: toggle diagnostics (workspace) / buffer / workspace |
 | `<leader>cs` | Document symbols (trouble) |
 | `<leader>cl` | LSP refs/defs list (trouble) |
 | `<leader>cL` / `<leader>cQ` | Location list / quickfix (trouble) |
@@ -99,6 +104,7 @@ Bound buffer-local on `LspAttach` (`lua/plugins/coding/lspconfig.lua`) unless no
 | `<leader>ghp` | Preview hunk |
 | `<leader>gbs` / `<leader>gbr` | Stage / reset buffer |
 | `<leader>gbl` | Toggle blame on current line |
+| `<leader>gB` | Blame line popup: full commit info (gitsigns `blame_line {full=true}`) |
 | `<leader>gdi` / `<leader>gdc` | Diff vs index / vs commit |
 | `<leader>gds` | Toggle deleted lines |
 | `<leader>l` | Lazy actions picker (sync / update / clean / …) |
@@ -146,7 +152,7 @@ Bound buffer-local on `LspAttach` (`lua/plugins/coding/lspconfig.lua`) unless no
 | `P` / `s` / `S` | Tree: preview / vertical / horizontal open | file-tree.lua |
 | `<leader>ot` / `or` / `ol` | Overseer: toggle list / run / run command | overseer.lua |
 | `<leader>oq` / `oa` | Overseer: quick action / task action | overseer.lua |
-| `gsa` / `gsd` / `gsr` / `gsf` | Surround: add / delete / replace / find | mini.lua |
+| `gsa` / `gsd` / `gsr` / `gsf` / `gsn` | Surround: add / delete / replace / find / set N lines | mini.lua |
 | `af` / `if` / `ac` / `ic` / `ab` / `ib` / `aa` / `ia` | Treesitter textobjects: function / class / block / parameter | mini.lua |
 | `]f` / `[f` | Next / previous function (treesitter) | textobjects.lua |
 | `H` / `L` / `J` / `K` (visual) | Move selection block | mini.lua |
@@ -154,7 +160,9 @@ Bound buffer-local on `LspAttach` (`lua/plugins/coding/lspconfig.lua`) unless no
 | `<leader>qq` / `ql` / `qs` | Session: save / load last / select | mini.lua |
 | (auto) | Session saved on exit; `nvim <dir>` restores the last one | mini.lua |
 | `<leader>bp` | Pick buffer from the tab strip (bufferline) | bufferline.lua |
+| `<leader>bs` | Toggle buffer sort: MRU / group-by-directory (bufferline) | bufferline.lua |
 | `zR` / `zM` / `K` | Fold: open all / close all / peek | ufo.lua |
 | `<leader>ut` | Toggle treesitter-context | treesitter-context.lua |
 | `<C-h>` / `<C-j>` / `<C-k>` / `<C-l>` | tmux pane navigation | tmux.lua |
-| `<C-\>` | tmux previous pane | tmux.lua |
+| `<M-h>` / `<M-j>` / `<M-k>` / `<M-l>` | Resize pane (tmux.nvim) | tmux.lua |
+| `<M-C-h>` / `<M-C-j>` / `<M-C-k>` / `<M-C-l>` | Swap pane with neighbor (tmux.nvim) | tmux.lua |

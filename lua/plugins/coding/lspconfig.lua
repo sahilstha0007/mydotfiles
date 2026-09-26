@@ -36,6 +36,7 @@ return {
         'gopls',
         -- ruff replaces pyright for Python (lint + type-checking + format)
         'ruff',
+        'intelephense',
         'astro',
         'dockerls',
         'docker_compose_language_service',
@@ -50,13 +51,24 @@ return {
         { dynamicRegistration = false, lineFoldingOnly = true }
       vim.lsp.config('*', { capabilities = capabilities })
 
+      -- nvim-lspconfig's bundled tailwindcss config includes markdown in its
+      -- filetypes, and bundled lsp/*.lua files merge OVER user lsp/*.lua
+      -- files, so a filetypes array in lsp/tailwindcss.lua would be lost.
+      -- Explicit vim.lsp.config calls take precedence over lsp/ dir files.
+      vim.lsp.config('tailwindcss', {
+        filetypes = vim.tbl_filter(function(ft)
+          return ft ~= 'markdown'
+        end, vim.lsp.config['tailwindcss'].filetypes or {}),
+      })
+
       vim.lsp.enable(servers)
 
       -- Buffer-local keymaps + behavior when a server attaches. Neovim 0.11
       -- already provides defaults (K hover, grn rename, gra code action,
       -- grr refs, gri impl, gO symbols, C-s signature, [d/]d diagnostics).
-      -- Go-to-definition/type/references/impl are bound globally by telescope
-      -- (see plugins/editor/telescope.lua); we only add code actions here.
+      -- Go-to-definition/type/references/impl are bound globally via
+      -- snacks.picker (see plugins/editor/pickers.lua); we only add code
+      -- actions here.
       vim.api.nvim_create_autocmd('LspAttach', {
         group = vim.api.nvim_create_augroup('lsp-attach', { clear = true }),
         callback = function(event)
@@ -143,11 +155,17 @@ return {
           'dockerfile-language-server',
           'docker-compose-language-service',
           'neocmakelsp',
+          'intelephense',
           -- formatters
           'stylua',
           'prettier',
           'prettierd',
           'biome',
+          'pint',
+          'blade-formatter',
+          -- debugger (used by plugins/languages/php.lua DAP config)
+          'php-debug-adapter',
+          'hadolint',
         },
       }
     end,

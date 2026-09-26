@@ -5,7 +5,8 @@ return {
       vim.api.nvim_create_autocmd("FileType", {
         pattern = "NvimTree",
         callback = function()
-          vim.wo.winblend = 25
+          -- full transparency: no frost on the tree
+          vim.wo.winblend = 0
         end,
       })
       return opts

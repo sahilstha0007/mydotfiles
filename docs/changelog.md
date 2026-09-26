@@ -166,22 +166,11 @@
 - **Space no longer fights the completion menu.** In `lua/plugins/coding/cmp.lua`, typing space in insert mode used to re-filter the open blink.cmp menu on every keystroke — causing flicker, cursor jumps, and "no matches" flashing while coding. Space now hides the menu and inserts the space cleanly.
 - **Gotchas learned (both verified in headless nvim):** a plain `{ 'hide', 'fallback' }` keymap *eats* the space when the menu is open (blink's `hide()` returns true when it hid something). And the callback must return the **literal `' '`** — expr-mapping results are not termcode-expanded, so the first attempt (returning `'<Space>'`) typed the literal text `<Space>` into the buffer. Returning `' '` types a real space with no recursion (`a  b   c` round-trips exactly).
 
-## Claude Code automations
-
-- **Two new hooks** in `.claude/settings.json`:
-  - `check-lua.sh` (PostToolUse) — runs `luac -p` on any edited `.lua` file and blocks the edit on syntax errors.
-  - `check-imports.sh` (PostToolUse) — verifies every `lua/plugins/<cat>/<name>.lua` spec has an active import in `lua/lazy-init.lua` (with an exceptions list for intentional ones).
-- **Fixed a bug the hook found on first run:** `lua/plugins/linting/phpstan.lua` existed but was never imported — lazy.nvim silently never loaded it. Added `{ import = 'plugins.linting.phpstan' }` to `lua/lazy-init.lua`.
-- **`verify-config` skill** (`.claude/skills/verify-config/`) — one-pass QA battery: all-Lua `luac` check, HTML well-formedness, docs cross-references, spec/import drift, dead requires, keymap collisions, `.bak` safety.
-- **`config-reviewer` subagent** (`.claude/agents/config-reviewer.md`) — strict checklist reviewer grounded in this repo's actual failure history (keymap collisions, dead bindings, LSP duplication, docs drift).
-- **Known dead specs** (intentionally unloaded, listed in the hook's exceptions): `editor/fzf.lua`, `editor/lualine-theme.lua`, `formatting/prettier.lua` (conform owns prettier config), `languages/laravel.lua`, `ui/colorscheme.lua`.
-
 ## nvim × tmux polish
 
 - **E37-free buffer cycling.** `vim.opt.hidden = true` (`lua/options.lua`) — `]b` / `<S-h>` / `bd` no longer error when you switch away from a buffer with unsaved changes.
-- **Auto-reload on focus.** `autoread` + a `FocusGained → :checktime` autocmd — edits made outside nvim (git, formatters, AI agents) appear without a manual `:e!`. Pairs with `set -g focus-events on` in tmux.
-- **AI-agent panes are now reusable.** `<leader>a` used to spawn a fresh tmux pane every press; it now tracks the pane id and *focuses* the running agent instead (falls back to spawning if the pane is gone).
-- **tmux (`~/.config/tmux/tmux.conf`, backed up to `tmux.conf.bak-<date>`):** `focus-events on` (nvim sync), `set-clipboard on` (OSC52 copy-mode yanks → OS clipboard), vi copy-mode `v`/`V`/`C-v`, `C-a C-a` → last window, and resurrect now captures pane contents + shell history so agent chats survive restarts.
+- **Auto-reload on focus.** `autoread` + a `FocusGained → :checktime` autocmd — edits made outside nvim (git, formatters) appear without a manual `:e!`. Pairs with `set -g focus-events on` in tmux.
+- **tmux (`~/.config/tmux/tmux.conf`, backed up to `tmux.conf.bak-<date>`):** `focus-events on` (nvim sync), `set-clipboard on` (OSC52 copy-mode yanks → OS clipboard), vi copy-mode `v`/`V`/`C-v`, `C-a C-a` → last window, and resurrect now captures pane contents + shell history so in-progress work survives restarts.
 - **Minor:** wrapped lines show a `↪` continuation marker (`showbreak`).
 
 ## The "cooler" pass
@@ -212,9 +201,24 @@
 - **Re-enabled `matchit`, `matchparen`, `shada`.** Removed from `disabled_plugins` in `lua/lazy-init.lua`: bracket-match highlight works again, `%` crosses HTML tags / if-else pairs, and marks/registers/jumplist persist across restarts (undo already persisted via `undofile`).
 - **Removed duplicate `<leader>gbl`** in `lua/plugins/editor/gitsigns.lua` (was bound to both `blame_line` and `toggle_current_line_blame`; the toggle now wins, matching docs).
 - **Snippets.** Added `rafamadriz/friendly-snippets` as a dependency of blink.cmp in `lua/plugins/coding/cmp.lua` — loaded automatically by blink's native `vim.snippet` engine, so the `snippets` completion source finally has content.
-- **Docs filled in.** `docs/keymaps.md` was a placeholder ("ignore") — now a full keymap reference. Added `docs/ai-tools.md`, `docs/cheatsheet.md`, and this changelog; all files referenced by `docs/index.md` now exist.
+- **Docs filled in.** `docs/keymaps.md` was a placeholder ("ignore") — now a full keymap reference. Added `docs/cheatsheet.md` and this changelog; all files referenced by `docs/index.md` now exist.
+
+## keymap audit: every claim machine-verified
+
+- **Fixed a real bug**: `textobjects.lua` used master-branch config keys that main-branch mini.nvim silently ignores — `]f`/`[f` never existed at runtime. Rewrote with explicit `vim.keymap.set` calls to `move.goto_next_start`/`goto_previous_start`; verified headless (both maps resolve with descs).
+- **Fixed a second latent bug of the same class**: `gsn` (surround "set N lines") never existed either — mini.surround's `apply_config` never maps `update_n_lines`, so the config key was silently ignored. Now bound explicitly in `mini.lua`; verified in the fresh dump (291 global maps).
+- **Removed phantom claims** (documented, never bound): `te` (new tab) → replaced with `:tabnew`; `<Tab>`/`<S-Tab>` tab switching (Tab is deliberately unmapped to protect `<C-i>` jumplist); `Ctrl+\` prev tmux pane.
+- **Dumped all resolved keymaps headless** (`nvim --headless`) to `~/.cache/nvim/keymaps_dump.json`: 291 global + 24 buffer-local normal-mode maps (gitsigns requires a *tracked* git file to attach). Saved the generator as `scripts/keymaps-dump.lua` so the dump can be regenerated anytime. Verified owners: ` sr` = grug-far, `<leader>sy` = yanky, `<leader>vs` = venv-selector (buffer-local, Python), `H`/`L`/`]b`/`[b` = keymaps.lua buffer nav, hardtime off by default, `maplocalleader = ' '` (Space, so octo in-buffer maps are `Space+po/pm/pc/pf`, not `\po`).
+- **Key semantic correction**: tmux `prefix+h`/`v` split directions match nvim `sh`/`sv` exactly (h = side-by-side, v = stacked). Only the command *names* (`:vsplit` vs `split-window -v`) contradict. Notes updated so users trust the keys, not the names.
+- **Second audit round (docs + remaining vault notes)**: removed the `<C-\>` "tmux previous pane" phantom from `keymaps.md` and `learn-nvim.html` (no such map exists in tmux.nvim or the dump), fixed the stale `learn-nvim.html` tmux code block (old `TmuxNavigateLeft/Right` commands replaced by tmux.nvim's actual `require"tmux".move_left()/move_right()` maps), corrected `lsp.md` `gi` → `gI` (implementation), and fixed `03 - Neovim.md`'s `Space+th` description (toggle inlay hints, not "hover helpers"). Everything else the sweep flagged was verified fine: `<S-h>`/`<S-l>` really are bound (nvim normalizes them to `H`/`L` in dumps), mini.ai `aa/af/ab/ac`-style textobjects resolve via the `a`/`i` operator + custom treesitter specs, tmux `1..9` window jumps and copy-mode keys confirmed live, octo `po/pm/pc/pf/pd` + `gf` + `Enter` confirmed against plugin defaults.
+- **Reverse-coverage round (the other direction — what's in the dump but missing from docs)**: built a second checker (`/tmp/keycheck2.py`, variant-matching: `Space+x`/`<leader>x`/case forms; first two token-based attempts were defeated by a literal backtick in note 03's smart-skip row and family-shorthand rows, so no span-tokenizing). Found 57 genuinely undocumented user-facing maps and documented them in note 03 + `keymaps.md`: tmux.nvim `Alt+h/j/k/l` resize + `Alt+Ctrl+h/j/k/l` swap, `]d`/`[d` diagnostics, `Ctrl+w d` diagnostics float, `grt`/`grx` (nvim 0.12 builtin LSP), mini.bracketed `]q/[q` `]l/[l` `]t/[t` `]a/[a` (+ uppercase first/last), `[ `/`] ` empty-line, mini.ai `g[`/`g]` around-edges, surround `gsn` + the `n`/`l` next/last suffix family, `Space+qq/ql/qs` autosave. Remaining dump maps were verified as not-ours (nvim core defaults `gc/gcc/grt/grx/[<C-L>` family, matchit `[%/g%`, python ftplugin `[m/[[`) or already covered by family rows. Final state: **0 undocumented user-facing maps, 0 false doc claims** — both checker directions clean.
+
+## Dump tool hardened (side effects of headless runs)
+
+- **It self-bootstraps now.** The old header said "run from a TRACKED git repo" but the script always used its own `/tmp/probe_repo` (created manually, untracked `main.py`). It now `git init`s that probe repo itself, so it runs from any cwd, no prep.
+- **It no longer clobbers your session.** A headless dump run was triggering the user config's `mini-sessions` VimLeavePre autocmd (probe `main.py` is a named buffer), overwriting `sessions/last` with dashboard-only junk. The script now clears the `mini-sessions` autocmd group before `qa!` (root cause was our own `lua/plugins/editor/mini.lua:73` autocmd, *not* mini.sessions' `autowrite`, which only fires on an active session). Verified: marker content in `sessions/last` survives a full dump run untouched.
+- **Re-verified end-to-end** after both fixes: probe repo self-created, session preserved, dump byte-identical at 688 maps (g=291 / b=24), `gsn` + gitsigns `]c` present. Also confirmed the config is unchanged since the dump — no config file is newer than `keymaps_dump.json`, so the docs describe current reality.
 
 ## Prior
 
-- Replaced in-editor AI (avante.nvim) with CLI agents (`<leader>a` → Claude Code / opencode) — see `docs/ai-tools.md`.
 - Added `learn-nvim.html` — a standalone interactive walkthrough of the whole setup (basic → intermediate), styled to mirror the lualine mode colors.

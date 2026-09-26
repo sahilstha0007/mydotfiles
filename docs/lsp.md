@@ -80,7 +80,7 @@ These are added on attach for every server:
 - `gd` — go to definition
 - `gD` — go to declaration
 - `gr` — references
-- `gi` — implementation
+- `gI` — implementation
 - `K` — hover docs
 - `<leader>ca` — code action (when supported)
 - `<leader>cr` — rename (from `lua/keymaps.lua`)

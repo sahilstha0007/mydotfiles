@@ -5,9 +5,14 @@ return {
     cmd = 'Trouble',
     keys = {
       {
-        '<leader>cD',
+        '<leader>xx',
         '<cmd>Trouble diagnostics toggle<cr>',
         desc = 'Diagnostics (Trouble)',
+      },
+      {
+        '<leader>cD',
+        '<cmd>Trouble diagnostics toggle<cr>',
+        desc = 'Workspace Diagnostics (Trouble)',
       },
       {
         '<leader>cd',
