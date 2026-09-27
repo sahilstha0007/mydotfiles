@@ -27,7 +27,11 @@ local function check(value, message)
   end
 end
 
-local root = '/home/sahil/.config/nvim'
+-- Derive the config root from this file's own location. Hardcoding it made
+-- this spec read the LIVE tree even when run against a copy, so it passed on
+-- a clone that had none of the code under test. Same pattern as
+-- tests/minimal_init.lua.
+local root = vim.fn.fnamemodify(debug.getinfo(1, 'S').source:sub(2), ':p:h:h')
 
 -- --- 1. the mechanism, measured -------------------------------------------
 

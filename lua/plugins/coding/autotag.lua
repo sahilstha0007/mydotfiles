@@ -11,7 +11,12 @@
 -- needed here.
 return {
   'windwp/nvim-ts-autotag',
-  event = 'LazyFile',
+  -- lazy.nvim removed the `LazyFile` custom event; it is no longer in
+  -- lazy/core/handler/event.lua's M.mappings (only `VeryLazy` survives), so
+  -- requesting it fails at setup with
+  --   Invalid 'event': 'LazyFile'
+  -- It was sugar for these three real buffer events, so name them directly.
+  event = { 'BufReadPost', 'BufNewFile', 'BufWritePre' },
   opts = {
     opts = {
       enable_rename = true,

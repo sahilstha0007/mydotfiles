@@ -11,7 +11,7 @@
 -- this sets a known palette and asserts the hierarchy moves it. Same contract,
 -- no dependency on how it gets loaded.
 
-vim.opt.runtimepath:prepend(vim.env.NVIM_CONFIG_ROOT or '/home/sahil/.config/nvim')
+vim.opt.runtimepath:prepend(vim.env.NVIM_CONFIG_ROOT or vim.fn.fnamemodify(debug.getinfo(1, 'S').source:sub(2), ':p:h:h'))
 
 local failed = 0
 local function check(ok, msg)

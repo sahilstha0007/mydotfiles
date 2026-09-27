@@ -469,9 +469,9 @@ local function catppuccin_opts()
           -- the "receded" feel but clears the WCAG AA bar (~4.9:1).
           Comment = { fg = c.overlay1, italic = true },
 
-          -- Explorer blends with terminal. nvim-tree.lua is the active tree
-          -- (neo-tree is disabled in editor/disable-neotree.lua), so these are
-          -- NvimTree* groups; catppuccin's nvimtree integration themes the rest.
+          -- Explorer blends with terminal. nvim-tree.lua is the active tree,
+          -- so these are NvimTree* groups; catppuccin's nvimtree integration
+          -- themes the rest.
           NvimTreeNormal       = { bg = 'NONE', fg = c.text },
           NvimTreeNormalNC     = { bg = 'NONE' },
           NvimTreeEndOfBuffer  = { bg = 'NONE' },

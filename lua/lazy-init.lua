@@ -28,14 +28,12 @@ require('lazy').setup({
     { import = 'plugins.editor.git-conflict' },
     { import = 'plugins.editor.gitsigns' },
     { import = 'plugins.editor.grug-far' },
-    { import = 'plugins.editor.hardtime' },
     { import = 'plugins.editor.lazygit' },
     { import = 'plugins.editor.lualine' },
     { import = 'plugins.editor.mini' },
     { import = 'plugins.editor.octo' },
     { import = 'plugins.editor.oil' },
     { import = 'plugins.editor.smear-cursor' },
-    { import = 'plugins.editor.disable-neotree' },
     { import = 'plugins.editor.bufferline' },
     { import = 'plugins.editor.diffview' },
     { import = 'plugins.editor.overseer' },
@@ -44,13 +42,7 @@ require('lazy').setup({
     { import = 'plugins.editor.tmux' },
     { import = 'plugins.editor.ufo' },
     { import = 'plugins.editor.undotree' },
-    { import = 'plugins.editor.agent-modes' },
-    { import = 'plugins.editor.agent-picker' },
     { import = 'plugins.editor.checkpoints' },
-    { import = 'plugins.editor.mcp-picker' },
-    { import = 'plugins.editor.model-picker' },
-    { import = 'plugins.editor.multi-agent' },
-    { import = 'plugins.editor.opencode-agent' },
     { import = 'plugins.editor.which-key' },
     { import = 'plugins.editor.yanky' },
     { import = 'plugins.formatting.conform' },
@@ -87,6 +79,9 @@ require('lazy').setup({
     },
   },
 }, {
+  -- No :Lazy update in this workflow, so the background checker's `git
+  -- ls-remote` fan-out across 65 plugins is pure startup latency.
+  checker = { enabled = false },
   ui = {
     -- If you are using a Nerd Font: set icons to an empty table which will use the
     -- default lazy.nvim defined Nerd Font icons, otherwise define a unicode icons table

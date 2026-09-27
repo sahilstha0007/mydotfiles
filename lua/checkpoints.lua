@@ -1,7 +1,7 @@
--- Checkpoints: snapshot the working tree before an agent runs, and jump back.
+-- Checkpoints: snapshot the working tree, and jump back.
 --
 -- Module (pure functions + the picker UI). The lazy spec that registers
--- <leader>ac/<leader>aC lives in plugins/editor/checkpoints.lua.
+-- <leader>cc/<leader>cC lives in plugins/editor/checkpoints.lua.
 --
 -- Why not `git stash`: measured on this box, NO form of `git stash create`
 -- captures an untracked file. Plain `create` drops it; `create -u` returns a
@@ -21,8 +21,8 @@
 -- reachable and prunable; without a ref git gc would eventually collect them.
 --
 -- Keymaps (global):
---   <leader>ac  checkpoint  snapshot now
---   <leader>aC  checkpoint list  jump back to a snapshot
+--   <leader>cc  checkpoint  snapshot now
+--   <leader>cC  checkpoint list  jump back to a snapshot
 
 local M = {}
 
@@ -45,16 +45,14 @@ function M.available(cwd)
 end
 
 local function session_id()
-  -- The opencode session when there is one, else a per-buffer fallback, so
-  -- two agents in two buffers do not write into the same ref and clobber each
+  -- Per-buffer, so two buffers do not write into the same ref and clobber each
   -- other's history.
-  local ok, panel = pcall(require, 'agent-panel')
-  if ok then
-    local s = panel.session and panel.session()
-    if s then
-      return s
-    end
-  end
+  --
+  -- This used to prefer the opencode session id via `require('agent-panel')`.
+  -- agent-panel.lua was deleted when the AI setup came out, so that lookup
+  -- could never succeed again -- it pcall'd a missing file on every snapshot
+  -- and silently fell through to the line below. The fallback was already the
+  -- only path that ever ran; this just drops the dead half.
   return 'buf' .. vim.api.nvim_get_current_buf()
 end
 
@@ -240,7 +238,7 @@ local function browse()
   end
   local items = M.list()
   if #items == 0 then
-    vim.notify('no checkpoints yet — <leader>ac to make one', vim.log.levels.WARN)
+    vim.notify('no checkpoints yet — <leader>cc to make one', vim.log.levels.WARN)
     return
   end
   vim.ui.select(items, {
@@ -275,8 +273,8 @@ function M.setup()
   -- the whole opts table as the lhs. Every other keymap in this config is
   -- plain vim.keymap.set, so this stays plain.
   local group = vim.api.nvim_create_augroup('Checkpoints', { clear = true })
-  vim.keymap.set('n', '<leader>ac', snapshot, { desc = 'Agent: checkpoint working tree' })
-  vim.keymap.set('n', '<leader>aC', browse, { desc = 'Agent: restore checkpoint' })
+  vim.keymap.set('n', '<leader>cc', snapshot, { desc = 'Checkpoint working tree' })
+  vim.keymap.set('n', '<leader>cC', browse, { desc = 'Restore checkpoint' })
   vim.api.nvim_create_autocmd('VimLeavePre', {
     group = group,
     callback = function()

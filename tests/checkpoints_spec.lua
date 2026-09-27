@@ -11,7 +11,10 @@
 --
 -- Run: nvim --headless -u tests/minimal_init.lua -l tests/checkpoints_spec.lua
 
-vim.opt.runtimepath:prepend('/home/sahil/.config/nvim')
+-- Derive from this file's own location, matching tests/minimal_init.lua, so a
+-- copied or cloned tree tests itself instead of the live config.
+local ROOT = vim.fn.fnamemodify(debug.getinfo(1, 'S').source:sub(2), ':p:h:h')
+vim.opt.runtimepath:prepend(ROOT)
 
 local passed, failed = 0, 0
 local function check(cond, msg)
@@ -64,7 +67,7 @@ write('created_by_agent.txt', 'new file the agent made\n')
 vim.fn.delete(REPO .. '/does_not_exist.txt')
 
 -- Plain module: the lazy spec that wires the keymaps is a thin wrapper.
-local cp = dofile('/home/sahil/.config/nvim/lua/checkpoints.lua')
+local cp = dofile(ROOT .. '/lua/checkpoints.lua')
 
 -- --- availability ----------------------------------------------------------
 check(cp.available(REPO), 'a real git repo should report available')

@@ -112,7 +112,6 @@ Ghostty/wezterm ── tmux (prefix C-a) ── nvim
 | `<leader>e` | nvim-tree (right side, quits on open) |
 | `<C-/>` | **Terminal toggle** (snacks.terminal float; also `<C-_>` spelling) |
 | `<leader>ft` / `fT` | Terminal toggle: cwd / git root |
-| `<leader>a` | AI agent picker (Claude Code / opencode) → right tmux pane or float |
 | `<leader>l` | Lazy actions picker (sync/update/clean/…) |
 | `<leader>o*` | Overseer tasks (run, toggle list, quick action) |
 | `<leader>pi pr pd pn ps` | Octo: issues / PRs / discussions / notifications / search |

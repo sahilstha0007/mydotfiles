@@ -26,7 +26,7 @@
 # success — that is how three of the first mutants "passed".
 set -u
 
-SRC=/home/sahil/.config/nvim
+SRC="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 W=/tmp/nvim-mut
 FILE=lua/plugins/ui/terminal-colors.lua
 

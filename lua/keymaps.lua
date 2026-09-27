@@ -121,35 +121,12 @@ keymap.set('v', '<', '<gv')
 keymap.set('v', '>', '>gv')
 
 -- Skip over closing brackets, quotes, and commas with <C-l>
-local skip_chars = { ')', ']', '}', "'", '"', ',', '`', ';' }
-local function is_skip_char(char)
-  for _, c in ipairs(skip_chars) do
-    if char == c then
-      return true
-    end
-  end
-  return false
-end
-
-vim.keymap.set(
-  'i',
-  '<C-l>',
-  function()
-    local col = vim.fn.col '.'
-    local line = vim.fn.getline '.'
-    local char_under_cursor = line:sub(col, col)
-    if is_skip_char(char_under_cursor) then
-      return '<Right>'
-    else
-      return '<C-l>'
-    end
-  end,
-  {
-    expr = true,
-    noremap = true,
-    desc = 'Skip past closing bracket/quote/comma',
-  }
-)
+keymap.set('i', '<C-l>', function()
+  local line, col = vim.fn.getline('.'), vim.fn.col('.')
+  return vim.tbl_contains({ ')', ']', '}', "'", '"', ',', '`', ';' }, line:sub(col, col))
+      and '<Right>'
+    or '<C-l>'
+end, { expr = true, desc = 'Skip past closing bracket/quote/comma' })
 
 -- Redo: native is <C-r>, which is awkward mid-flow and collides with the
 -- terminal (tmux prefix-free <C-r> works, but many people never learn it).

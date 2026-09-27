@@ -28,7 +28,8 @@ end
 -- --- the config under test -------------------------------------------------
 -- Read the shipped value rather than hardcoding `hide`: a spec that restates
 -- the implementation passes even when the implementation is wrong.
-local snacks_cfg = '/home/sahil/.config/nvim/lua/plugins/editor/snacks.lua'
+local root = vim.fn.fnamemodify(debug.getinfo(1, 'S').source:sub(2), ':p:h:h')
+local snacks_cfg = root .. '/lua/plugins/editor/snacks.lua'
 local src = table.concat(vim.fn.readfile(snacks_cfg), '\n')
 assert(src:find("bufhidden%s*=%s*'hide'", 1, false) or src:find('bufhidden = "hide"', 1, true),
   'snacks config no longer sets bufhidden=hide for terminals -- scrollback regression')
