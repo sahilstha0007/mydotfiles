@@ -116,7 +116,6 @@ Ghostty/wezterm ── tmux (prefix C-a) ── nvim
 | `<leader>o*` | Overseer tasks (run, toggle list, quick action) |
 | `<leader>pi pr pd pn ps` | Octo: issues / PRs / discussions / notifications / search |
 | `<leader>qq` `ql` `qs` | Session save / load / select |
-| `<leader>uh` | Toggle hardtime trainer (OFF by default) |
 | `<leader>ut` | Toggle treesitter-context |
 | `<leader>xx` `cd` `cD` `cs` `cl` | Trouble: toggle diagnostics / buffer diag / workspace diag / symbols / LSP list |
 | `zR` `zM` | Fold open all / close all (ufo) |
@@ -177,7 +176,6 @@ nvim sessions (mini.sessions) layer on top, so `nvim <dir>` + tmux restore ≈ f
    it's filtered via explicit `vim.lsp.config` in lspconfig.lua).
 9. **`nvim-tree` opens on `nvim <dir>`** via a BufEnter autocmd (plugin is lazy).
 10. **Session auto-save skips the fresh dashboard** (no named buffer + single window check in mini.lua).
-11. **hardtime is disabled by default** — enable via `<leader>uh` only after native motions feel natural.
 12. **tmux OSC fallback:** inside tmux, OSC palette queries are eaten, so terminal-colors.lua
     reads the terminal's config file directly (kitty/wezterm), detected via env vars that survive tmux.
 
@@ -235,7 +233,6 @@ tree buffer (maparg shows buffer-local callback taking precedence).
 - ~~`<leader>bs` sort buffers by directory~~ ✅ DONE 2026-09-07 (toggle MRU ↔ directory;
   snapshot-based restore — `insert_after_current` "respects current order", so plain
   clear of `custom_sort` would NOT restore MRU; see bufferline.lua comment).
-- Enable `hardtime` for 1 week once you stop reaching for arrows — locks in the speed gains.
 
 ---
 

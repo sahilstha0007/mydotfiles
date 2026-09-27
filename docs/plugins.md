@@ -69,10 +69,6 @@ gitsigns.nvim. Inline git change markers in the sign column plus `:Gitsigns:*
 grug-far.nvim. Project-wide search-and-replace UI. Good alternative to
 `vim.lsp.buf.codeaction` refactor when there's no LSP support.
 
-### `lua/plugins/editor/hardtime.lua`
-hardtime.nvim. Prevents the kind of bad muscle-memory habits (`dd`, `x`,
-`j` mash) that wear your hands and your wrists.
-
 ### `lua/plugins/editor/lazygit.lua`
 lazygit.nvim. Opens lazygit in a floating terminal. Usually `<leader>gg`.
 
