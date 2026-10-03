@@ -244,7 +244,10 @@ tree buffer (maparg shows buffer-local callback taking precedence).
 make keymaps
 
 # Config health + LSP/tool check
-# Bare :checkhealth now includes the custom-neovim section (lua/custom-neovim/health.lua).
+# Bare :checkhealth now includes the custom-neovim section. nvim globs
+# /lua/**/**/health.lua (runtime/lua/vim/health.lua:336) and `**` needs >=1 dir,
+# so the health module must live at lua/<name>/health.lua -- it was at
+# lua/health.lua for the life of the repo and never ran once.
 # To run just ours: :checkhealth custom-neovim
 nvim -c "checkhealth"
 

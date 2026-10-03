@@ -41,8 +41,11 @@ fmt-check:
 	@command -v $(STYLUA) >/dev/null 2>&1 || { echo "stylua not found at $(STYLUA)"; exit 1; }
 	$(STYLUA) --check $(LUA_SOURCES)
 
-# luacheck is not installed on this machine and is not in lazy-lock.json. Say so
-# plainly instead of exiting 127 with no explanation.
+# luacheck is not installed on this machine, is not in lazy-lock.json, and this
+# repo has NO .luacheckrc -- there is no configured luacheck config to wire up,
+# only stylua.toml. Say so plainly instead of exiting 127 with no explanation.
+# Default globals live in lua/globals.lua; luacheck would need --globals vim or
+# a config file to read anything useful here.
 lint:
 	@if command -v luacheck >/dev/null 2>&1; then \
 		luacheck $(LUA_SOURCES); \
