@@ -97,6 +97,7 @@ Ghostty/wezterm ── tmux (prefix C-a) ── nvim
 | `<leader>ghs ghr ghu ghp` | Stage / reset / undo-stage / preview hunk |
 | `<leader>gbs` `gbr` `gbl` | Stage / reset buffer, blame line |
 | `<leader>gB` | **Blame popup** — full commit (author/date/message) for current line |
+| `<leader>gG` | Open current file/line on GitHub (snacks gitbrowse) |
 | `<leader>gdi` `gdc` `gds` | Diff vs index / commit, show deleted |
 
 ### Tests / Debug
@@ -240,14 +241,21 @@ tree buffer (maparg shows buffer-local callback taking precedence).
 
 ```bash
 # Full keymap dump (all modes, global + buffer-local) → ~/.cache/nvim/keymaps_dump.json
-nvim --headless -u ~/.config/nvim/init.lua \
-  -c "luafile ~/.config/nvim/scripts/keymaps-dump.lua" -c "qa!"
+make keymaps
 
 # Config health + LSP/tool check
+# Bare :checkhealth now includes the custom-neovim section (lua/custom-neovim/health.lua).
+# To run just ours: :checkhealth custom-neovim
 nvim -c "checkhealth"
 
 # Startup profile
 nvim --startuptime /tmp/startup.log   # or <leader>l → Profile
+
+# Other rungs (independent — see Makefile for why test does not depend on these)
+make fmt        # rewrite the tree with stylua
+make fmt-check  # non-mutating; currently RED on pre-existing drift
+make lint       # luacheck; prints "not installed" and exits 0 if absent
+make test       # the spec suite — the only gate that must stay green
 ```
 
 Conflict check inside nvim: `<leader>sk` (snacks keymaps picker) → search the key.

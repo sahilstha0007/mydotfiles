@@ -1,7 +1,16 @@
 --[[
 --
--- This file is not required for your own configuration,
--- but helps people determine if their system is setup correctly.
+-- Runs under `:checkhealth custom-neovim` (or any `:checkhealth *`).
+--
+-- This file sat at lua/health.lua for the life of the repo and never ran once,
+-- even though AGENT.md tells the user to run `:checkhealth`. The layout nvim
+-- actually globs is `/lua/**/**/health.lua` (runtime/lua/vim/health.lua:336)
+-- -- `**` matches one or more directories, not zero, so a file at
+-- lua/health.lua sits at the wrong depth and lua/health/custom-neovim.lua is
+-- not the `<name>/health.lua` shape either. Only lua/<name>/health.lua resolves,
+-- and <name> is what the report is keyed by, which is why this is
+-- `custom-neovim` and not `kickstart.nvim` (that was upstream's label, never
+-- this config's identity).
 --
 --]]
 
@@ -45,7 +54,7 @@ end
 
 return {
   check = function()
-    vim.health.start 'kickstart.nvim'
+    vim.health.start 'custom-neovim'
 
     vim.health.info [[NOTE: Not every warning is a 'must-fix' in `:checkhealth`
 

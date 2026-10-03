@@ -105,6 +105,7 @@ Bound buffer-local on `LspAttach` (`lua/plugins/coding/lspconfig.lua`) unless no
 | `<leader>gbs` / `<leader>gbr` | Stage / reset buffer |
 | `<leader>gbl` | Toggle blame on current line |
 | `<leader>gB` | Blame line popup: full commit info (gitsigns `blame_line {full=true}`) |
+| `<leader>gG` | Open the current file/line on GitHub (snacks `gitbrowse`) |
 | `<leader>gdi` / `<leader>gdc` | Diff vs index / vs commit |
 | `<leader>gds` | Toggle deleted lines |
 | `<leader>l` | Lazy actions picker (sync / update / clean / …) |

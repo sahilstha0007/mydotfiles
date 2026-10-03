@@ -410,7 +410,7 @@ vim.opt.clipboard = <span class="s">'unnamedplus'</span>  <span class="cm">-- ya
 <span class="k">vim.keymap.set</span>(<span class="s">'v'</span>, <span class="s">'&gt;'</span>, <span class="s">'&gt;gv'</span>)</pre>
   </div>
 
-  <div class="tip"><b>Hardtime is watching:</b> your setup runs <code>hardtime.nvim</code> to break the <kbd>dd</kbd>/<kbd>x</kbd> mashing habit. It intentionally makes those slower until you start using motions + counts — the exact skills these lessons teach.</div>
+  <div class="tip"><b>No hardtime here:</b> this config used to run <code>hardtime.nvim</code> to break the <kbd>dd</kbd>/<kbd>x</kbd> mashing habit, but it was removed — <kbd>dd</kbd> and <kbd>x</kbd> are plain deletes here. The habits still pay off; nothing enforces them.</div>
 </section>
 
 <!-- ============ 03 INSERT ============ -->
@@ -979,7 +979,7 @@ keys = { { <span class="s">'&lt;leader&gt;gg'</span>, <span class="s">'&lt;cmd&g
   <div class="krow"><span class="k"><kbd>C-h</kbd> <kbd>C-j</kbd> <kbd>C-k</kbd> <kbd>C-l</kbd></span><span class="d"><b>Your config:</b> move focus between nvim and tmux panes as if they were one editor.</span></div>
   <div class="krow"><span class="k">prefix <kbd>C</kbd> + arrows</span><span class="d">tmux.nvim resize bindings.</span></div>
 
-  <div class="tip"><b>The payoff:</b> <kbd>Space</kbd><kbd>a</kbd> for the AI, <kbd>C-l</kbd> back into nvim, tests in another pane — all with the same fingers. That's the whole point of this setup.</div>
+  <div class="tip"><b>The payoff:</b> <kbd>Space</kbd><kbd>o</kbd> for the task runner, <kbd>C-l</kbd> back into nvim, tests in another pane — all with the same fingers. That's the whole point of this setup.</div>
 
   <div class="yset">
     <div class="yh"><span class="tag">your config</span> · <code>lua/plugins/editor/tmux.lua</code></div>
@@ -1153,7 +1153,6 @@ keys = { { <span class="s">'&lt;leader&gt;gg'</span>, <span class="s">'&lt;cmd&g
     <tr><td><kbd>l</kbd></td><td>Lazy actions picker (sync, update, clean, …)</td></tr>
     <tr><td><kbd>fr</kbd></td><td>File ring (recent files, harpoon-style)</td></tr>
     <tr><td><kbd>bp</kbd></td><td>Pick buffer from the tab strip</td></tr>
-    <tr><td><kbd>a</kbd></td><td>Pick AI agent (Claude Code / opencode) — right tmux pane inside tmux</td></tr>
     <tr><td><kbd>ut</kbd></td><td>Toggle treesitter-context</td></tr>
     <tr><td><kbd>th</kbd></td><td>Toggle inlay hints</td></tr>
     <tr><td><kbd>Space</kbd><kbd>Tab</kbd><kbd>d</kbd></td><td>Close tab</td></tr>

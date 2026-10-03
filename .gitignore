@@ -21,3 +21,10 @@ spell/
 .DS_Store
 *.log
 node_modules/
+
+# Scratch artifacts that showed up as `??` in the repo root. Named exactly, NOT
+# as a pattern: learn-nvim.html is a deliberately tracked 95K self-teaching
+# reference (docs/changelog.md), so a bare `*.html` rule would ignore it too --
+# and `git add .` would then stop tracking a file the project wants.
+/NvimTree_1
+/t.html

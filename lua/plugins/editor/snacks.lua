@@ -70,8 +70,18 @@ return {
     -- zen mode: distraction-free zoom (toggles back on Esc or <leader>z)
     { '<leader>z',  function() Snacks.zen() end, desc = 'Zen Mode (toggle)' },
     { '<leader>Z',  function() Snacks.zen.zoom() end, desc = 'Zoom (window only)' },
-    -- gitbrowse: open current file/line on GitHub (what's selected on remote)
-    { '<leader>gB', function() Snacks.gitbrowse() end, desc = 'Open on GitHub (gitbrowse)' },
+    -- gitbrowse: open current file/line on GitHub (what's selected on remote).
+    --
+    -- This was <leader>gB, which gitsigns' on_attach also binds (buffer-local)
+    -- to the full blame popup. gitsigns won every real buffer, so the binding
+    -- below was unreachable dead code -- and AGENT.md:99, docs/keymaps.md:107
+    -- and learn-nvim.html all documented <leader>gB as the blame popup.
+    -- The blame mapping is the one four sources agree on, so it keeps the key
+    -- and gitbrowse moves here. <leader>gG is free (nothing binds it) and sits
+    -- next to <leader>gg lazygit, which is the "leave the editor" end of the
+    -- group. tests/git_keymap_conflicts_spec.lua fails if this key is ever
+    -- bound twice again.
+    { '<leader>gG', function() Snacks.gitbrowse() end, desc = 'Open on GitHub (gitbrowse)' },
     { '<leader>s"',  function() Snacks.picker.registers() end, desc = 'Registers' },
     { '<leader>sa',  function() Snacks.picker.autocmds() end, desc = 'Auto Commands' },
     { '<leader>sb',  function() Snacks.picker.lines() end, desc = 'Buffer' },

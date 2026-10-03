@@ -119,10 +119,9 @@ on `nvim <dir>` — also read by the snacks dashboard).
 
 ### `lua/plugins/formatting/conform.lua`
 conform.nvim. Runs formatters on save. Per-filetype formatters configured here.
-
-### `lua/plugins/formatting/prettier.lua`
-Optional Prettier shim if conform doesn't pick up `prettier` automatically.
-Loaded eagerly so other plugin specs can assume it's available.
+`prettier`/`prettierd` are already listed for every web filetype here, and
+`biome` wins whenever the project has a `biome.json`, so a separate
+prettier shim would only have double-registered the same formatters.
 
 ## Languages
 
