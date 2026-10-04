@@ -74,19 +74,60 @@ local function slice(from, to)
   return table.concat(vim.list_slice(lines, from, to), '\n')
 end
 
--- Anchor checks: these must hold or the ranges below are wrong.
+-- Locate each region by CONTENT, not by hardcoded line number. This used to
+-- pin exact lines (116/141/170/191/227), so `make fmt` shifted them and the
+-- spec went red for a reason that had nothing to do with the colour maths it
+-- exists to test. Anchoring on the definitions themselves means reformatting
+-- can never break it, while a renamed or deleted function still fails loudly
+-- -- which is the only failure the line anchors were ever trying to catch.
+local function block(start_pat, end_pat)
+  local first
+  for i, l in ipairs(lines) do
+    if l:match(start_pat) then
+      first = i
+      break
+    end
+  end
+  assert(first, 'no line matches start pattern: ' .. start_pat)
+  for j = first, #lines do
+    if lines[j]:match(end_pat) then
+      return first, j
+    end
+  end
+  error('no line after ' .. first .. ' matches end pattern: ' .. end_pat)
+end
+
+-- Section 1: MIN_CONTRAST through acc(), ending just before hue()'s doc comment.
+local a1, b1 =
+  block('^local MIN_CONTRAST = ', "^%-%- Hue %(0%.%.360%) of a '#rrggbb'")
+-- Section 2: hue() and MIN_HUE_SEP, up to just before pick_accents().
+local a2, b2 = block('^local function hue%(', '^local function pick_accents%(')
+b2 = b2 - 1 -- pick_accents' own doc comment belongs to section 3
+-- Section 3: pick_accents() through its closing `end`.
+local a3, b3 = block('^local function pick_accents%(%)$', '^end$')
+
 check(
-  lines[116] == 'local MIN_CONTRAST = 4.5 -- WCAG AA for normal text',
-  'MIN_CONTRAST is at line 116 (update the slice if it moved)',
-  lines[116]
+  lines[a1] == 'local MIN_CONTRAST = 4.5 -- WCAG AA for normal text',
+  'MIN_CONTRAST block found',
+  lines[a1]
 )
-check(lines[141] == 'local function contrast(a, b)', 'contrast() starts at 141', lines[141])
-check(lines[170] == 'local function acc(idx, bright)', 'acc() starts at 170', lines[170])
-check(lines[227] == 'local function pick_accents()', 'pick_accents() starts at 227', lines[227])
 check(
-  lines[191] == '-- Hue (0..360) of a \'#rrggbb\' color; -1 for achromatic grays (never passed',
-  'acc() ends before the hue() comment at 191',
-  lines[191]
+  lines[a3] == 'local function pick_accents()',
+  'pick_accents block found',
+  lines[a3]
+)
+check(
+  b1 < a2,
+  ('sections do not overlap (acc ends %d, hue starts %d)'):format(b1, a2),
+  ('b1=%d a2=%d'):format(b1, a2)
+)
+check(
+  b2 < a3,
+  ('sections do not overlap (hue ends %d, pick_accents starts %d)'):format(
+    b2,
+    a3
+  ),
+  ('b2=%d a3=%d'):format(b2, a3)
 )
 
 -- acc() needs `pal`; build a minimal one so the function is self-contained.
@@ -95,9 +136,9 @@ check(
 -- local that the `return` then reads instead of the real function.
 local CHUNK = table.concat({
   'local pal = _TEST_PAL',
-  slice(116, 191), -- MIN_CONTRAST, channel, rel_lum, contrast, saturation, acc
-  slice(193, 226), -- hue, hue_dist, MIN_HUE_SEP (needed by pick_accents)
-  slice(227, 262), -- pick_accents
+  slice(a1, b1), -- MIN_CONTRAST, channel, rel_lum, contrast, saturation, acc
+  slice(a2, b2), -- hue, hue_dist, MIN_HUE_SEP (needed by pick_accents)
+  slice(a3, b3), -- pick_accents
   'return { MIN_CONTRAST = MIN_CONTRAST, rel_lum = rel_lum, contrast = contrast, saturation = saturation, acc = acc, pick_accents = pick_accents }',
 }, '\n')
 
@@ -139,7 +180,11 @@ local known = {
 _G._TEST_PAL = { ansi = {}, fg = nil, bg = nil }
 local fn0, err0 = loadstring(CHUNK)
 if type(fn0) ~= 'function' then
-  check(false, 'the extracted source compiles', 'loadstring returned ' .. type(fn0) .. ': ' .. tostring(err0))
+  check(
+    false,
+    'the extracted source compiles',
+    'loadstring returned ' .. type(fn0) .. ': ' .. tostring(err0)
+  )
   os.exit(1)
 end
 check(true, 'the extracted source compiles')
@@ -154,7 +199,12 @@ do
     check(
       math.abs(got - want) < 0.01,
       string.format('contrast(%s, %s) = %.3f', k[1], k[2], got),
-      string.format('got %.4f, WCAG says %.4f, documented %.3f', got, want, k[3])
+      string.format(
+        'got %.4f, WCAG says %.4f, documented %.3f',
+        got,
+        want,
+        k[3]
+      )
     )
   end
 
@@ -174,11 +224,15 @@ do
   -- CHECK 2: symmetry — the gate must work in both directions
   -- -------------------------------------------------------------------------
   check(
-    math.abs(T.contrast('#ffb3ac', '#1a1110') - T.contrast('#1a1110', '#ffb3ac')) < 1e-9,
+    math.abs(
+      T.contrast('#ffb3ac', '#1a1110') - T.contrast('#1a1110', '#ffb3ac')
+    ) < 1e-9,
     'contrast is symmetric on a light token / dark bg'
   )
   check(
-    math.abs(T.contrast('#1e66f5', '#eff1f5') - T.contrast('#eff1f5', '#1e66f5')) < 1e-9,
+    math.abs(
+      T.contrast('#1e66f5', '#eff1f5') - T.contrast('#eff1f5', '#1e66f5')
+    ) < 1e-9,
     'contrast is symmetric on a dark token / light bg (the latte case)'
   )
   check(
@@ -211,9 +265,14 @@ do
     old_passed_new_fails .. ' of ' .. #disputed .. ' disputed greys'
   )
   check(
-    T.contrast('#6e6e6a', '#1a1110') < 4.5 and T.contrast('#787878', '#1a1110') < 4.5,
+    T.contrast('#6e6e6a', '#1a1110') < 4.5
+      and T.contrast('#787878', '#1a1110') < 4.5,
     'the two greys quoted in the code comments are both under 4.5:1',
-    string.format('#6e6e6a=%.2f #787878=%.2f', T.contrast('#6e6e6a', '#1a1110'), T.contrast('#787878', '#1a1110'))
+    string.format(
+      '#6e6e6a=%.2f #787878=%.2f',
+      T.contrast('#6e6e6a', '#1a1110'),
+      T.contrast('#787878', '#1a1110')
+    )
   )
 
   -- -------------------------------------------------------------------------
@@ -244,7 +303,11 @@ do
   pal_bad.ansi[4] = '#ffb3ac' -- base blue   — readable
   pal_bad.ansi[12] = '#ffb3ac' -- bright blue
   local T_bad = eval_with(pal_bad)
-  check(T_bad.acc(2, 10) == nil, 'acc() refuses the 2.87:1 olive success token', tostring(T_bad.acc(2, 10)))
+  check(
+    T_bad.acc(2, 10) == nil,
+    'acc() refuses the 2.87:1 olive success token',
+    tostring(T_bad.acc(2, 10))
+  )
   check(
     T_bad.acc(4, 12) == '#ffb3ac',
     'acc() still adopts the readable blue',
@@ -279,7 +342,11 @@ do
   local T_sparse = eval_with(pal_sparse)
   local ok_sparse = pcall(T_sparse.acc, 7, 15)
   check(ok_sparse, 'acc() survives an entirely empty palette slot')
-  check(T_sparse.acc(7, 15) == nil, 'acc() returns nil for an empty slot', tostring(T_sparse.acc(7, 15)))
+  check(
+    T_sparse.acc(7, 15) == nil,
+    'acc() returns nil for an empty slot',
+    tostring(T_sparse.acc(7, 15))
+  )
 
   -- (e) pick_accents must still produce a spread, not collapse to one colour
   local pal_mono = { ansi = {}, bg = '#1a1110', fg = '#f1dedc' }
@@ -299,7 +366,11 @@ do
       'a monochromatic palette yields few distinct accents (derivation fills the rest)',
       n .. ' accents adopted'
     )
-    check(accents.blue ~= nil, 'the primary is always adopted for the blue slot', tostring(accents.blue))
+    check(
+      accents.blue ~= nil,
+      'the primary is always adopted for the blue slot',
+      tostring(accents.blue)
+    )
   end
 end
 

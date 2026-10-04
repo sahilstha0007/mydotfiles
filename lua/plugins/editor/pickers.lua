@@ -9,7 +9,7 @@ return {
       end, { desc = 'Goto Definition' })
 
       vim.keymap.set('n', 'gr', function()
-        require('snacks.picker').lsp_references({ include_current_line = false })
+        require('snacks.picker').lsp_references { include_current_line = false }
       end, { desc = 'References', nowait = true })
 
       vim.keymap.set('n', 'gI', function()

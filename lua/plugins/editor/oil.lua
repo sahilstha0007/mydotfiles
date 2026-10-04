@@ -32,7 +32,11 @@ return {
       -- NOTE: float is on <leader>O (uppercase) — <leader>o is the Overseer
       -- Tasks prefix group (ot, or, ol, oq, oa…), so a direct <leader>o
       -- map would shadow the group in which-key.
-      { '<leader>O', '<cmd>Oil --float<cr>', desc = 'Oil (float) — edit dir as buffer' },
+      {
+        '<leader>O',
+        '<cmd>Oil --float<cr>',
+        desc = 'Oil (float) — edit dir as buffer',
+      },
     },
     cmd = 'Oil',
   },

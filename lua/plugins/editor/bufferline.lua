@@ -6,7 +6,9 @@ local function pill_tint(c)
   local function mix(hex_a, hex_b, t)
     local function to_rgb(hex)
       local h = hex:gsub('#', '')
-      return tonumber(h:sub(1, 2), 16), tonumber(h:sub(3, 4), 16), tonumber(h:sub(5, 6), 16)
+      return tonumber(h:sub(1, 2), 16),
+        tonumber(h:sub(3, 4), 16),
+        tonumber(h:sub(5, 6), 16)
     end
     local ar, ag, ab = to_rgb(hex_a)
     local br, bg, bb = to_rgb(hex_b)
@@ -121,7 +123,10 @@ return {
               table.insert(ids, c.id)
             end
             if #ids == 0 then
-              return vim.notify('bufferline: no buffers to sort', vim.log.levels.WARN)
+              return vim.notify(
+                'bufferline: no buffers to sort',
+                vim.log.levels.WARN
+              )
             end
             mru_snapshot = ids
             require('bufferline').sort_by 'directory'
@@ -195,10 +200,13 @@ return {
       -- and push each highlight group through bufferline's own name generator
       -- so the strip follows the terminal without a full re-setup.
       vim.api.nvim_create_autocmd('ColorScheme', {
-        group = vim.api.nvim_create_augroup('bufferline-palette', { clear = true }),
+        group = vim.api.nvim_create_augroup(
+          'bufferline-palette',
+          { clear = true }
+        ),
         callback = function()
           local c = require('utils.theme').palette()
-          local hl = require('bufferline.highlights')
+          local hl = require 'bufferline.highlights'
           for name, attrs in pairs(highlights_from(c)) do
             vim.api.nvim_set_hl(0, hl.generate_name(name), attrs)
           end

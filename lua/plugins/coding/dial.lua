@@ -31,7 +31,12 @@ return {
           cyclic = true,
         },
         augend.case.new {
-          types = { 'camelCase', 'PascalCase', 'snake_case', 'SCREAMING_SNAKE_CASE' },
+          types = {
+            'camelCase',
+            'PascalCase',
+            'snake_case',
+            'SCREAMING_SNAKE_CASE',
+          },
           cyclic = true,
         },
         augend.date.new {
@@ -53,12 +58,42 @@ return {
         augend.integer.new_decimal,
       })
 
-      vim.keymap.set('n', '<C-a>', dial.inc_normal(), { desc = 'Increment (dial)' })
-      vim.keymap.set('n', '<C-x>', dial.dec_normal(), { desc = 'Decrement (dial)' })
-      vim.keymap.set('v', '<C-a>', dial.inc_visual(), { desc = 'Increment (dial)' })
-      vim.keymap.set('v', '<C-x>', dial.dec_visual(), { desc = 'Decrement (dial)' })
-      vim.keymap.set('v', 'g<C-a>', dial.inc_gvisual(), { desc = 'Increment sequence' })
-      vim.keymap.set('v', 'g<C-x>', dial.dec_gvisual(), { desc = 'Decrement sequence' })
+      vim.keymap.set(
+        'n',
+        '<C-a>',
+        dial.inc_normal(),
+        { desc = 'Increment (dial)' }
+      )
+      vim.keymap.set(
+        'n',
+        '<C-x>',
+        dial.dec_normal(),
+        { desc = 'Decrement (dial)' }
+      )
+      vim.keymap.set(
+        'v',
+        '<C-a>',
+        dial.inc_visual(),
+        { desc = 'Increment (dial)' }
+      )
+      vim.keymap.set(
+        'v',
+        '<C-x>',
+        dial.dec_visual(),
+        { desc = 'Decrement (dial)' }
+      )
+      vim.keymap.set(
+        'v',
+        'g<C-a>',
+        dial.inc_gvisual(),
+        { desc = 'Increment sequence' }
+      )
+      vim.keymap.set(
+        'v',
+        'g<C-x>',
+        dial.dec_gvisual(),
+        { desc = 'Decrement sequence' }
+      )
     end,
   },
 }

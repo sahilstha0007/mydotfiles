@@ -15,7 +15,10 @@ return {
       -- the terminal theme changes, which fires ColorScheme; refresh() rebuilds
       -- the Lualine* groups and the mode→color map from the new palette.
       vim.api.nvim_create_autocmd('ColorScheme', {
-        group = vim.api.nvim_create_augroup('lualine-palette', { clear = true }),
+        group = vim.api.nvim_create_augroup(
+          'lualine-palette',
+          { clear = true }
+        ),
         callback = function()
           pcall(require('plugins.editor.lualine-theme').refresh)
         end,
@@ -25,7 +28,7 @@ return {
       -- on ColorScheme, so lookups stay cheap and stay in sync with palette
       -- changes. (The mode color component runs on every cursor move / mode
       -- change, so anything computed inside it is a hot path.)
-      local theme = require('plugins.editor.lualine-theme')
+      local theme = require 'plugins.editor.lualine-theme'
       local mode_color = theme.mode_colors
 
       local conditions = {

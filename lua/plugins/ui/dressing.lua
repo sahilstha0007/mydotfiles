@@ -65,7 +65,7 @@ return {
     -- Ignore those two lines, or drop dressing and the errors go away.
     config = function(_, opts)
       require('dressing').setup(opts)
-      local patch = require('dressing.patch')
+      local patch = require 'dressing.patch'
       patch.original_mods.select = Snacks.picker.select
       patch.original_mods.input = Snacks.input
     end,

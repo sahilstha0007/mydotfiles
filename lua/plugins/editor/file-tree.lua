@@ -3,7 +3,12 @@ return {
     'nvim-tree/nvim-tree.lua',
     version = '*',
     -- Lazy-loaded: pulled in on <leader>e, :NvimTree*, or opening a directory.
-    cmd = { 'NvimTreeOpen', 'NvimTreeToggle', 'NvimTreeFocus', 'NvimTreeFindFile' },
+    cmd = {
+      'NvimTreeOpen',
+      'NvimTreeToggle',
+      'NvimTreeFocus',
+      'NvimTreeFindFile',
+    },
     dependencies = {
       'nvim-tree/nvim-web-devicons',
       'nvim-lua/plenary.nvim',
@@ -44,7 +49,10 @@ return {
 
       -- `nvim <dir>` still opens the tree, even though the plugin is lazy.
       vim.api.nvim_create_autocmd('BufEnter', {
-        group = vim.api.nvim_create_augroup('nvim-tree-dir-open', { clear = true }),
+        group = vim.api.nvim_create_augroup(
+          'nvim-tree-dir-open',
+          { clear = true }
+        ),
         callback = function()
           local file = vim.fn.expand '%:p'
           if vim.fn.isdirectory(file) == 1 then

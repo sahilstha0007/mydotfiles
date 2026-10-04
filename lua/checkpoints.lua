@@ -26,7 +26,7 @@
 
 local M = {}
 
-local NS = vim.api.nvim_create_namespace('checkpoints')
+local NS = vim.api.nvim_create_namespace 'checkpoints'
 local REF_PREFIX = 'refs/checkpoints/'
 
 local function git_dir(cwd)
@@ -82,10 +82,14 @@ function M.create(cwd)
     end
   end
 
-  local staged = vim.system({ 'git', '-C', cwd, 'add', '-A' }, { text = true }):wait()
+  local staged = vim
+    .system({ 'git', '-C', cwd, 'add', '-A' }, { text = true })
+    :wait()
   local tree
   if staged and staged.code == 0 then
-    local w = vim.system({ 'git', '-C', cwd, 'write-tree' }, { text = true }):wait()
+    local w = vim
+      .system({ 'git', '-C', cwd, 'write-tree' }, { text = true })
+      :wait()
     if w and w.code == 0 then
       tree = vim.trim(w.stdout or '')
     end
@@ -108,9 +112,14 @@ function M.create(cwd)
   -- Anchor the tree under a ref so it survives gc. Updating a ref never moves
   -- HEAD and creates no commit.
   local ref = M.ref(cwd)
-  local upd = vim.system({ 'git', '-C', cwd, 'update-ref', ref, tree }, { text = true }):wait()
+  local upd = vim
+    .system({ 'git', '-C', cwd, 'update-ref', ref, tree }, { text = true })
+    :wait()
   if not upd or upd.code ~= 0 then
-    return nil, 'could not record the snapshot: ' .. vim.trim((upd and upd.stderr) or 'unknown error')
+    return nil,
+      'could not record the snapshot: ' .. vim.trim(
+        (upd and upd.stderr) or 'unknown error'
+      )
   end
 
   M.save_log(cwd, tree)
@@ -155,7 +164,7 @@ function M.list(cwd, raw)
   if not f then
     return out
   end
-  local body = f:read('*a')
+  local body = f:read '*a'
   f:close()
   local ok, decoded = pcall(vim.json.decode, body)
   if ok and type(decoded) == 'table' then
@@ -169,7 +178,11 @@ function M.list(cwd, raw)
     table.insert(items, {
       index = i,
       tree = e.tree,
-      label = string.format('%s  %s', os.date('%H:%M:%S', e.at or 0), e.tree:sub(1, 8)),
+      label = string.format(
+        '%s  %s',
+        os.date('%H:%M:%S', e.at or 0),
+        e.tree:sub(1, 8)
+      ),
     })
   end
   return items
@@ -189,7 +202,9 @@ function M.restore(cwd, tree, opts)
     return false, 'no snapshot given'
   end
 
-  local st = vim.system({ 'git', '-C', cwd, 'status', '--porcelain' }, { text = true }):wait()
+  local st = vim
+    .system({ 'git', '-C', cwd, 'status', '--porcelain' }, { text = true })
+    :wait()
   local dirty = st and st.code == 0 and vim.trim(st.stdout or '') ~= ''
   if dirty and not opts.force then
     return false, 'working tree has uncommitted changes'
@@ -197,9 +212,12 @@ function M.restore(cwd, tree, opts)
 
   -- read-tree + checkout-index writes the work tree without touching HEAD,
   -- the index's staged state, or the stash list.
-  local r = vim.system({ 'git', '-C', cwd, 'read-tree', '--reset', '-u', tree }, { text = true }):wait()
+  local r = vim
+    .system({ 'git', '-C', cwd, 'read-tree', '--reset', '-u', tree }, { text = true })
+    :wait()
   if not r or r.code ~= 0 then
-    return false, 'restore failed: ' .. vim.trim((r and r.stderr) or 'unknown error')
+    return false,
+      'restore failed: ' .. vim.trim((r and r.stderr) or 'unknown error')
   end
   return true, 'restored ' .. tree:sub(1, 8)
 end
@@ -208,7 +226,9 @@ end
 function M.clear(cwd)
   cwd = cwd or vim.fn.getcwd()
   local ref = M.ref(cwd)
-  vim.system({ 'git', '-C', cwd, 'update-ref', '-d', ref }, { text = true }):wait()
+  vim
+    .system({ 'git', '-C', cwd, 'update-ref', '-d', ref }, { text = true })
+    :wait()
   local path = M.log_path(cwd)
   if path ~= '' and vim.fn.filereadable(path) == 1 then
     vim.fn.delete(path)
@@ -238,7 +258,10 @@ local function browse()
   end
   local items = M.list()
   if #items == 0 then
-    vim.notify('no checkpoints yet — <leader>cc to make one', vim.log.levels.WARN)
+    vim.notify(
+      'no checkpoints yet — <leader>cc to make one',
+      vim.log.levels.WARN
+    )
     return
   end
   vim.ui.select(items, {
@@ -252,18 +275,25 @@ local function browse()
     end
     local ok, msg = M.restore(nil, choice.tree)
     if not ok and msg == 'working tree has uncommitted changes' then
-      vim.ui.select({ 'Cancel', 'Discard my changes and restore' }, { prompt = 'Working tree is dirty. ' }, function(pick)
-        if pick == 'Discard my changes and restore' then
-          local ok2, msg2 = M.restore(nil, choice.tree, { force = true })
-          vim.notify(msg2, ok2 and vim.log.levels.INFO or vim.log.levels.ERROR)
+      vim.ui.select(
+        { 'Cancel', 'Discard my changes and restore' },
+        { prompt = 'Working tree is dirty. ' },
+        function(pick)
+          if pick == 'Discard my changes and restore' then
+            local ok2, msg2 = M.restore(nil, choice.tree, { force = true })
+            vim.notify(
+              msg2,
+              ok2 and vim.log.levels.INFO or vim.log.levels.ERROR
+            )
+          end
         end
-      end)
+      )
       return
     end
     vim.notify(msg, ok and vim.log.levels.INFO or vim.log.levels.ERROR)
     -- The agent reloads buffers on its own (autoread), but a clean buffer only
     -- reloads if it is not the current one; :checktime covers the rest.
-    vim.cmd('checktime')
+    vim.cmd 'checktime'
   end)
 end
 
@@ -273,7 +303,12 @@ function M.setup()
   -- the whole opts table as the lhs. Every other keymap in this config is
   -- plain vim.keymap.set, so this stays plain.
   local group = vim.api.nvim_create_augroup('Checkpoints', { clear = true })
-  vim.keymap.set('n', '<leader>cc', snapshot, { desc = 'Checkpoint working tree' })
+  vim.keymap.set(
+    'n',
+    '<leader>cc',
+    snapshot,
+    { desc = 'Checkpoint working tree' }
+  )
   vim.keymap.set('n', '<leader>cC', browse, { desc = 'Restore checkpoint' })
   vim.api.nvim_create_autocmd('VimLeavePre', {
     group = group,

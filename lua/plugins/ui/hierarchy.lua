@@ -30,14 +30,14 @@ function M.apply()
   end
 
   local c = {
-    surface2 = slot('CursorLine'),
-    surface1 = slot('NonText'),
-    overlay1 = slot('Comment'),
-    overlay0 = slot('LineNr'),
-    comment = slot('Comment'),
-    text = slot('Normal'),
-    error = slot('DiagnosticError'),
-    warn = slot('DiagnosticWarn'),
+    surface2 = slot 'CursorLine',
+    surface1 = slot 'NonText',
+    overlay1 = slot 'Comment',
+    overlay0 = slot 'LineNr',
+    comment = slot 'Comment',
+    text = slot 'Normal',
+    error = slot 'DiagnosticError',
+    warn = slot 'DiagnosticWarn',
   }
 
   -- --- demote: structure -------------------------------------------------
@@ -70,7 +70,7 @@ function M.apply()
   -- Diagnostics. Severity sort + underline means the LIST reads in the right
   -- order; the underline means it survives on a translucent background
   -- where a subtle colour shift would not.
-  vim.diagnostic.config({ severity_sort = true, underline = true })
+  vim.diagnostic.config { severity_sort = true, underline = true }
 
   -- Git: gitsigns already colours these; the hunk marks are the third
   -- promoted element and must stay above the demoted structure above.

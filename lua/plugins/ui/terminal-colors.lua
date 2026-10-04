@@ -30,8 +30,8 @@ local M = {}
 -- ---------------------------------------------------------------------------
 local pal = {
   ansi = {}, -- [0..15] -> '#rrggbb'
-  fg = nil,  -- OSC 10
-  bg = nil,  -- OSC 11
+  fg = nil, -- OSC 10
+  bg = nil, -- OSC 11
 }
 
 -- True once the 16 ANSI colors have been collected. fg/bg are optional —
@@ -79,7 +79,9 @@ end
 -- Mix two '#rrggbb' colors by fraction t (0..1) toward the second.
 local function mix(a, b, t)
   local function rgb(hex)
-    return tonumber(hex:sub(2, 3), 16), tonumber(hex:sub(4, 5), 16), tonumber(hex:sub(6, 7), 16)
+    return tonumber(hex:sub(2, 3), 16),
+      tonumber(hex:sub(4, 5), 16),
+      tonumber(hex:sub(6, 7), 16)
   end
   local ar, ag, ab = rgb(a)
   local br, bg, bb = rgb(b)
@@ -226,7 +228,7 @@ end
 local MIN_HUE_SEP = 40
 local function pick_accents()
   local chosen = {} -- slot -> hex
-  local taken = {}  -- accepted hues
+  local taken = {} -- accepted hues
 
   local primary = acc(4, 12) -- wallpaper primary -> blue slot, always
   if primary then
@@ -235,9 +237,18 @@ local function pick_accents()
   end
 
   local candidates = {
-    { 'lavender', 4, 12 }, { 'sapphire', 6, 14 }, { 'sky', 6, 14 }, { 'teal', 6, 14 },
-    { 'green', 2, 10 }, { 'yellow', 3, 11 }, { 'peach', 3, 11 }, { 'red', 1, 9 },
-    { 'maroon', 1, 9 }, { 'mauve', 5, 13 }, { 'pink', 5, 13 }, { 'flamingo', 1, 9 },
+    { 'lavender', 4, 12 },
+    { 'sapphire', 6, 14 },
+    { 'sky', 6, 14 },
+    { 'teal', 6, 14 },
+    { 'green', 2, 10 },
+    { 'yellow', 3, 11 },
+    { 'peach', 3, 11 },
+    { 'red', 1, 9 },
+    { 'maroon', 1, 9 },
+    { 'mauve', 5, 13 },
+    { 'pink', 5, 13 },
+    { 'flamingo', 1, 9 },
   }
   for _, c in ipairs(candidates) do
     local hex = acc(c[2], c[3])
@@ -263,23 +274,55 @@ end
 -- Map the terminal palette onto catppuccin mocha slots
 -- ---------------------------------------------------------------------------
 local MOCHA_DEFAULTS = {
-  base = '#1e1e2e', text = '#cdd6f4', surface0 = '#313244', surface1 = '#45475a',
-  surface2 = '#585b70', overlay0 = '#6c7086', overlay1 = '#7f849c', overlay2 = '#9399b2',
-  blue = '#89b4fa', lavender = '#b4befe', sapphire = '#74c7ec', sky = '#89dceb',
-  teal = '#94e2d5', green = '#a6e3a1', yellow = '#f9e2af', peach = '#fab387',
-  red = '#f38ba8', maroon = '#eba0ac', mauve = '#cba6f7', pink = '#f5c2e7',
-  flamingo = '#f2cdcd', rosewater = '#f5e0dc',
+  base = '#1e1e2e',
+  text = '#cdd6f4',
+  surface0 = '#313244',
+  surface1 = '#45475a',
+  surface2 = '#585b70',
+  overlay0 = '#6c7086',
+  overlay1 = '#7f849c',
+  overlay2 = '#9399b2',
+  blue = '#89b4fa',
+  lavender = '#b4befe',
+  sapphire = '#74c7ec',
+  sky = '#89dceb',
+  teal = '#94e2d5',
+  green = '#a6e3a1',
+  yellow = '#f9e2af',
+  peach = '#fab387',
+  red = '#f38ba8',
+  maroon = '#eba0ac',
+  mauve = '#cba6f7',
+  pink = '#f5c2e7',
+  flamingo = '#f2cdcd',
+  rosewater = '#f5e0dc',
 }
 
 -- Light (latte) defaults — used when the adopted background is bright, so
 -- gray ANSI slots fall back to colors that actually read on light surfaces.
 local LATTE_DEFAULTS = {
-  base = '#eff1f5', text = '#4c4f69', surface0 = '#ccd0da', surface1 = '#bcc0cc',
-  surface2 = '#acb0be', overlay0 = '#9ca0b0', overlay1 = '#8c8fa1', overlay2 = '#7c7f93',
-  blue = '#1e66f5', lavender = '#7287fd', sapphire = '#209fb5', sky = '#04a5e5',
-  teal = '#179299', green = '#40a02b', yellow = '#df8e1d', peach = '#fe640b',
-  red = '#d20f39', maroon = '#e64553', mauve = '#8839ef', pink = '#ea76cb',
-  flamingo = '#dd7878', rosewater = '#dc8a78',
+  base = '#eff1f5',
+  text = '#4c4f69',
+  surface0 = '#ccd0da',
+  surface1 = '#bcc0cc',
+  surface2 = '#acb0be',
+  overlay0 = '#9ca0b0',
+  overlay1 = '#8c8fa1',
+  overlay2 = '#7c7f93',
+  blue = '#1e66f5',
+  lavender = '#7287fd',
+  sapphire = '#209fb5',
+  sky = '#04a5e5',
+  teal = '#179299',
+  green = '#40a02b',
+  yellow = '#df8e1d',
+  peach = '#fe640b',
+  red = '#d20f39',
+  maroon = '#e64553',
+  mauve = '#8839ef',
+  pink = '#ea76cb',
+  flamingo = '#dd7878',
+  rosewater = '#dc8a78',
 }
 
 -- HSLUV-space helpers via catppuccin's bundled lib: perceptually uniform
@@ -440,17 +483,17 @@ local function catppuccin_opts()
     transparent_background = true, -- let kitty/wezterm opacity show through
     color_overrides = { [flavour] = build_overrides() },
     integrations = {
-      nvimtree           = true,
-      treesitter         = true,
-      blink_cmp          = true,
-      gitsigns           = true,
-      which_key          = true,
-      mini               = { enabled = true },
-      snacks             = true,
-      lsp_trouble        = true,
+      nvimtree = true,
+      treesitter = true,
+      blink_cmp = true,
+      gitsigns = true,
+      which_key = true,
+      mini = { enabled = true },
+      snacks = true,
+      lsp_trouble = true,
       treesitter_context = true,
-      ufo                = true,
-      flash              = true,
+      ufo = true,
+      flash = true,
     },
     highlight_overrides = {
       [flavour] = function(c)
@@ -461,8 +504,13 @@ local function catppuccin_opts()
         local rim = mix(c.surface2, c.blue, 0.35) -- luminous blue float border
         -- Octo's *Dark* tokens want a deeper tone on dark themes and a
         -- softened tone on light ones (same luminance rule as the rest).
-        local darken = is_light_bg() and function(hex) return mix(hex, c.base, 0.45) end
-          or function(hex) return mix(hex, '#000000', 0.45) end
+        local darken = is_light_bg()
+            and function(hex)
+              return mix(hex, c.base, 0.45)
+            end
+          or function(hex)
+            return mix(hex, '#000000', 0.45)
+          end
         return {
           -- Comments: catppuccin uses overlay0 (#6c7086, ~3.8:1 on this
           -- background) which reads as barely-there gray. overlay1 keeps
@@ -472,65 +520,80 @@ local function catppuccin_opts()
           -- Explorer blends with terminal. nvim-tree.lua is the active tree,
           -- so these are NvimTree* groups; catppuccin's nvimtree integration
           -- themes the rest.
-          NvimTreeNormal       = { bg = 'NONE', fg = c.text },
-          NvimTreeNormalNC     = { bg = 'NONE' },
-          NvimTreeEndOfBuffer  = { bg = 'NONE' },
+          NvimTreeNormal = { bg = 'NONE', fg = c.text },
+          NvimTreeNormalNC = { bg = 'NONE' },
+          NvimTreeEndOfBuffer = { bg = 'NONE' },
           NvimTreeWinSeparator = { fg = c.surface1, bg = 'NONE' },
 
           -- Completion popup: FULL TRANSPARENCY (user preference) — body is
           -- NONE like every other float; active row = blue bold underline.
-          Pmenu      = { bg = 'NONE', fg = c.text },
-          PmenuSel   = { bg = 'NONE', fg = c.blue, bold = true, underline = true },
+          Pmenu = { bg = 'NONE', fg = c.text },
+          PmenuSel = { bg = 'NONE', fg = c.blue, bold = true, underline = true },
           PmenuMatchSel = { bg = 'NONE', fg = c.blue, bold = true },
           PmenuKindSel = { bg = 'NONE', fg = c.blue, bold = true },
           PmenuExtraSel = { bg = 'NONE', fg = c.text, bold = true },
-          PmenuSbar  = { bg = 'NONE' },
+          PmenuSbar = { bg = 'NONE' },
           PmenuThumb = { bg = c.blue },
 
           -- blink.cmp overlays: FULL TRANSPARENCY — body NONE so the menu
           -- floats directly over the wallpaper; active row = underline.
-          BlinkCmpMenu          = { bg = 'NONE', fg = c.text },
+          BlinkCmpMenu = { bg = 'NONE', fg = c.text },
           -- border bg pinned to transparent so the rounded corners read as
           -- clean curves over the wallpaper
-          BlinkCmpMenuBorder    = { fg = rim, bg = 'NONE' },
+          BlinkCmpMenuBorder = { fg = rim, bg = 'NONE' },
           BlinkCmpMenuSelection = {
             bg = 'NONE',
             fg = c.blue,
             bold = true,
             underline = true,
           },
-          BlinkCmpScrollBarThumb  = { bg = c.blue },
+          BlinkCmpScrollBarThumb = { bg = c.blue },
           BlinkCmpScrollBarGutter = { bg = 'NONE' },
-          BlinkCmpLabel         = { fg = c.text },
-          BlinkCmpLabelMatch    = { fg = c.blue, bold = true },
-          BlinkCmpLabelDetail   = { fg = c.overlay1 },
-          BlinkCmpDoc           = { bg = 'NONE' },
-          BlinkCmpDocBorder     = { fg = rim, bg = 'NONE' },
+          BlinkCmpLabel = { fg = c.text },
+          BlinkCmpLabelMatch = { fg = c.blue, bold = true },
+          BlinkCmpLabelDetail = { fg = c.overlay1 },
+          BlinkCmpDoc = { bg = 'NONE' },
+          BlinkCmpDocBorder = { fg = rim, bg = 'NONE' },
           BlinkCmpSignatureHelp = { bg = 'NONE' },
           BlinkCmpSignatureHelpBorder = { fg = rim, bg = 'NONE' },
-          BlinkCmpGhostText     = { fg = c.overlay0 },
-          BlinkCmpKindFunction  = { fg = c.blue },
-          BlinkCmpKindMethod    = { fg = c.blue },
-          BlinkCmpKindVariable  = { fg = c.red },
-          BlinkCmpKindConstant  = { fg = c.yellow },
-          BlinkCmpKindClass     = { fg = c.yellow },
-          BlinkCmpKindKeyword   = { fg = c.mauve },
-          BlinkCmpKindSnippet   = { fg = c.green },
-          BlinkCmpKindText      = { fg = c.subtext0 },
-          BlinkCmpKindProperty  = { fg = c.subtext0 },
+          BlinkCmpGhostText = { fg = c.overlay0 },
+          BlinkCmpKindFunction = { fg = c.blue },
+          BlinkCmpKindMethod = { fg = c.blue },
+          BlinkCmpKindVariable = { fg = c.red },
+          BlinkCmpKindConstant = { fg = c.yellow },
+          BlinkCmpKindClass = { fg = c.yellow },
+          BlinkCmpKindKeyword = { fg = c.mauve },
+          BlinkCmpKindSnippet = { fg = c.green },
+          BlinkCmpKindText = { fg = c.subtext0 },
+          BlinkCmpKindProperty = { fg = c.subtext0 },
 
           -- contrast polish — underline/fg based, no filled boxes (full
           -- transparency: wallpaper visible through everything)
-          Search      = { bg = 'NONE', fg = c.blue, bold = true, underline = true },
-          CurSearch   = { bg = 'NONE', fg = c.yellow, bold = true, underline = true },
-          Visual      = { bg = 'NONE', fg = c.text, bold = true },
-          MatchParen  = { bg = 'NONE', fg = c.blue, bold = true, underline = true },
-          IncSearch   = { bg = 'NONE', fg = c.peach, bold = true, underline = true },
+          Search = { bg = 'NONE', fg = c.blue, bold = true, underline = true },
+          CurSearch = {
+            bg = 'NONE',
+            fg = c.yellow,
+            bold = true,
+            underline = true,
+          },
+          Visual = { bg = 'NONE', fg = c.text, bold = true },
+          MatchParen = {
+            bg = 'NONE',
+            fg = c.blue,
+            bold = true,
+            underline = true,
+          },
+          IncSearch = {
+            bg = 'NONE',
+            fg = c.peach,
+            bold = true,
+            underline = true,
+          },
           WinSeparator = { fg = c.surface1 },
 
           -- Active line: NO bg (full transparency) — the cursor row is
           -- marked by the blue bold line number alone.
-          CursorLine   = { bg = 'NONE' },
+          CursorLine = { bg = 'NONE' },
           CursorLineNr = { fg = c.blue, bold = true },
 
           -- Floating windows (hover, diagnostics popup, dressing, which-key):
@@ -544,7 +607,12 @@ local function catppuccin_opts()
           -- -----------------------------------------------------------------
           -- Snacks picker — the single picker (telescope removed)
           -- -----------------------------------------------------------------
-          SnacksPickerSelected = { bg = 'NONE', fg = c.blue, bold = true, underline = true },
+          SnacksPickerSelected = {
+            bg = 'NONE',
+            fg = c.blue,
+            bold = true,
+            underline = true,
+          },
           SnacksPickerMatch = { fg = c.blue, bold = true },
           SnacksPickerPrompt = { fg = c.flamingo },
           SnacksPickerTitle = { fg = c.blue, bg = 'NONE' },
@@ -556,8 +624,8 @@ local function catppuccin_opts()
           -- Notifications — accent-colored text, transparent body
           -- -----------------------------------------------------------------
           -- Notifications — accent-colored text, transparent body
-          SnacksNotifierInfo  = { fg = c.blue },
-          SnacksNotifierWarn  = { fg = c.yellow },
+          SnacksNotifierInfo = { fg = c.blue },
+          SnacksNotifierWarn = { fg = c.yellow },
           SnacksNotifierError = { fg = c.red },
           SnacksNotifierDebug = { fg = c.peach },
           SnacksNotifierTrace = { fg = c.rosewater },
@@ -568,20 +636,20 @@ local function catppuccin_opts()
           -- Octo's semantic colors map onto the wallpaper palette: status
           -- dots, timeline markers, and merge-state chips all re-tint when
           -- the wallpaper changes (catppuccin re-applies this table).
-          OctoWhite      = { fg = c.text },
-          OctoGrey       = { fg = c.overlay1 },
-          OctoBlack      = { fg = c.base },
-          OctoRed        = { fg = c.red },
-          OctoDarkRed    = { fg = darken(c.red) },
-          OctoGreen      = { fg = c.green },
-          OctoDarkGreen  = { fg = darken(c.green) },
-          OctoYellow     = { fg = c.yellow },
+          OctoWhite = { fg = c.text },
+          OctoGrey = { fg = c.overlay1 },
+          OctoBlack = { fg = c.base },
+          OctoRed = { fg = c.red },
+          OctoDarkRed = { fg = darken(c.red) },
+          OctoGreen = { fg = c.green },
+          OctoDarkGreen = { fg = darken(c.green) },
+          OctoYellow = { fg = c.yellow },
           OctoDarkYellow = { fg = darken(c.yellow) },
-          OctoBlue       = { fg = c.blue },
-          OctoDarkBlue   = { fg = darken(c.blue) },
-          OctoPurple     = { fg = c.mauve },
+          OctoBlue = { fg = c.blue },
+          OctoDarkBlue = { fg = darken(c.blue) },
+          OctoPurple = { fg = c.mauve },
           -- merge-state chips: filled pills (text flips to the surface color)
-          OctoStateOpen   = { fg = c.base, bg = c.green },
+          OctoStateOpen = { fg = c.base, bg = c.green },
           OctoStateClosed = { fg = c.base, bg = c.red },
           OctoStateMerged = { fg = c.base, bg = c.mauve },
         }
@@ -589,7 +657,6 @@ local function catppuccin_opts()
     },
   }
 end
-
 
 -- ---------------------------------------------------------------------------
 -- Terminal query + live update
@@ -800,7 +867,10 @@ local function read_wezterm_palette()
   f:close()
   local fn, err = loadstring(src)
   if not fn then
-    vim.notify('terminal-colors: wezterm palette parse: ' .. tostring(err), vim.log.levels.WARN)
+    vim.notify(
+      'terminal-colors: wezterm palette parse: ' .. tostring(err),
+      vim.log.levels.WARN
+    )
     return false
   end
   local ok, cs = pcall(fn)
@@ -882,11 +952,15 @@ local function refresh_from_file()
   else
     refresh_timer = vim.uv.new_timer()
   end
-  refresh_timer:start(200, 0, vim.schedule_wrap(function()
-    if poll_palette_file() and complete() then
-      apply()
-    end
-  end))
+  refresh_timer:start(
+    200,
+    0,
+    vim.schedule_wrap(function()
+      if poll_palette_file() and complete() then
+        apply()
+      end
+    end)
+  )
 end
 
 -- Live palette updates when OSC is dead (inside tmux, or over ssh where no
@@ -906,11 +980,15 @@ local function start_palette_watch()
   end
 
   watch_timer = vim.uv.new_timer()
-  watch_timer:start(3000, 3000, vim.schedule_wrap(function()
-    if poll_palette_file() and complete() then
-      apply()
-    end
-  end))
+  watch_timer:start(
+    3000,
+    3000,
+    vim.schedule_wrap(function()
+      if poll_palette_file() and complete() then
+        apply()
+      end
+    end)
+  )
 
   local handle = vim.uv.new_fs_event()
   if not handle then
@@ -918,12 +996,16 @@ local function start_palette_watch()
   end
   watch_handle = handle
   local dir = vim.fs.dirname(palette_file) or vim.env.HOME or '/'
-  local ok_start = watch_handle:start(dir, {}, vim.schedule_wrap(function(err2)
-    if err2 then
-      return
-    end
-    refresh_from_file()
-  end))
+  local ok_start = watch_handle:start(
+    dir,
+    {},
+    vim.schedule_wrap(function(err2)
+      if err2 then
+        return
+      end
+      refresh_from_file()
+    end)
+  )
   if not ok_start then
     watch_handle:close()
     watch_handle = nil

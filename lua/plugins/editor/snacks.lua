@@ -9,17 +9,61 @@ return {
         -- Smart popup for lazy.nvim: pick an action instead of typing :Lazy
         -- subcommands. The dashboard's `l` key still opens the full Lazy UI.
         local actions = {
-          { name = 'Sync',    desc = 'Install & update pinned plugins', cmd = ':Lazy sync' },
-          { name = 'Install', desc = 'Install missing plugins',         cmd = ':Lazy install' },
-          { name = 'Update',  desc = 'Update installed plugins',        cmd = ':Lazy update' },
-          { name = 'Clean',   desc = 'Remove unused plugins',           cmd = ':Lazy clean' },
-          { name = 'Check',   desc = 'Validate plugin specs',           cmd = ':Lazy check' },
-          { name = 'Restore', desc = 'Restore plugins from lockfile',   cmd = ':Lazy restore' },
-          { name = 'Profile', desc = 'Startup / load profiling',        cmd = ':Lazy profile' },
-          { name = 'Health',  desc = 'Run :checkhealth for a plugin',   cmd = ':Lazy health' },
-          { name = 'Log',     desc = 'Open the lazy.nvim log',          cmd = ':Lazy log' },
-          { name = 'Debug',   desc = 'Debug lazy.nvim loading',         cmd = ':Lazy debug' },
-          { name = 'Open UI', desc = 'Open the lazy.nvim dashboard',    cmd = ':Lazy' },
+          {
+            name = 'Sync',
+            desc = 'Install & update pinned plugins',
+            cmd = ':Lazy sync',
+          },
+          {
+            name = 'Install',
+            desc = 'Install missing plugins',
+            cmd = ':Lazy install',
+          },
+          {
+            name = 'Update',
+            desc = 'Update installed plugins',
+            cmd = ':Lazy update',
+          },
+          {
+            name = 'Clean',
+            desc = 'Remove unused plugins',
+            cmd = ':Lazy clean',
+          },
+          {
+            name = 'Check',
+            desc = 'Validate plugin specs',
+            cmd = ':Lazy check',
+          },
+          {
+            name = 'Restore',
+            desc = 'Restore plugins from lockfile',
+            cmd = ':Lazy restore',
+          },
+          {
+            name = 'Profile',
+            desc = 'Startup / load profiling',
+            cmd = ':Lazy profile',
+          },
+          {
+            name = 'Health',
+            desc = 'Run :checkhealth for a plugin',
+            cmd = ':Lazy health',
+          },
+          {
+            name = 'Log',
+            desc = 'Open the lazy.nvim log',
+            cmd = ':Lazy log',
+          },
+          {
+            name = 'Debug',
+            desc = 'Debug lazy.nvim loading',
+            cmd = ':Lazy debug',
+          },
+          {
+            name = 'Open UI',
+            desc = 'Open the lazy.nvim dashboard',
+            cmd = ':Lazy',
+          },
         }
         Snacks.picker.select(actions, {
           prompt = 'Lazy actions',
@@ -36,11 +80,41 @@ return {
     },
     -- ---- single picker system (telescope removed): find/search/symbol ----
     -- bindings open snacks.picker, which also owns vim.ui.select.
-    { '<leader>,',   function() Snacks.picker.buffers() end, desc = 'Switch Buffer' },
-    { '<leader>fb',  function() Snacks.picker.buffers() end, desc = 'Buffers' },
-    { '<leader>ff',  function() Snacks.picker.files() end, desc = 'Files' },
-    { '<leader><space>', function() Snacks.picker.files() end, desc = 'Find Files' },
-    { '<leader>fg',  function() Snacks.picker.git_files() end, desc = 'Git-files' },
+    {
+      '<leader>,',
+      function()
+        Snacks.picker.buffers()
+      end,
+      desc = 'Switch Buffer',
+    },
+    {
+      '<leader>fb',
+      function()
+        Snacks.picker.buffers()
+      end,
+      desc = 'Buffers',
+    },
+    {
+      '<leader>ff',
+      function()
+        Snacks.picker.files()
+      end,
+      desc = 'Files',
+    },
+    {
+      '<leader><space>',
+      function()
+        Snacks.picker.files()
+      end,
+      desc = 'Find Files',
+    },
+    {
+      '<leader>fg',
+      function()
+        Snacks.picker.git_files()
+      end,
+      desc = 'Git-files',
+    },
     -- Terminal toggle (snacks.terminal): <C-/> mirrors VSCode's terminal
     -- key. Terminals send C-/ as C-_, so map both spellings. Needs t-mode
     -- too: snacks installs no in-terminal keymaps of its own, and lazy's
@@ -58,18 +132,65 @@ return {
     --
     -- <C-_> stays a true toggle -- same as snacks' default -- so clearing is
     -- still one keystroke if you want the buffer gone.
-    { '<C-/>',       function() Snacks.terminal.hide() end, mode = { 'n', 't' }, desc = 'Terminal (hide)' },
-    { '<C-_>',       function() Snacks.terminal.toggle() end, mode = { 'n', 't' }, desc = 'Terminal (toggle)' },
-    { '<leader>ft',  function() Snacks.terminal.toggle() end, desc = 'Terminal (toggle, cwd)' },
-    { '<leader>fT',  function() Snacks.terminal.toggle(nil, { cwd = Snacks.git.get_root() }) end, desc = 'Terminal (toggle, git root)' },
+    {
+      '<C-/>',
+      function()
+        Snacks.terminal.hide()
+      end,
+      mode = { 'n', 't' },
+      desc = 'Terminal (hide)',
+    },
+    {
+      '<C-_>',
+      function()
+        Snacks.terminal.toggle()
+      end,
+      mode = { 'n', 't' },
+      desc = 'Terminal (toggle)',
+    },
+    {
+      '<leader>ft',
+      function()
+        Snacks.terminal.toggle()
+      end,
+      desc = 'Terminal (toggle, cwd)',
+    },
+    {
+      '<leader>fT',
+      function()
+        Snacks.terminal.toggle(nil, { cwd = Snacks.git.get_root() })
+      end,
+      desc = 'Terminal (toggle, git root)',
+    },
     -- lazydocker float: the docker TUI over the editor, mirroring tmux's
     -- Prefix+d popup and lazygit.nvim's <leader>gg float. UPPERCASE D —
     -- lowercase <leader>d is the DAP debug group (dap/core.lua). toggle()
     -- re-press closes it; auto_close ends the float when lazydocker exits.
-    { '<leader>D',   function() Snacks.terminal.toggle('lazydocker', { cwd = vim.fn.getcwd(), auto_close = true }) end, desc = 'LazyDocker (docker TUI float)' },
+    {
+      '<leader>D',
+      function()
+        Snacks.terminal.toggle(
+          'lazydocker',
+          { cwd = vim.fn.getcwd(), auto_close = true }
+        )
+      end,
+      desc = 'LazyDocker (docker TUI float)',
+    },
     -- zen mode: distraction-free zoom (toggles back on Esc or <leader>z)
-    { '<leader>z',  function() Snacks.zen() end, desc = 'Zen Mode (toggle)' },
-    { '<leader>Z',  function() Snacks.zen.zoom() end, desc = 'Zoom (window only)' },
+    {
+      '<leader>z',
+      function()
+        Snacks.zen()
+      end,
+      desc = 'Zen Mode (toggle)',
+    },
+    {
+      '<leader>Z',
+      function()
+        Snacks.zen.zoom()
+      end,
+      desc = 'Zoom (window only)',
+    },
     -- gitbrowse: open current file/line on GitHub (what's selected on remote).
     --
     -- This was <leader>gB, which gitsigns' on_attach also binds (buffer-local)
@@ -81,26 +202,146 @@ return {
     -- next to <leader>gg lazygit, which is the "leave the editor" end of the
     -- group. tests/git_keymap_conflicts_spec.lua fails if this key is ever
     -- bound twice again.
-    { '<leader>gG', function() Snacks.gitbrowse() end, desc = 'Open on GitHub (gitbrowse)' },
-    { '<leader>s"',  function() Snacks.picker.registers() end, desc = 'Registers' },
-    { '<leader>sa',  function() Snacks.picker.autocmds() end, desc = 'Auto Commands' },
-    { '<leader>sb',  function() Snacks.picker.lines() end, desc = 'Buffer' },
-    { '<leader>sc',  function() Snacks.picker.command_history() end, desc = 'Command History' },
-    { '<leader>sC',  function() Snacks.picker.commands() end, desc = 'Commands' },
-    { '<leader>sd',  function() Snacks.picker.diagnostics({ bufnum = 0 }) end, desc = 'Document Diagnostics' },
-    { '<leader>sD',  function() Snacks.picker.diagnostics() end, desc = 'Workspace Diagnostics' },
-    { '<leader>sg',  function() Snacks.picker.grep() end, desc = 'Grep' },
-    { '<leader>sh',  function() Snacks.picker.help() end, desc = 'Help Pages' },
-    { '<leader>sH',  function() Snacks.picker.highlights() end, desc = 'Highlight Groups' },
-    { '<leader>sj',  function() Snacks.picker.jumps() end, desc = 'Jumplist' },
-    { '<leader>sk',  function() Snacks.picker.keymaps() end, desc = 'Key Maps' },
-    { '<leader>sl',  function() Snacks.picker.loclist() end, desc = 'Location List' },
-    { '<leader>sM',  function() Snacks.picker.man() end, desc = 'Man Pages' },
-    { '<leader>sm',  function() Snacks.picker.marks() end, desc = 'Jump to Mark' },
-    { '<leader>sR',  function() Snacks.picker.resume() end, desc = 'Resume' },
-    { '<leader>sq',  function() Snacks.picker.qflist() end, desc = 'Quickfix List' },
-    { '<leader>ss',  function() Snacks.picker.lsp_symbols() end, desc = 'Symbol (Document)' },
-    { '<leader>sS',  function() Snacks.picker.lsp_workspace_symbols() end, desc = 'Symbol (Workspace)' },
+    {
+      '<leader>gG',
+      function()
+        Snacks.gitbrowse()
+      end,
+      desc = 'Open on GitHub (gitbrowse)',
+    },
+    {
+      '<leader>s"',
+      function()
+        Snacks.picker.registers()
+      end,
+      desc = 'Registers',
+    },
+    {
+      '<leader>sa',
+      function()
+        Snacks.picker.autocmds()
+      end,
+      desc = 'Auto Commands',
+    },
+    {
+      '<leader>sb',
+      function()
+        Snacks.picker.lines()
+      end,
+      desc = 'Buffer',
+    },
+    {
+      '<leader>sc',
+      function()
+        Snacks.picker.command_history()
+      end,
+      desc = 'Command History',
+    },
+    {
+      '<leader>sC',
+      function()
+        Snacks.picker.commands()
+      end,
+      desc = 'Commands',
+    },
+    {
+      '<leader>sd',
+      function()
+        Snacks.picker.diagnostics { bufnum = 0 }
+      end,
+      desc = 'Document Diagnostics',
+    },
+    {
+      '<leader>sD',
+      function()
+        Snacks.picker.diagnostics()
+      end,
+      desc = 'Workspace Diagnostics',
+    },
+    {
+      '<leader>sg',
+      function()
+        Snacks.picker.grep()
+      end,
+      desc = 'Grep',
+    },
+    {
+      '<leader>sh',
+      function()
+        Snacks.picker.help()
+      end,
+      desc = 'Help Pages',
+    },
+    {
+      '<leader>sH',
+      function()
+        Snacks.picker.highlights()
+      end,
+      desc = 'Highlight Groups',
+    },
+    {
+      '<leader>sj',
+      function()
+        Snacks.picker.jumps()
+      end,
+      desc = 'Jumplist',
+    },
+    {
+      '<leader>sk',
+      function()
+        Snacks.picker.keymaps()
+      end,
+      desc = 'Key Maps',
+    },
+    {
+      '<leader>sl',
+      function()
+        Snacks.picker.loclist()
+      end,
+      desc = 'Location List',
+    },
+    {
+      '<leader>sM',
+      function()
+        Snacks.picker.man()
+      end,
+      desc = 'Man Pages',
+    },
+    {
+      '<leader>sm',
+      function()
+        Snacks.picker.marks()
+      end,
+      desc = 'Jump to Mark',
+    },
+    {
+      '<leader>sR',
+      function()
+        Snacks.picker.resume()
+      end,
+      desc = 'Resume',
+    },
+    {
+      '<leader>sq',
+      function()
+        Snacks.picker.qflist()
+      end,
+      desc = 'Quickfix List',
+    },
+    {
+      '<leader>ss',
+      function()
+        Snacks.picker.lsp_symbols()
+      end,
+      desc = 'Symbol (Document)',
+    },
+    {
+      '<leader>sS',
+      function()
+        Snacks.picker.lsp_workspace_symbols()
+      end,
+      desc = 'Symbol (Workspace)',
+    },
   },
   ---@type snacks.Config
   opts = function()
@@ -159,7 +400,10 @@ return {
     end
     tint_header()
     vim.api.nvim_create_autocmd('ColorScheme', {
-      group = vim.api.nvim_create_augroup('dashboard-header-tint', { clear = true }),
+      group = vim.api.nvim_create_augroup(
+        'dashboard-header-tint',
+        { clear = true }
+      ),
       callback = tint_header,
     })
     local header_rows = {}
@@ -204,14 +448,44 @@ return {
         width = 72,
         preset = {
           keys = {
-            { icon = ic(0xF002), key = 'f', desc = 'Find File', action = ":lua Snacks.dashboard.pick('files')" },  -- fa-search
-            { icon = ic(0xF15B), key = 'n', desc = 'New File', action = ':ene | startinsert' },                     -- fa-file
-            { icon = ic(0xF0349), key = 'g', desc = 'Find Text', action = ":lua Snacks.dashboard.pick('live_grep')" }, -- md-magnify
-            { icon = ic(0xF0093), key = 't', desc = 'Run Tests', action = ":lua require('neotest').run.run(vim.uv.cwd())" }, -- md-flask
-            { icon = ic(0xF02A2), key = 'G', desc = 'LazyGit', action = ':LazyGit' },                              -- md-git
-            { icon = ic(0xF02DA), key = 's', desc = 'Restore Session', section = 'session' },                       -- md-history
-            { icon = ic(0xF03D3), key = 'l', desc = 'Lazy', action = ':Lazy' },                                    -- md-package
-            { icon = ic(0xF0425), key = 'q', desc = 'Quit', action = ':qa' },                                      -- md-power
+            {
+              icon = ic(0xF002),
+              key = 'f',
+              desc = 'Find File',
+              action = ":lua Snacks.dashboard.pick('files')",
+            }, -- fa-search
+            {
+              icon = ic(0xF15B),
+              key = 'n',
+              desc = 'New File',
+              action = ':ene | startinsert',
+            }, -- fa-file
+            {
+              icon = ic(0xF0349),
+              key = 'g',
+              desc = 'Find Text',
+              action = ":lua Snacks.dashboard.pick('live_grep')",
+            }, -- md-magnify
+            {
+              icon = ic(0xF0093),
+              key = 't',
+              desc = 'Run Tests',
+              action = ":lua require('neotest').run.run(vim.uv.cwd())",
+            }, -- md-flask
+            {
+              icon = ic(0xF02A2),
+              key = 'G',
+              desc = 'LazyGit',
+              action = ':LazyGit',
+            }, -- md-git
+            {
+              icon = ic(0xF02DA),
+              key = 's',
+              desc = 'Restore Session',
+              section = 'session',
+            }, -- md-history
+            { icon = ic(0xF03D3), key = 'l', desc = 'Lazy', action = ':Lazy' }, -- md-package
+            { icon = ic(0xF0425), key = 'q', desc = 'Quit', action = ':qa' }, -- md-power
           },
           header = header_rows,
         },
@@ -234,7 +508,13 @@ return {
             title = 'Git Status',
             indent = 2,
           },
-          { icon = ic(0xF02DA), title = 'Recent Files', section = 'recent_files', indent = 2, padding = 1 }, -- md-history
+          {
+            icon = ic(0xF02DA),
+            title = 'Recent Files',
+            section = 'recent_files',
+            indent = 2,
+            padding = 1,
+          }, -- md-history
           -- startup renders the plugin-load stats (startuptime, loaded/count),
           -- which is what the old `lazy` section used to show
           { section = 'startup' },

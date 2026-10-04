@@ -16,7 +16,10 @@
 -- self-testing. It was previously a hardcoded absolute path, which meant a
 -- spec run inside a copied tree still put the LIVE config on the runtimepath
 -- and every mutant of that copy passed green.
-vim.opt.rtp:prepend(vim.env.NVIM_CONFIG_ROOT or (vim.fn.fnamemodify(debug.getinfo(1, 'S').source:sub(2), ':p:h:h')))
+vim.opt.rtp:prepend(
+  vim.env.NVIM_CONFIG_ROOT
+    or (vim.fn.fnamemodify(debug.getinfo(1, 'S').source:sub(2), ':p:h:h'))
+)
 vim.opt.swapfile = false
 vim.opt.shadafile = 'NONE'
 -- Undo must behave like stock nvim here, or the measurements are meaningless.

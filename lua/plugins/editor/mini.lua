@@ -12,10 +12,22 @@ return {
         -- (block), `aa`/`ia` (parameter) now resolve against the real
         -- syntax tree instead of regex guesswork.
         custom_textobjects = {
-          a = MiniAi.gen_spec.treesitter({ a = '@parameter.outer', i = '@parameter.inner' }),
-          b = MiniAi.gen_spec.treesitter({ a = '@block.outer', i = '@block.inner' }),
-          c = MiniAi.gen_spec.treesitter({ a = '@class.outer', i = '@class.inner' }),
-          f = MiniAi.gen_spec.treesitter({ a = '@function.outer', i = '@function.inner' }),
+          a = MiniAi.gen_spec.treesitter {
+            a = '@parameter.outer',
+            i = '@parameter.inner',
+          },
+          b = MiniAi.gen_spec.treesitter {
+            a = '@block.outer',
+            i = '@block.inner',
+          },
+          c = MiniAi.gen_spec.treesitter {
+            a = '@class.outer',
+            i = '@class.inner',
+          },
+          f = MiniAi.gen_spec.treesitter {
+            a = '@function.outer',
+            i = '@function.inner',
+          },
         },
       }
 
@@ -80,7 +92,8 @@ return {
         directory = vim.fn.stdpath 'data' .. '/sessions',
       }
 
-      local session_group = vim.api.nvim_create_augroup('mini-sessions', { clear = true })
+      local session_group =
+        vim.api.nvim_create_augroup('mini-sessions', { clear = true })
 
       -- Auto-save: persist the workspace on exit (skips the fresh-launch
       -- dashboard-only state, which has no real workspace to save).
@@ -89,7 +102,7 @@ return {
         callback = function()
           local bufname = vim.api.nvim_buf_get_name(0)
           if #vim.api.nvim_list_wins() > 1 or bufname ~= '' then
-            MiniSessions.write('last')
+            MiniSessions.write 'last'
           end
         end,
       })
@@ -109,9 +122,24 @@ return {
 
       -- write('last') needs an explicit name: a bare write() only saves an
       -- already-active session (v:this_session), so it'd no-op on a fresh launch.
-      vim.keymap.set('n', '<leader>qq', '<cmd>lua MiniSessions.write("last")<CR>', { desc = 'Save Session' })
-      vim.keymap.set('n', '<leader>ql', '<cmd>lua MiniSessions.read()<CR>', { desc = 'Load Last Session' })
-      vim.keymap.set('n', '<leader>qs', '<cmd>lua MiniSessions.select()<CR>', { desc = 'Select Session' })
+      vim.keymap.set(
+        'n',
+        '<leader>qq',
+        '<cmd>lua MiniSessions.write("last")<CR>',
+        { desc = 'Save Session' }
+      )
+      vim.keymap.set(
+        'n',
+        '<leader>ql',
+        '<cmd>lua MiniSessions.read()<CR>',
+        { desc = 'Load Last Session' }
+      )
+      vim.keymap.set(
+        'n',
+        '<leader>qs',
+        '<cmd>lua MiniSessions.select()<CR>',
+        { desc = 'Select Session' }
+      )
     end,
   },
 }

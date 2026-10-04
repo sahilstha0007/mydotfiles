@@ -25,7 +25,7 @@
 -- So the two plugin dirs this spec needs are prepended explicitly.
 
 local passed, failed = 0, 0
-local LAZY = vim.fn.expand('$HOME') .. '/.local/share/nvim/lazy'
+local LAZY = vim.fn.expand '$HOME' .. '/.local/share/nvim/lazy'
 vim.opt.runtimepath:prepend(LAZY .. '/dressing.nvim')
 vim.opt.runtimepath:prepend(LAZY .. '/snacks.nvim')
 
@@ -54,8 +54,8 @@ local function check(cond, msg)
   end
 end
 
-local patch = require('dressing.patch')
-local snacks = require('snacks')
+local patch = require 'dressing.patch'
+local snacks = require 'snacks'
 -- and the config() half, which re-points the capture at snacks
 if entry.config then
   entry.config('dressing.nvim', entry.opts)
@@ -64,8 +64,14 @@ end
 -- --- dressing must not answer prompts -----------------------------------------
 -- If either is enabled, dressing's wrapper services the call and the snacks
 -- picker never sees it. This is the whole bug in one boolean.
-check(not patch.is_enabled('select'), 'dressing.select is enabled, so it swallows every vim.ui.select')
-check(not patch.is_enabled('input'), 'dressing.input is enabled, so it swallows every vim.ui.input')
+check(
+  not patch.is_enabled 'select',
+  'dressing.select is enabled, so it swallows every vim.ui.select'
+)
+check(
+  not patch.is_enabled 'input',
+  'dressing.input is enabled, so it swallows every vim.ui.input'
+)
 
 -- --- and the wrapper must forward to snacks, not to nvim's builtin ------------
 -- This is the subtle half. Disabling dressing is NOT enough: patch.lua
@@ -75,11 +81,11 @@ check(not patch.is_enabled('input'), 'dressing.input is enabled, so it swallows 
 -- not a picker. So the capture has to be re-pointed at snacks.
 check(
   patch.original_mods.select == snacks.picker.select,
-  'dressing forwards vim.ui.select to nvim\'s builtin, not to Snacks.picker.select'
+  "dressing forwards vim.ui.select to nvim's builtin, not to Snacks.picker.select"
 )
 check(
   patch.original_mods.input == snacks.input,
-  'dressing forwards vim.ui.input to nvim\'s builtin, not to Snacks.input'
+  "dressing forwards vim.ui.input to nvim's builtin, not to Snacks.input"
 )
 
 -- --- the end-to-end check: does a real call arrive in snacks? ----------------
@@ -106,7 +112,8 @@ check(hit, 'a real vim.ui.select() call did not reach Snacks.picker.select')
 -- Both halves are load-bearing. Someone tidying away either the `enabled =
 -- false` opts or the config() re-point silently restores the bug, and neither
 -- shows up as an error at boot.
-local src = table.concat(vim.fn.readfile(root .. '/lua/plugins/ui/dressing.lua'), '\n')
+local src = table
+  .concat(vim.fn.readfile(root .. '/lua/plugins/ui/dressing.lua'), '\n')
   :gsub('%-%-[^\n]*', '')
 
 check(

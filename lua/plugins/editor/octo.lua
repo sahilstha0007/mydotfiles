@@ -27,11 +27,17 @@ return {
       { '<leader>pi', '<cmd>Octo issue list<CR>', desc = 'Issues' },
       { '<leader>pr', '<cmd>Octo pr list<CR>', desc = 'Pull Requests' },
       { '<leader>pd', '<cmd>Octo discussion list<CR>', desc = 'Discussions' },
-      { '<leader>pn', '<cmd>Octo notification list<CR>', desc = 'Notifications' },
+      {
+        '<leader>pn',
+        '<cmd>Octo notification list<CR>',
+        desc = 'Notifications',
+      },
       {
         '<leader>ps',
         function()
-          require('octo.utils').create_base_search_command { include_current_repo = true }
+          require('octo.utils').create_base_search_command {
+            include_current_repo = true,
+          }
         end,
         desc = 'Search GitHub',
       },

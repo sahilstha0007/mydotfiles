@@ -31,7 +31,7 @@ vim.fn.mkdir(REPO, 'p')
 
 local function git(...)
   local args = { 'git', '-C', REPO }
-  for _, a in ipairs({ ... }) do
+  for _, a in ipairs { ... } do
     table.insert(args, a)
   end
   local out = vim.system(args, { text = true }):wait()
@@ -43,7 +43,7 @@ local function read(p)
   if not f then
     return nil
   end
-  local s = f:read('*a')
+  local s = f:read '*a'
   f:close()
   return s
 end
@@ -71,7 +71,7 @@ local cp = dofile(ROOT .. '/lua/checkpoints.lua')
 
 -- --- availability ----------------------------------------------------------
 check(cp.available(REPO), 'a real git repo should report available')
-check(not cp.available('/tmp'), 'a non-repo should report unavailable')
+check(not cp.available '/tmp', 'a non-repo should report unavailable')
 
 -- --- the staging area is the user's, and must survive ----------------------
 --
@@ -84,21 +84,42 @@ local tree, err = cp.create(REPO)
 check(tree ~= nil, 'create failed: ' .. tostring(err))
 
 local staged_after = git('diff', '--cached', '--name-only')
-check(staged_before == staged_after,
-  ('the staging area changed: before [%s] after [%s]'):format(staged_before, staged_after))
-check(staged_after == 'tracked.txt',
-  'the snapshot left extra things staged: ' .. staged_after)
+check(
+  staged_before == staged_after,
+  ('the staging area changed: before [%s] after [%s]'):format(
+    staged_before,
+    staged_after
+  )
+)
+check(
+  staged_after == 'tracked.txt',
+  'the snapshot left extra things staged: ' .. staged_after
+)
 
 -- HEAD and the stash list must be untouched by a snapshot.
-check(git('log', '--oneline'):match('init') ~= nil, 'HEAD moved during a snapshot')
-check(git('stash', 'list') == '', 'a snapshot created a stash entry: ' .. git('stash', 'list'))
+check(
+  git('log', '--oneline'):match 'init' ~= nil,
+  'HEAD moved during a snapshot'
+)
+check(
+  git('stash', 'list') == '',
+  'a snapshot created a stash entry: ' .. git('stash', 'list')
+)
 
 -- --- the snapshot must contain BOTH the edit and the new file -------------
 local ls = git('ls-tree', '--name-only', tree)
-check(ls:find('created_by_agent.txt', 1, true) ~= nil,
-  'the new file the agent created is not in the snapshot:\n' .. ls)
-check(ls:find('tracked.txt', 1, true) ~= nil, 'the edited file is not in the snapshot:\n' .. ls)
-check(git('show', tree .. ':tracked.txt') == 'agent edited this', 'the edit was not captured')
+check(
+  ls:find('created_by_agent.txt', 1, true) ~= nil,
+  'the new file the agent created is not in the snapshot:\n' .. ls
+)
+check(
+  ls:find('tracked.txt', 1, true) ~= nil,
+  'the edited file is not in the snapshot:\n' .. ls
+)
+check(
+  git('show', tree .. ':tracked.txt') == 'agent edited this',
+  'the edit was not captured'
+)
 
 -- --- the snapshot is restorable, including a deleted file ------------------
 -- Deleting tracked.txt is the case stash-style snapshots lose entirely.
@@ -109,40 +130,64 @@ vim.fn.delete(REPO .. '/tracked.txt')
 
 local ok, msg = cp.restore(REPO, tree, { force = true })
 check(ok, 'restore failed: ' .. tostring(msg))
-check(read('tracked.txt') == 'agent edited this\n', 'restore did not bring the file back')
-check(read('created_by_agent.txt') == 'new file the agent made\n', 'restore lost the created file')
-check(git('log', '--oneline'):match('init') ~= nil, 'restore moved HEAD')
+check(
+  read 'tracked.txt' == 'agent edited this\n',
+  'restore did not bring the file back'
+)
+check(
+  read 'created_by_agent.txt' == 'new file the agent made\n',
+  'restore lost the created file'
+)
+check(git('log', '--oneline'):match 'init' ~= nil, 'restore moved HEAD')
 check(git('stash', 'list') == '', 'restore created a stash entry')
 
 -- --- a dirty tree is never clobbered without saying so --------------------
 write('tracked.txt', 'MY UNSAVED WORK\n')
 local ok2, msg2 = cp.restore(REPO, tree)
 check(not ok2, 'a dirty working tree was overwritten without force')
-check(read('tracked.txt') == 'MY UNSAVED WORK\n', 'the unsaved work was destroyed anyway')
-check(msg2 == 'working tree has uncommitted changes', 'unhelpful refusal message: ' .. tostring(msg2))
+check(
+  read 'tracked.txt' == 'MY UNSAVED WORK\n',
+  'the unsaved work was destroyed anyway'
+)
+check(
+  msg2 == 'working tree has uncommitted changes',
+  'unhelpful refusal message: ' .. tostring(msg2)
+)
 
 -- with force it goes through, and the message says so
 local ok3, msg3 = cp.restore(REPO, tree, { force = true })
 check(ok3, 'a forced restore failed: ' .. tostring(msg3))
-check(read('tracked.txt') == 'agent edited this\n', 'a forced restore did not apply')
+check(
+  read 'tracked.txt' == 'agent edited this\n',
+  'a forced restore did not apply'
+)
 
 -- --- history ---------------------------------------------------------------
 local log = cp.list(REPO, true)
 check(#log >= 1, 'no snapshot was recorded in the history')
-check(log[1].tree == tree, 'the newest history entry is not the snapshot just taken')
+check(
+  log[1].tree == tree,
+  'the newest history entry is not the snapshot just taken'
+)
 
 local shown = cp.list(REPO)
-check(shown[1].label:find(tree:sub(1, 8), 1, true) ~= nil, 'the display label lost the tree sha: ' .. shown[1].label)
+check(
+  shown[1].label:find(tree:sub(1, 8), 1, true) ~= nil,
+  'the display label lost the tree sha: ' .. shown[1].label
+)
 
 -- clearing removes the ref and the log, and is not destructive to the work
 cp.clear(REPO)
 check(#cp.list(REPO, true) == 0, 'clear left history behind')
-check(read('tracked.txt') == 'agent edited this\n', 'clear destroyed the working tree')
+check(
+  read 'tracked.txt' == 'agent edited this\n',
+  'clear destroyed the working tree'
+)
 
 vim.fn.delete(REPO, 'rf')
 print(string.format('checkpoints: %d passed, %d failed', passed, failed))
 if failed > 0 then
-  vim.cmd('cq')
+  vim.cmd 'cq'
 else
-  vim.cmd('qa!')
+  vim.cmd 'qa!'
 end

@@ -11,7 +11,10 @@
 -- this sets a known palette and asserts the hierarchy moves it. Same contract,
 -- no dependency on how it gets loaded.
 
-vim.opt.runtimepath:prepend(vim.env.NVIM_CONFIG_ROOT or vim.fn.fnamemodify(debug.getinfo(1, 'S').source:sub(2), ':p:h:h'))
+vim.opt.runtimepath:prepend(
+  vim.env.NVIM_CONFIG_ROOT
+    or vim.fn.fnamemodify(debug.getinfo(1, 'S').source:sub(2), ':p:h:h')
+)
 
 local failed = 0
 local function check(ok, msg)
@@ -36,7 +39,10 @@ set(0, 'DiagnosticError', { fg = '#f38ba8' })
 set(0, 'DiagnosticWarn', { fg = '#f9e2af' })
 
 -- Before: the groups the hierarchy owns are unset.
-check(vim.api.nvim_get_hl(0, { name = '@punctuation' }).fg == nil, 'premise: @punctuation unset')
+check(
+  vim.api.nvim_get_hl(0, { name = '@punctuation' }).fg == nil,
+  'premise: @punctuation unset'
+)
 
 local ok, err = pcall(function()
   require('plugins.ui.hierarchy').apply()
@@ -47,21 +53,45 @@ local function fg(name)
   return vim.api.nvim_get_hl(0, { name = name, link = false }).fg
 end
 
-local punctuation, text, operator = fg('@punctuation'), fg('Normal'), fg('@operator')
+local punctuation, text, operator =
+  fg '@punctuation', fg 'Normal', fg '@operator'
 check(punctuation ~= nil, '@punctuation got a concrete fg (not left as a link)')
 check(operator ~= nil, '@operator got a concrete fg')
-check(punctuation < text, string.format('@punctuation #%06x is dimmer than Normal #%06x', punctuation or 0, text or 0))
-check(operator < text, string.format('@operator #%06x is dimmer than Normal #%06x', operator or 0, text or 0))
-check(fg('@punctuation.bracket') == punctuation, '@punctuation.bracket tracks @punctuation')
-check(fg('@comment.todo') == fg('DiagnosticWarn'), '@comment.todo is promoted to the warn colour')
-check(fg('CursorLineNr') == text, 'CursorLineNr promoted to full text weight')
+check(
+  punctuation < text,
+  string.format(
+    '@punctuation #%06x is dimmer than Normal #%06x',
+    punctuation or 0,
+    text or 0
+  )
+)
+check(
+  operator < text,
+  string.format(
+    '@operator #%06x is dimmer than Normal #%06x',
+    operator or 0,
+    text or 0
+  )
+)
+check(
+  fg '@punctuation.bracket' == punctuation,
+  '@punctuation.bracket tracks @punctuation'
+)
+check(
+  fg '@comment.todo' == fg 'DiagnosticWarn',
+  '@comment.todo is promoted to the warn colour'
+)
+check(fg 'CursorLineNr' == text, 'CursorLineNr promoted to full text weight')
 
 -- The promotion must also survive a manual colorscheme change: that is the
 -- autocmd the module registers, and it is the one that was silently missing.
 vim.api.nvim_exec_autocmds('ColorScheme', {})
-check(fg('@punctuation') == punctuation, 'hierarchy survives a ColorScheme event')
+check(
+  fg '@punctuation' == punctuation,
+  'hierarchy survives a ColorScheme event'
+)
 
 if failed > 0 then
   error(string.format('syntax-hierarchy: %d assertion(s) failed', failed))
 end
-print('syntax-hierarchy: ok')
+print 'syntax-hierarchy: ok'

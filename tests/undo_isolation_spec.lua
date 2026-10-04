@@ -41,14 +41,14 @@ local root = vim.fn.fnamemodify(debug.getinfo(1, 'S').source:sub(2), ':p:h:h')
 local function agent_wrote(nwrites)
   local path = vim.fn.tempname() .. '.txt'
   vim.fn.writefile({ 'v1' }, path)
-  vim.cmd('silent enew!')
+  vim.cmd 'silent enew!'
   vim.cmd.edit(vim.fn.fnameescape(path))
   local buf = vim.api.nvim_get_current_buf()
 
   vim.api.nvim_buf_set_lines(buf, 0, -1, false, { 'MINE-1' })
-  vim.cmd('silent write')
+  vim.cmd 'silent write'
   vim.api.nvim_buf_set_lines(buf, 0, -1, false, { 'MINE-2' })
-  vim.cmd('silent write') -- my last save
+  vim.cmd 'silent write' -- my last save
 
   for i = 1, nwrites do
     vim.fn.writefile({ 'AGENT-' .. i }, path)
@@ -67,15 +67,24 @@ end
 
 test('agent write lands in the buffer silently (the hazard is real)', function()
   local buf = agent_wrote(2)
-  check(line_of(buf) == 'AGENT-2', 'agent text did not land; got ' .. tostring(line_of(buf)))
-  check(not vim.bo[buf].modified, 'buffer unexpectedly modified after clean reload')
+  check(
+    line_of(buf) == 'AGENT-2',
+    'agent text did not land; got ' .. tostring(line_of(buf))
+  )
+  check(
+    not vim.bo[buf].modified,
+    'buffer unexpectedly modified after clean reload'
+  )
 end)
 
 test('earlier 1f reaches my last write in ONE keystroke', function()
   for _, n in ipairs { 1, 3, 5 } do
     local buf = agent_wrote(n)
     pcall(vim.cmd, 'silent earlier 1f')
-    check(line_of(buf) == 'MINE-2', n .. ' agent write(s): earlier 1f gave ' .. tostring(line_of(buf)))
+    check(
+      line_of(buf) == 'MINE-2',
+      n .. ' agent write(s): earlier 1f gave ' .. tostring(line_of(buf))
+    )
   end
 end)
 
@@ -99,19 +108,22 @@ end)
 -- pre-edit file content. There is no count of presses that recovers it, and no
 -- warning. Only `earlier 1f` lands on MINE-2, because only that is anchored to
 -- the write rather than to the (now-absent) intermediate blocks.
-test('plain `u` skips my own intermediate state -- which is the whole problem', function()
-  local buf = agent_wrote(2)
-  pcall(vim.cmd, 'silent earlier 1f')
-  check(line_of(buf) == 'MINE-2', 'setup failed')
-  pcall(vim.cmd, 'silent undo')
-  -- NOT MINE-1. Asserted explicitly so the skip is a known, watched property:
-  -- if a future nvim starts preserving intermediate states this goes red, and
-  -- the right response is to relax the test, not to ship the change unexamined.
-  check(
-    line_of(buf) == 'v1',
-    'expected the measured MINE-2->v1 skip, got ' .. tostring(line_of(buf))
-  )
-end)
+test(
+  'plain `u` skips my own intermediate state -- which is the whole problem',
+  function()
+    local buf = agent_wrote(2)
+    pcall(vim.cmd, 'silent earlier 1f')
+    check(line_of(buf) == 'MINE-2', 'setup failed')
+    pcall(vim.cmd, 'silent undo')
+    -- NOT MINE-1. Asserted explicitly so the skip is a known, watched property:
+    -- if a future nvim starts preserving intermediate states this goes red, and
+    -- the right response is to relax the test, not to ship the change unexamined.
+    check(
+      line_of(buf) == 'v1',
+      'expected the measured MINE-2->v1 skip, got ' .. tostring(line_of(buf))
+    )
+  end
+)
 
 -- --- 2. the keymap, pinned -----------------------------------------------
 
@@ -129,16 +141,22 @@ test('<leader>uf is bound to earlier 1f and reaches my last write', function()
     found[2]:find('earlier 1f', 1, true) ~= nil,
     '<leader>uf does not run earlier 1f: ' .. tostring(found[2])
   )
-  check(found.desc ~= nil and #found.desc > 0, '<leader>uf has no desc (invisible in which-key)')
+  check(
+    found.desc ~= nil and #found.desc > 0,
+    '<leader>uf has no desc (invisible in which-key)'
+  )
 
   -- Bind it for real and confirm the keystroke lands, not just the string.
   local buf, path = agent_wrote(3)
   vim.keymap.set('n', '<leader>uf', found[2], { buffer = buf, silent = true })
   check(line_of(buf) == 'AGENT-3', 'setup failed')
   vim.api.nvim_buf_call(buf, function()
-    vim.cmd('normal \\uf')
+    vim.cmd 'normal \\uf'
   end)
-  check(line_of(buf) == 'MINE-2', 'pressing <leader>uf gave ' .. tostring(line_of(buf)))
+  check(
+    line_of(buf) == 'MINE-2',
+    'pressing <leader>uf gave ' .. tostring(line_of(buf))
+  )
 end)
 
 test('revert key is reversible', function()
@@ -150,14 +168,17 @@ test('revert key is reversible', function()
     end
   end
   check(fwd, '<leader>uF is not defined in undotree.lua')
-  check(fwd[2]:find('later 1f', 1, true) ~= nil, '<leader>uF does not run later 1f')
+  check(
+    fwd[2]:find('later 1f', 1, true) ~= nil,
+    '<leader>uF does not run later 1f'
+  )
 
   local buf = agent_wrote(2)
   vim.keymap.set('n', '<leader>uF', fwd[2], { buffer = buf, silent = true })
   pcall(vim.cmd, 'silent earlier 1f')
   check(line_of(buf) == 'MINE-2', 'setup failed')
   vim.api.nvim_buf_call(buf, function()
-    vim.cmd('normal \\uF')
+    vim.cmd 'normal \\uF'
   end)
   check(line_of(buf) == 'AGENT-2', '<leader>uF gave ' .. tostring(line_of(buf)))
 end)
@@ -165,4 +186,4 @@ end)
 if #failures > 0 then
   error(table.concat(failures, '\n'), 0)
 end
-print('undo_isolation_spec: ok')
+print 'undo_isolation_spec: ok'

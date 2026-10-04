@@ -92,27 +92,27 @@ require('lazy').setup({
       cmd = '⌘',
       config = vim.fn.nr2char(0xF0493), -- md-cog
       event = vim.fn.nr2char(0xF00ED), -- md-calendar
-      ft = vim.fn.nr2char(0xF024B),    -- md-folder
-      init = vim.fn.nr2char(0xF040A),  -- md-play
-      keys = vim.fn.nr2char(0xF030C),  -- md-keyboard
+      ft = vim.fn.nr2char(0xF024B), -- md-folder
+      init = vim.fn.nr2char(0xF040A), -- md-play
+      keys = vim.fn.nr2char(0xF030C), -- md-keyboard
       plugin = vim.fn.nr2char(0xF0431), -- md-puzzle
       runtime = vim.fn.nr2char(0xF018D), -- md-console
       require = vim.fn.nr2char(0xF01DA), -- md-download
       source = vim.fn.nr2char(0xF0214), -- md-file
       start = vim.fn.nr2char(0xF040A), -- md-play
-      task = vim.fn.nr2char(0xF012C),  -- md-check
+      task = vim.fn.nr2char(0xF012C), -- md-check
       lazy = vim.fn.nr2char(0xF04B2) .. ' ', -- md-sleep
     },
   },
 })
 
 -- Prevent codeAction alerts on buffers backed by basic LSPs
-vim.api.nvim_create_autocmd("LspAttach", {
+vim.api.nvim_create_autocmd('LspAttach', {
   callback = function(ev)
     local client = vim.lsp.get_client_by_id(ev.data.client_id)
-    if client and not client:supports_method("textDocument/codeAction") then
-      pcall(vim.keymap.del, "n", "<leader>ca", { buffer = ev.buf })
-      pcall(vim.keymap.del, "v", "<leader>ca", { buffer = ev.buf })
+    if client and not client:supports_method 'textDocument/codeAction' then
+      pcall(vim.keymap.del, 'n', '<leader>ca', { buffer = ev.buf })
+      pcall(vim.keymap.del, 'v', '<leader>ca', { buffer = ev.buf })
     end
   end,
 })

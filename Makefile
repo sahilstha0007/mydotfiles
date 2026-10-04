@@ -28,15 +28,16 @@ fmt:
 	$(STYLUA) $(LUA_SOURCES)
 	@echo "fmt: stylua rewrote $(LUA_SOURCES)"
 
-# Non-mutating form of fmt. Currently RED on pre-existing drift, and that drift
-# is load-bearing: tests/terminal_colors_spec.lua slices lua/plugins/ui/
-# terminal-colors.lua by LINE NUMBER and asserts on the exact text at lines
-# 116/141/170/191/227. stylua reflows those comments and every anchor moves, so
-# running `make fmt` turns a green suite red.
+# Non-mutating form of fmt. The tree is stylua-clean, so this is green and
+# worth keeping green -- it is the gate that stops drift accumulating.
 #
-# To clear the drift: run `make fmt`, then update the line numbers in
-# tests/terminal_colors_spec.lua (its failure output names each one), and
-# re-run `make test`. Do not relax the anchors to make it pass.
+# It was red on 42 files, and the old comment here claimed that drift was
+# "load-bearing" because tests/terminal_colors_spec.lua located functions in
+# terminal-colors.lua by hardcoded line number. That was backwards: the
+# brittleness was the line anchors, not the formatting. The spec now finds each
+# region by matching the definition itself, so `make fmt` and `make test` no
+# longer conflict. If this ever goes red, run `make fmt` -- do NOT go looking
+# for line numbers to update.
 fmt-check:
 	@command -v $(STYLUA) >/dev/null 2>&1 || { echo "stylua not found at $(STYLUA)"; exit 1; }
 	$(STYLUA) --check $(LUA_SOURCES)
@@ -54,11 +55,10 @@ lint:
 		echo "install: luarocks install luacheck   (or drop it in mason)"; \
 	fi
 
-# Everything that can be green today: the suite plus whatever linters exist.
-# fmt-check is deliberately NOT here — it is red on pre-existing drift, and
-# folding it in would make this command permanently red and therefore ignored.
-# Run `make fmt` to clear it, then add it back if you want the style gate.
-check: test lint
+# Everything that can be green today: the suite, plus whatever linters exist,
+# plus the style gate. fmt-check is safe to include now that the colour spec no
+# longer locates functions by line number — the reason it used to be excluded.
+check: test lint fmt-check
 
 # The verification path AGENT.md:242 documents for keymap changes. Bootstraps
 # its own probe git repo at /tmp/probe_repo so gitsigns' buffer maps attach.

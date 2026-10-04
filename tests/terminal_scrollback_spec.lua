@@ -31,19 +31,25 @@ end
 local root = vim.fn.fnamemodify(debug.getinfo(1, 'S').source:sub(2), ':p:h:h')
 local snacks_cfg = root .. '/lua/plugins/editor/snacks.lua'
 local src = table.concat(vim.fn.readfile(snacks_cfg), '\n')
-assert(src:find("bufhidden%s*=%s*'hide'", 1, false) or src:find('bufhidden = "hide"', 1, true),
-  'snacks config no longer sets bufhidden=hide for terminals -- scrollback regression')
+assert(
+  src:find("bufhidden%s*=%s*'hide'", 1, false)
+    or src:find('bufhidden = "hide"', 1, true),
+  'snacks config no longer sets bufhidden=hide for terminals -- scrollback regression'
+)
 
 -- --- drive a real terminal -------------------------------------------------
 -- termopen rather than `:terminal` + chansend: in a headless plenary run the
 -- interactive shell exits immediately and the channel id goes invalid, which
 -- fails the spec for a reason unrelated to scrollback. A job that prints and
 -- then holds the channel open exercises the same buffer lifecycle.
-vim.cmd('enew')
-vim.cmd('new') -- a window to fall back to, so `close` is not the last one
-local job = vim.fn.jobstart({ 'sh', '-c', "printf '%s\\n' " .. MARKER .. '; sleep 30' }, {
-  term = true,
-})
+vim.cmd 'enew'
+vim.cmd 'new' -- a window to fall back to, so `close` is not the last one
+local job = vim.fn.jobstart(
+  { 'sh', '-c', "printf '%s\\n' " .. MARKER .. '; sleep 30' },
+  {
+    term = true,
+  }
+)
 assert(job > 0, 'could not start a terminal job')
 local buf = term_buf_of()
 assert(buf, 'no terminal buffer was created')
@@ -60,20 +66,22 @@ assert(contains(buf, MARKER), 'marker never reached the terminal buffer')
 -- --- close it the way a user does ------------------------------------------
 -- `hide` is the option under test, so the close must be unconditional: the
 -- contract is that an explicit close preserves history, not that a hide does.
-vim.cmd('close')
-assert(not vim.api.nvim_buf_is_valid(buf) or vim.bo[buf].bufhidden == 'hide',
-  'terminal buffer was wiped on close -- scrollback is gone')
+vim.cmd 'close'
+assert(
+  not vim.api.nvim_buf_is_valid(buf) or vim.bo[buf].bufhidden == 'hide',
+  'terminal buffer was wiped on close -- scrollback is gone'
+)
 
 if not vim.api.nvim_buf_is_valid(buf) then
-  print('terminal-scrollback: FAIL (buffer wiped on close)')
-  vim.cmd('cquit 1')
+  print 'terminal-scrollback: FAIL (buffer wiped on close)'
+  vim.cmd 'cquit 1'
 end
 assert(contains(buf, MARKER), 'scrollback lost after close')
 
 -- The buffer must still be reachable, which is what makes the history usable
 -- on reopen rather than merely surviving in memory.
-assert(#vim.fn.getbufinfo({ buflisted = 0 }) >= 0)
+assert(#vim.fn.getbufinfo { buflisted = 0 } >= 0)
 vim.cmd('buffer ' .. buf)
 assert(contains(buf, MARKER), 'scrollback lost after reopening the buffer')
 
-print('terminal-scrollback: ok')
+print 'terminal-scrollback: ok'
