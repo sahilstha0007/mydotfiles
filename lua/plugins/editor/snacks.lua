@@ -354,6 +354,43 @@ return {
       return vim.fn.nr2char(cp) .. ' '
     end
 
+    -- Report the two dressing/smacks `vim.ui` health lines as INFO, not ERROR.
+    --
+    -- WHY: snacks/picker/core/_health.lua and snacks/input.lua both report an
+    -- ERROR when `vim.ui.select ~= Snacks.picker.select` (same for `input`).
+    -- That is an IDENTITY test, and dressing's patch.lua wrapper owns both
+    -- permanently -- see plugins/ui/dressing.lua for the full trace. So with
+    -- dressing installed the test can never pass even though routing is correct;
+    -- tests/ui_owner_spec.lua is what actually proves routing (it follows the
+    -- call through the wrapper to the picker).
+    --
+    -- WHY HERE and not in dressing.lua: dressing loads on VeryLazy, which lazy
+    -- fires off UIEnter (lazy/core/util.lua:180-190). A headless `:checkhealth`
+    -- never gets a UI, so dressing's config never runs and a wrapper living
+    -- there silently did nothing -- verified, not assumed. This spec is
+    -- `lazy = false`, so opts always run at startup and the redirect is live.
+    --
+    -- `Snacks.health.error` is a metatable stub that forwards to
+    -- `vim.health.error`, which appends to the rendered report. Redirecting the
+    -- message to `Snacks.health.info` changes its severity in that report.
+    -- vim.health is untouched, and snacks has no `opts.health.check` hook, so
+    -- this stub is the seam (both verified against the installed snacks source).
+    --
+    -- The match is EXACT -- two fixed strings, no patterns -- so any OTHER snacks
+    -- health error still reports as an error.
+    do
+      local real_error, real_info = Snacks.health.error, Snacks.health.info
+      Snacks.health.error = function(msg)
+        if
+          msg == '`vim.ui.select` is not set to `Snacks.picker.select`'
+          or msg == '`vim.ui.input` is not set to `Snacks.input`'
+        then
+          return real_info(msg)
+        end
+        return real_error(msg)
+      end
+    end
+
     -- Terminal scrollback survives until you deliberately clear it.
     --
     -- `bufhidden=hide` is the whole fix. A `:terminal` buffer defaults to
@@ -441,6 +478,10 @@ return {
       scroll = { enabled = true },
       -- highlight the word under the cursor (LSP-aware fallback)
       words = { enabled = true },
+      -- scratch buffers: <leader>nn is today's daily note (Atlas vault),
+      -- <leader>nN a free scratch buffer. Module ships with snacks; wiring it
+      -- costs one keymap each and no new dependency.
+      scratch = { enabled = true },
 
       -- dashboard start screen
       dashboard = {

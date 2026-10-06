@@ -17,6 +17,12 @@ return {
     --
     -- What dressing is still here for: the transparent/border styling that
     -- snacks' own windows don't provide.
+    --
+    -- The two health lines above now report as INFO, not ERROR: snacks' check is
+    -- an identity test, and this file's patch owns vim.ui permanently -- so the
+    -- test could never pass even though routing is correct. The redirect lives
+    -- in plugins/editor/snacks.lua (opts, near the top) because this file loads
+    -- on VeryLazy->UIEnter and so never runs under a headless `:checkhealth`.
     'stevearc/dressing.nvim',
     event = 'VeryLazy',
     opts = {
