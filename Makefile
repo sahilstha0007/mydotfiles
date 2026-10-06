@@ -51,8 +51,10 @@ lint:
 	@if command -v luacheck >/dev/null 2>&1; then \
 		luacheck $(LUA_SOURCES); \
 	else \
-		echo "luacheck not installed - skipping."; \
+		echo "luacheck not installed -- lint did NOT run."; \
+		echo "A skipping gate exits 0 and reports green while doing nothing."; \
 		echo "install: luarocks install luacheck   (or drop it in mason)"; \
+		exit 1; \
 	fi
 
 # Everything that can be green today: the suite, plus whatever linters exist,
