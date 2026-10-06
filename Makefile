@@ -1,4 +1,4 @@
-.PHONY: test update fmt fmt-check lint check keymaps
+.PHONY: test update fmt fmt-check lint check keymaps mutate
 
 # stylua lives in mason's package dir, not on PATH — nvim's own PATH munging in
 # globals.lua is not inherited by make. Fall back to PATH so this works on a
@@ -56,6 +56,18 @@ lint:
 		echo "install: luarocks install luacheck   (or drop it in mason)"; \
 		exit 1; \
 	fi
+
+# Proves tests/terminal_colors_spec.lua is not vacuous: stages 9 deliberate
+# defects in a COPY of the tree and asserts the spec goes red for each, plus one
+# equivalent change (M9) that must stay green. Without this, a spec that
+# stopped testing anything would report green forever — the exact failure this
+# tree already suffered once (see the harness header).
+#
+# Its own target rather than a `check` dependency: it stages into /tmp and
+# re-copies the tree per mutant, so it is a deliberate, occasional gate, not
+# something to run on every edit. Costs ~0.5s if you do.
+mutate:
+	@bash tests/mutate-terminal-colors.sh
 
 # Everything that can be green today: the suite, plus whatever linters exist,
 # plus the style gate. fmt-check is safe to include now that the colour spec no
