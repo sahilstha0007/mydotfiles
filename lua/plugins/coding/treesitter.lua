@@ -28,11 +28,15 @@ return {
         'markdown',
         'markdown_inline',
         'python',
+        'scss',
         'sql',
+        'svelte',
         'tsx',
         'typescript',
+        'typst',
         'vim',
         'vimdoc',
+        'vue',
         'yaml',
       }
 
