@@ -266,6 +266,97 @@ return {
       desc = 'Grep',
     },
     {
+      -- Search the selection across the whole project.
+      --
+      -- The gap this fills: <leader>sg greps the tree for a typed pattern and
+      -- <leader>sr (grug-far) prefills only the CURRENT FILE's extension. Neither
+      -- starts from text you already have selected. <leader>ss was the obvious
+      -- home for it, but that is document symbols -- so this is <leader>sS'...:
+      -- <leader>su for "selection" is taken-free and clusters with the other
+      -- search keys (sg/sr/ss) instead of hiding on a shifted variant.
+      --
+      -- Falls back to opening the picker with the selection as the pattern when
+      -- invoked with no selection (normal mode), so the key is never dead.
+      '<leader>su',
+      function()
+        local mode = vim.fn.mode()
+        local selection = mode:match '^[vV\22]' and vim.fn.getreg '"' or nil
+
+        -- In normal mode `gv` would give a stale/empty reg, so only read '"'
+        -- when actually in visual mode. Trim: a trailing newline from a
+        -- linewise yank makes a useless rg pattern.
+        selection = selection and vim.trim(selection) or nil
+
+        if not selection or selection == '' then
+          return Snacks.picker.grep()
+        end
+
+        -- One line only: rg treats a newline as two patterns, and a multi-line
+        -- visual selection is almost never what someone means by "search this".
+        selection = selection:gsub('\n.*', '')
+
+        Snacks.picker.grep {
+          search = selection,
+          cwd = Snacks.git.get_root(),
+        }
+      end,
+      desc = 'Grep Selection (project)',
+    },
+    {
+      -- Today's daily note, pre-filled with the Atlas frontmatter shape.
+      --
+      -- One keystroke instead of cd-ing into `06 - Daily/` and naming a file by
+      -- hand. The frontmatter mirrors 06 - Daily/2026-09-23.md so the vault's
+      -- Dataview/Dashboard queries keep working: same keys, same order, same
+      -- `tags`/`cssclasses` fields.
+      --
+      -- `os.date('%Y-%m-%d')` is local time, which is what the existing notes
+      -- use (their filenames are local dates, not UTC).
+      --
+      -- WEEKDAY is lowercased to match the existing notes' cssclasses (`wednesday`,
+      -- not `Wednesday`) -- that class drives the daily-dash styling, and a
+      -- mismatched case silently drops the styling. Heading uses %B + a
+      -- space-padded day because %e leaves a leading space on single digits,
+      -- which would render "October  6" with a double space.
+      '<leader>nn',
+      function()
+        local date = os.date '%Y-%m-%d'
+        local weekday = os.date('%A'):lower()
+        local now = os.date '%Y-%m-%dT%H:%M'
+
+        Snacks.scratch.open {
+          name = 'daily-' .. date,
+          ft = 'markdown',
+          template = table.concat({
+            '---',
+            'date: ' .. now,
+            'tags:',
+            '  - Daily',
+            'cssclasses:',
+            '  - daily-dash',
+            '  - ' .. weekday,
+            'dsa: 0',
+            'build: 0',
+            'learn: 0',
+            'workout: true',
+            '---',
+            '# ' .. os.date '%A, %B ' .. os.date '%-d' .. ', ' .. os.date '%Y',
+            '',
+          }, '\n'),
+        }
+      end,
+      desc = 'Daily Note (today)',
+    },
+    {
+      -- Free-form scratch buffer. `min`/`m<CR>` writes it to
+      -- stdpath('data')/scratch, so nothing lands in the vault by accident.
+      '<leader>nN',
+      function()
+        Snacks.scratch.open { name = 'scratch', ft = 'markdown' }
+      end,
+      desc = 'Scratch Buffer (not saved to vault)',
+    },
+    {
       '<leader>sh',
       function()
         Snacks.picker.help()
