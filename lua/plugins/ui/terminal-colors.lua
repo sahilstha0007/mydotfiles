@@ -433,6 +433,30 @@ local function build_overrides()
   -- out gray boxes when adopted as surface0.
   local surface0 = mix(base, text, 0.08)
 
+  -- Neutral ramp gate. The ACCENT slots are vetted by acc() (contrast,
+  -- saturation, hue separation), but these are fixed blend ratios — so a
+  -- wallpaper whose own text token is low-contrast lands overlay1 at 3.8:1
+  -- on a dark bg and 2.3:1 on a light one. overlay1 IS the Comment /
+  -- @comment colour and overlay0 IS LineNr / @operator / SignColumn: the most
+  -- read glyphs on screen, failing WCAG AA while the comment above them
+  -- claimed otherwise.
+  --
+  -- Fix in the ramp itself, not at each call site: keep the demote intent by
+  -- taking the SMALLEST lift off `base` that clears MIN_CONTRAST, so a healthy
+  -- wallpaper is bit-for-bit unchanged and only a failing one moves.
+  local function readable(t)
+    if contrast(mix(text, base, t), base) >= MIN_CONTRAST then
+      return mix(text, base, t)
+    end
+    for lift = t - 0.05, 0, -0.05 do
+      local c = mix(text, base, lift)
+      if contrast(c, base) >= MIN_CONTRAST then
+        return c
+      end
+    end
+    return text -- nothing in the ramp passes; full-contrast text is the floor
+  end
+
   return {
     base = base,
     mantle = mix(base, '#000000', 0.15),
@@ -440,12 +464,12 @@ local function build_overrides()
     surface0 = surface0,
     surface1 = mix(surface0, text, 0.12),
     surface2 = mix(surface0, text, 0.25),
-    overlay0 = mix(text, base, 0.68),
-    overlay1 = mix(text, base, 0.55),
-    overlay2 = mix(text, base, 0.4),
+    overlay0 = readable(0.68),
+    overlay1 = readable(0.55),
+    overlay2 = readable(0.4),
     text = text,
-    subtext0 = mix(text, base, 0.3),
-    subtext1 = mix(text, base, 0.15),
+    subtext0 = readable(0.3),
+    subtext1 = readable(0.15),
     -- Accents: wallpaper primary owns blue (chrome + functions stay themed);
     -- every other accent is adopted only when hue-distinct (pick_accents), so
     -- monochromatic wallpapers fall back to catppuccin's spread-out syntax
@@ -512,9 +536,11 @@ local function catppuccin_opts()
             return mix(hex, '#000000', 0.45)
           end
         return {
-          -- Comments: catppuccin uses overlay0 (#6c7086, ~3.8:1 on this
-          -- background) which reads as barely-there gray. overlay1 keeps
-          -- the "receded" feel but clears the WCAG AA bar (~4.9:1).
+          -- Comments: catppuccin uses overlay0, the most-demoted slot, which
+          -- reads as barely-there gray. overlay1 keeps the "receded" feel one
+          -- step brighter. build_overrides' readable() gate is what actually
+          -- holds this at MIN_CONTRAST — do not trust the fixed 0.55 blend
+          -- ratio to do it, it lands at 3.8:1 on a typical dark wallpaper.
           Comment = { fg = c.overlay1, italic = true },
 
           -- Explorer blends with terminal. nvim-tree.lua is the active tree,
@@ -762,19 +788,6 @@ end
 
 local palette_file = nil -- resolved palette file once found
 
--- Which terminal are we inside? Env vars survive into tmux (verified:
--- WEZTERM_PANE and KITTY_WINDOW_ID both propagate). WEZTERM_PANE wins when
--- both are set — that happens when wezterm itself is launched from a kitty
--- window, and nvim's palette should follow the terminal it's ACTUALLY in.
-local function detect_terminal()
-  if vim.env.WEZTERM_PANE or vim.env.TERM_PROGRAM == 'WezTerm' then
-    return 'wezterm'
-  elseif vim.env.KITTY_WINDOW_ID or vim.env.TERM_PROGRAM == 'kitty' then
-    return 'kitty'
-  end
-  return nil
-end
-
 -- Follow `include` lines in a kitty config file. Returns a list of
 -- { path, content } pairs for every file in the chain (resolved relative
 -- to the kitty config dir).
@@ -906,19 +919,30 @@ local function read_wezterm_palette()
   return true
 end
 
--- Read the active terminal's palette file into pal. Tries the detected
--- terminal first, then the other one as a fallback — a missing/broken file
--- in one terminal should never leave the editor on stock mocha.
+-- Read the dev-stack palette into pal.
+--
+-- The host terminal is deliberately NOT consulted. Inside tmux the host is
+-- unknowable (tmux is what makes WEZTERM_PANE/KITTY_WINDOW_ID the only
+-- signal), and the two candidate files answer DIFFERENT questions:
+--
+--   colors/custom.lua      <- the wallpaper cascade (wezterm keypress ->
+--                             matugen -> matugen.lua -> this file). tmux,
+--                             oh-my-posh, herdr and opencode all read the
+--                             same matugen.lua, so this is the dev stack's
+--                             one source of truth.
+--   kitty/colors-matugen.conf <- ml4w's DESKTOP-wallpaper path. A different
+--                             image, a different matugen config, and no
+--                             readability guard.
+--
+-- Preferring kitty's file (the old `detect_terminal()` behaviour) made nvim
+-- adopt the desktop palette while the tmux status bar around it wore the
+-- cascade palette — the two visibly disagreed. kitty is intentionally kept
+-- stock-ml4w and outside the cascade (see 02 - Dev/Terminal Stack/05 and 07),
+-- so it must not become a second source for the editor.
+--
+-- kitty is still the fallback for a machine where wezterm's config is absent
+-- entirely, so a missing file never leaves the editor on stock mocha.
 local function read_terminal_palette()
-  local term = detect_terminal()
-  if term == 'wezterm' then
-    return read_wezterm_palette() or read_kitty_palette()
-  elseif term == 'kitty' then
-    return read_kitty_palette() or read_wezterm_palette()
-  end
-  -- Unknown terminal (headless, plain ssh, ...): prefer the wallpaper-synced
-  -- wezterm palette — colors/custom.lua is the source of truth sync-wallpaper.sh
-  -- writes — before kitty's (which ml4w may leave stale).
   return read_wezterm_palette() or read_kitty_palette()
 end
 

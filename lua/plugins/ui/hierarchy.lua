@@ -24,6 +24,12 @@ function M.apply()
   -- the terminal's ANSI 0-15 onto these exact names, and falls back to stock
   -- mocha if nothing answers. Reading the live highlight group is more
   -- robust than re-deriving hexes here.
+  --
+  -- Read the SOURCE group, never one this function writes. LineNr used to be
+  -- the source for overlay0, but LineNr is also a LineNr target below — the
+  -- read returned whatever the previous run left there and echoed it straight
+  -- back, so both were stuck on stock catppuccin surface1 (1.65:1 on the
+  -- wallpaper background) and never followed the palette at all.
   local function slot(name)
     local hl = vim.api.nvim_get_hl(0, { name = name, link = false })
     return hl.fg and string.format('#%06x', hl.fg) or nil
@@ -33,7 +39,7 @@ function M.apply()
     surface2 = slot 'CursorLine',
     surface1 = slot 'NonText',
     overlay1 = slot 'Comment',
-    overlay0 = slot 'LineNr',
+    overlay0 = slot 'NonText',
     comment = slot 'Comment',
     text = slot 'Normal',
     error = slot 'DiagnosticError',

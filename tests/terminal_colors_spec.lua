@@ -281,6 +281,76 @@ do
   check(T.MIN_CONTRAST == 4.5, 'MIN_CONTRAST is 4.5', tostring(T.MIN_CONTRAST))
 
   -- -------------------------------------------------------------------------
+  -- CHECK 4b: the neutral ramp's readable() gate really clears 4.5:1
+  -- Re-derive it from the SAME blend formula build_overrides uses and prove
+  -- the ungated ratios used to fail, so this is a real regression test and
+  -- not a restatement of the code above.
+  -- -------------------------------------------------------------------------
+  do
+    local function to_rgb(h)
+      h = h:gsub('#', '')
+      return tonumber(h:sub(1, 2), 16),
+        tonumber(h:sub(3, 4), 16),
+        tonumber(h:sub(5, 6), 16)
+    end
+    local function blend(a, b, t)
+      local ar, ag, ab = to_rgb(a)
+      local br, bg, bb = to_rgb(b)
+      return string.format(
+        '#%02x%02x%02x',
+        math.floor(ar + (br - ar) * t + 0.5),
+        math.floor(ag + (bg - ag) * t + 0.5),
+        math.floor(ab + (bb - ab) * t + 0.5)
+      )
+    end
+    local function readable(text, base, t)
+      if T.contrast(blend(text, base, t), base) >= T.MIN_CONTRAST then
+        return blend(text, base, t)
+      end
+      for lift = t - 0.05, 0, -0.05 do
+        local c = blend(text, base, lift)
+        if T.contrast(c, base) >= T.MIN_CONTRAST then
+          return c
+        end
+      end
+      return text
+    end
+    -- Real wallpaper pairs, both directions. The light one is the case that
+    -- matters most: overlay1 at mix(text,base,0.55) was 2.31:1 there.
+    local walls = {
+      { '#101419', '#e0e2e9', 'dark wallpaper' },
+      { '#141414', '#e8e0d8', 'dark warm wallpaper' },
+      { '#1a1a1a', '#c8c8c8', 'low-contrast dark wallpaper' },
+      { '#f2f0ea', '#3b3b46', 'light wallpaper' },
+      { '#ffffff', '#000000', 'light maximal wallpaper' },
+      { '#e8e6e0', '#555560', 'light low-contrast wallpaper' },
+    }
+    local gated_fail, ungated_fail, checked = 0, 0, 0
+    for _, w in ipairs(walls) do
+      local base, text = w[1], w[2]
+      for _, t in ipairs { 0.68, 0.55, 0.4, 0.3, 0.15 } do
+        checked = checked + 1
+        if T.contrast(blend(text, base, t), base) < T.MIN_CONTRAST then
+          ungated_fail = ungated_fail + 1
+          if T.contrast(readable(text, base, t), base) < T.MIN_CONTRAST then
+            gated_fail = gated_fail + 1
+          end
+        end
+      end
+    end
+    check(
+      ungated_fail > 0,
+      'the ungated blend ratios really do fail WCAG AA on these wallpapers',
+      ungated_fail .. ' of ' .. checked .. ' ratios under 4.5:1'
+    )
+    check(
+      gated_fail == 0,
+      'readable() lifts every neutral ramp slot to MIN_CONTRAST',
+      gated_fail .. ' gated slots still under 4.5:1'
+    )
+  end
+
+  -- -------------------------------------------------------------------------
   -- CHECK 5: acc() applies the gate — re-eval with a controlled palette
   -- -------------------------------------------------------------------------
   -- acc() reads the module-local `pal`, so the extraction is re-run with a
@@ -371,6 +441,39 @@ do
       'the primary is always adopted for the blue slot',
       tostring(accents.blue)
     )
+  end
+
+  -- (f) the NEUTRAL ramp has the same gate. Accents go through acc(); the
+  --     overlay0/1/2 + subtext0/1 slots used to be fixed blends of text into
+  --     base with no contrast check at all, which parked Comment at 3.8:1 on a
+  --     dark wallpaper and 2.3:1 on a light one. build_overrides() gates them
+  --     with readable(); assert the gate is wired to those exact slots, since
+  --     a slot reverting to a raw mix() ratio is the regression.
+  do
+    local ramp = {}
+    for i = 1, #lines do
+      -- %w, not %a: the slot names carry digits (overlay0, subtext1).
+      local slot = lines[i]:match '^%s*(%w+) = readable%('
+      if slot then
+        ramp[#ramp + 1] = slot
+      end
+    end
+    table.sort(ramp)
+    local want = { 'overlay0', 'overlay1', 'overlay2', 'subtext0', 'subtext1' }
+    check(
+      #ramp == #want,
+      'all five gated neutral slots are present',
+      table.concat(ramp, ',')
+    )
+    for _, slot in ipairs(want) do
+      check(
+        vim.tbl_contains(ramp, slot),
+        ('neutral slot %s goes through the readable() contrast gate'):format(
+          slot
+        ),
+        table.concat(ramp, ',')
+      )
+    end
   end
 end
 
