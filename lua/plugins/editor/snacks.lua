@@ -320,9 +320,23 @@ return {
       -- which would render "October  6" with a double space.
       '<leader>nn',
       function()
-        local date = os.date '%Y-%m-%d'
+        -- The vault's notes are named %Y%m%d (20260923.md), not %Y-%m-%d.
+        -- A dashed name is a file this folder has never contained, and the
+        -- date-based lookups in the dashboard will not match it.
+        local date = os.date '%Y%m%d'
         local weekday = os.date('%A'):lower()
         local now = os.date '%Y-%m-%dT%H:%M'
+
+        -- English ordinal: 1st/2nd/3rd/4th, but 11th/12th/13th and 21st/22nd.
+        -- Every existing note uses one ("September 23rd"), so bare %-d would
+        -- make today's note the only one in the folder without it.
+        local function ordinal(n)
+          local suffix = ({ [1] = 'st', [2] = 'nd', [3] = 'rd' })[n % 10]
+          if not suffix or (n % 100 >= 11 and n % 100 <= 13) then
+            suffix = 'th'
+          end
+          return n .. suffix
+        end
 
         Snacks.scratch.open {
           name = 'daily-' .. date,
@@ -340,7 +354,11 @@ return {
             'learn: 0',
             'workout: true',
             '---',
-            '# ' .. os.date '%A, %B ' .. os.date '%-d' .. ', ' .. os.date '%Y',
+            '# '
+              .. os.date '%A, %B '
+              .. ordinal(tonumber(os.date '%-d'))
+              .. ', '
+              .. os.date '%Y',
             '',
           }, '\n'),
         }
