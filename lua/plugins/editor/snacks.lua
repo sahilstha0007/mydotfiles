@@ -1,3 +1,13 @@
+-- Vault root + Templater rendering, shared with tests/note_keys_spec.lua so
+-- the spec exercises the real implementation rather than a copy of it.
+local Templater = require 'utils.templater'
+
+-- Resolved once, here, because a `keys` handler cannot see the spec's `opts`:
+-- lazy puts opts on the plugin table, which the closure does not capture
+-- (verified -- t.vault_path is nil at runtime). Reading it from two places
+-- instead is how the two would drift.
+local VAULT_ROOT = Templater.vault_root()
+
 return {
   'folke/snacks.nvim',
   priority = 1000,
@@ -318,30 +328,50 @@ return {
       -- mismatched case silently drops the styling. Heading uses %B + a
       -- space-padded day because %e leaves a leading space on single digits,
       -- which would render "October  6" with a double space.
+      --
+      -- REVISION 2026-10-08: everything below was a stale re-implementation of
+      -- the vault's own template, and had drifted from it in three ways at once:
+      -- `workout: true` (the template says false), the entire note BODY was
+      -- missing (Habits / MIT / Journal / Metrics -- ~20 lines), and the note
+      -- was being written to snacks' scratch dir instead of the vault. So it
+      -- stopped duplicating the template and started READING it, below. The
+      -- inline copy is gone; there is nothing left to drift.
       '<leader>nn',
       function()
-        -- The vault's notes are named %Y%m%d (20260923.md), not %Y-%m-%d.
-        -- A dashed name is a file this folder has never contained, and the
-        -- date-based lookups in the dashboard will not match it.
-        local date = os.date '%Y%m%d'
+        local vault = VAULT_ROOT
         local weekday = os.date('%A'):lower()
         local now = os.date '%Y-%m-%dT%H:%M'
+        local date = os.date '%Y%m%d'
 
-        -- English ordinal: 1st/2nd/3rd/4th, but 11th/12th/13th and 21st/22nd.
-        -- Every existing note uses one ("September 23rd"), so bare %-d would
-        -- make today's note the only one in the folder without it.
-        local function ordinal(n)
-          local suffix = ({ [1] = 'st', [2] = 'nd', [3] = 'rd' })[n % 10]
-          if not suffix or (n % 100 >= 11 and n % 100 <= 13) then
-            suffix = 'th'
-          end
-          return n .. suffix
+        -- Build the body from the vault's template. Templater.expand() does the
+        -- rendering and documents the expression forms it handles.
+        --
+        -- Deliberately not a general Templater implementation: this resolves
+        -- exactly the expressions the vault's daily template uses, and returns
+        -- nil for anything else so the fallback below runs. A real engine here
+        -- would be far more machinery than one template justifies.
+        local raw = ''
+        local tpl_path = Templater.template_path(vault)
+        if tpl_path and vim.fn.filereadable(tpl_path) == 1 then
+          raw = table.concat(vim.fn.readfile(tpl_path), '\n')
         end
 
-        Snacks.scratch.open {
-          name = 'daily-' .. date,
-          ft = 'markdown',
-          template = table.concat({
+        local body = Templater.expand(raw)
+
+        -- expand() returns nil when the template uses a form it does not
+        -- understand, and '' when it is missing. Both mean "no usable
+        -- template", so they take the same fallback below. Checking with
+        -- `if not body or body == ''` rather than `body:find '<%'` -- that
+        -- indexed nil and threw on exactly the path meant to be safe.
+        if not body or string.find(body, '<%', 1, true) then
+          body = ''
+        end
+
+        -- If the template was missing or unreadable, fall back to the minimal
+        -- frontmatter shape rather than creating an empty note. This is the
+        -- only place the old inline copy survives, as a floor.
+        if body == '' then
+          body = table.concat({
             '---',
             'date: ' .. now,
             'tags:',
@@ -352,18 +382,25 @@ return {
             'dsa: 0',
             'build: 0',
             'learn: 0',
-            'workout: true',
+            'workout: false',
             '---',
-            '# '
-              .. os.date '%A, %B '
-              .. ordinal(tonumber(os.date '%-d'))
-              .. ', '
-              .. os.date '%Y',
+            '# ' .. os.date '%A, %B ' .. Templater.ordinal(
+              tonumber(os.date '%-d')
+            ) .. ', ' .. os.date '%Y',
             '',
-          }, '\n'),
+          }, '\n')
+        end
+
+        Snacks.scratch.open {
+          -- snacks writes into stdpath('data')/scratch; the vault copy is made
+          -- by the user with `min`/`m<CR>` as before, so nothing lands in the
+          -- vault without a deliberate action.
+          name = 'daily-' .. date,
+          ft = 'markdown',
+          template = body,
         }
       end,
-      desc = 'Daily Note (today)',
+      desc = 'Daily Note (from vault template)',
     },
     {
       -- Free-form scratch buffer. `min`/`m<CR>` writes it to
@@ -672,4 +709,12 @@ return {
       },
     }
   end,
+
+  -- `<leader>nn` reads the vault's real template rather than keeping its own
+  -- copy, which is what let the copy drift. Same resolved root the handler
+  -- uses (VAULT_ROOT above) -- declared here only so the value is visible from
+  -- the spec. Overridable with ATLAS_VAULT for another machine.
+  opts = {
+    vault_path = VAULT_ROOT,
+  },
 }
