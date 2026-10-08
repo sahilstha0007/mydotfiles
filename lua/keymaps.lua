@@ -145,19 +145,30 @@ keymap.set('n', '<S-h>', '<cmd>bprevious<cr>', { desc = 'Prev Buffer' })
 keymap.set('n', '<S-l>', '<cmd>bnext<cr>', { desc = 'Next Buffer' })
 keymap.set('n', '[b', '<cmd>bprevious<cr>', { desc = 'Prev Buffer' })
 keymap.set('n', ']b', '<cmd>bnext<cr>', { desc = 'Next Buffer' })
-keymap.set('n', '<leader>bd', '<cmd>bdelete<CR>', { desc = 'Delete Buffer' })
+-- snacks.bufdelete, whose own meta description is "delete buffers without
+-- disrupting window layout". Measured against plain :bdelete on a 2-window
+-- split: :bdelete takes the window with it, 2 windows -> 1; this keeps both
+-- and swaps a neighbouring buffer into the vacated pane, so deleting a buffer
+-- no longer collapses a split you wanted to keep. Module enabled in
+-- plugins/editor/snacks-bufdelete.lua.
+keymap.set('n', '<leader>bd', function()
+  Snacks.bufdelete.delete()
+end, vim.tbl_extend('keep', opts, { desc = 'Delete Buffer' }))
 keymap.set(
   'n',
   '<leader>bo',
   delete_other_buffers,
   { desc = 'Delete Other Buffers' }
 )
-keymap.set(
-  'n',
-  '<leader>bD',
-  '<cmd>bd<CR>',
-  { desc = 'Delete Buffer and Window' }
-)
+-- bD was `<cmd>bd<CR>`, and :bd is an abbreviation of :bdelete -- so this key
+-- was an exact duplicate of <leader>bd above, while its description promised
+-- "and Window" that it never closed. The cap now means the opposite of bd:
+-- the buffer is WIPED rather than merely deleted, so it leaves :ls and cannot
+-- come back via :bnext. Neither variant closes a window -- snacks preserves
+-- the layout, which is the point. (delete() defaults to `buf = 0`.)
+keymap.set('n', '<leader>bD', function()
+  Snacks.bufdelete.delete { wipe = true }
+end, vim.tbl_extend('keep', opts, { desc = 'Wipe Buffer (stronger delete)' }))
 
 -- Highlight when yanking (copying) text
 vim.api.nvim_create_autocmd('TextYankPost', {
