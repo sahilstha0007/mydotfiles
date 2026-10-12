@@ -43,6 +43,17 @@ return {
       },
     },
     config = function(_, opts)
+      -- Octo needs `gh` authenticated. If not, all Octo commands fail silently.
+      -- Check at setup so the user knows why rather than wondering later.
+      local gh_ok, gh = pcall(require, 'os.execute')
+      local gh_auth = vim.fn.system 'gh auth status 2>&1'
+      if vim.v.shell_error ~= 0 then
+        vim.notify(
+          'octo: `gh` CLI not authenticated. Run `gh auth login` to enable GitHub integration.',
+          vim.log.levels.WARN,
+          { title = 'octo.nvim' }
+        )
+      end
       require('octo').setup(opts)
       -- Octo defines its own stock Octo* highlight groups at setup, which
       -- clobber the wallpaper-themed ones from terminal-colors.lua. Re-assert

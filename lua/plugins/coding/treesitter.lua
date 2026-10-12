@@ -8,23 +8,18 @@ return {
       require('nvim-treesitter').setup()
 
       local ensure_installed = {
-        'astro',
+        -- language cores
         'bash',
         'c',
         'css',
-        'diff',
         'dockerfile',
         'editorconfig',
         'gitignore',
         'go',
-        'gomod',
-        'gosum',
-        'gowork',
         'html',
         'javascript',
         'json',
         'lua',
-        'luadoc',
         'markdown',
         'markdown_inline',
         'python',
@@ -33,11 +28,19 @@ return {
         'svelte',
         'tsx',
         'typescript',
-        'typst',
         'vim',
-        'vimdoc',
         'vue',
         'yaml',
+        -- extras you actually use
+        'diff',
+        'luadoc',
+        'ninja', -- python build sys you use
+        'rst', -- python docs you use
+        'php',
+        'blade', -- laravel
+        'astro', -- you have astro.lua
+        'regex',
+        'toml',
       }
 
       require('nvim-treesitter').install(ensure_installed)

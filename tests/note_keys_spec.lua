@@ -114,6 +114,16 @@ local function daily_template()
   return lines
 end
 
+--- Collapse runs of whitespace, newlines included.
+---
+--- Needed because stylua reflows code across lines and a pattern written for a
+--- single line silently stops matching when the formatter wraps it -- which
+--- looks identical to the code actually being broken. Used by two tests that
+--- both match against whole files.
+local function normalize(text)
+  return (text:gsub('%s+', ' '))
+end
+
 -- --------------------------------------------------- 0. date values
 --
 -- Added after mutation testing showed the rest of this file was blind to a
@@ -372,9 +382,6 @@ test('heading carries an English ordinal suffix like the real notes', function()
   -- formatter reflows it. Both failures look identical -- "must render the day
   -- through ordinal(...)" -- while meaning opposite things. Match the
   -- normalised whole file instead.
-  local function normalize(text)
-    return (text:gsub('%s+', ' '))
-  end
   -- `[%w_%.]*` allows a qualifier before the call name, so this matches all
   -- three real spellings: `M.ordinal(` in templater.lua, `Templater.ordinal(`
   -- in snacks.lua, and a bare `ordinal(`. Matching only the bare form is a
@@ -448,6 +455,71 @@ test('heading carries an English ordinal suffix like the real notes', function()
       )
     )
   end
+end)
+
+-- ------------------------------------------------------- 3.5 write target
+--
+-- The note used to be written via Snacks.scratch.open{ name = ... }, which
+-- lands in stdpath('data')/scratch under a hashed filename -- invisible to
+-- Obsidian. A comment claimed the vault copy was made by hand with `min`; no
+-- such mapping exists in this config, so the note went nowhere while looking
+-- written. These assert the destination, which is the whole point of the key.
+test('the daily note is written into the vault, not scratch', function()
+  local vault = Templater.vault_root()
+  check(vault, 'vault not found; set ATLAS_VAULT to run this spec')
+
+  local folder = Templater.daily_folder(vault)
+  check(folder, 'could not read the daily folder from Obsidian config')
+  check(
+    vim.fn.isdirectory(vault .. '/' .. folder) == 1,
+    ('daily folder %q does not exist in the vault'):format(folder)
+  )
+
+  local path = Templater.daily_note_path(vault, '20261008')
+  check(path, 'daily_note_path returned nil for a readable vault')
+  check(
+    path == ('%s/%s/20261008.md'):format(vault, folder),
+    ('note path must be <vault>/<folder>/YYYYMMDD.md, got %q'):format(path)
+  )
+
+  -- Pin the folder to Obsidian's own config rather than to whatever
+  -- daily_folder() returns, since a mutation can corrupt both sides in the
+  -- same way and they would agree.
+  --
+  -- Known limit: this cannot catch a resolver that hardcodes today's correct
+  -- folder. Hardcoding '06 - Daily' renders an identical path, so no assertion
+  -- on the output can tell it from the real implementation -- verified by
+  -- mutating to that literal and watching the spec stay green. Hardcoding a
+  -- DIFFERENT folder is caught, which is what would actually break the vault.
+  -- Distinguishing the rest needs a fixture vault, not a bigger assertion.
+  local cfg =
+    table.concat(vim.fn.readfile(vault .. '/.obsidian/daily-notes.json'), '\n')
+  local want_folder = vim.json.decode(cfg).folder
+  check(
+    folder == want_folder,
+    ('daily_folder() must read Obsidian config, got %q want %q'):format(
+      folder,
+      want_folder
+    )
+  )
+
+  -- The handler must pass that path as `file`. scratch.get() prefers `file`
+  -- over `name`, so this is what actually redirects the write; asserting only
+  -- on the resolver would pass even if the handler kept passing name= alone.
+  local handler = normalize(
+    table.concat(
+      vim.fn.readfile(root .. '/lua/plugins/editor/snacks.lua'),
+      '\n'
+    )
+  )
+  check(
+    handler:find 'daily_note_path%(vault, date%)' ~= nil,
+    'the <leader>nn handler must resolve the note path via daily_note_path(vault, date)'
+  )
+  check(
+    handler:find 'file = target' ~= nil,
+    'the handler must pass file = to Snacks.scratch.open -- name alone writes to scratch'
+  )
 end)
 
 -- ------------------------------------------------------ 4. filename format

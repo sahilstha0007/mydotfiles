@@ -48,6 +48,9 @@ return {
             command = 'node',
             args = {
               vim.env.MASON
+                -- NOTE: vim.env.MASON is set by mason.nvim at runtime, not by the shell.
+                -- If it is nil here, the JS DAP adapter path will be wrong at debug time.
+                -- Verify with `:lua =vim.env.MASON` after nvim starts.
                 .. '/packages/'
                 .. 'js-debug-adapter'
                 .. '/js-debug/src/dapDebugServer.js',

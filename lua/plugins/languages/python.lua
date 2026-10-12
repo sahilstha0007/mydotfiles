@@ -46,6 +46,9 @@ return {
         else
           require('dap-python').setup(
             vim.env.MASON .. '/packages/' .. 'debugpy' .. '/venv/bin/python'
+            -- NOTE: vim.env.MASON is set by mason.nvim at runtime, not by the shell.
+            -- If it is nil here, the Python DAP adapter path will be wrong at debug time.
+            -- Verify with `:lua =vim.env.MASON` after nvim starts.
           )
         end
       end,

@@ -147,4 +147,35 @@ function M.template_path(vault)
   return vault and (vault .. '/' .. rel) or nil
 end
 
+--- Where Obsidian writes the daily note: the vault-relative folder from
+--- `.obsidian/daily-notes.json`, e.g. "06 - Daily".
+---
+--- Read from the same config as template_path(), and for the same reason: a
+--- hardcoded folder drifts from the vault silently -- the note still writes,
+--- just somewhere Obsidian's dashboards never look. nil when the config is
+--- unreadable, so the caller can decide rather than writing to a guessed path.
+function M.daily_folder(vault)
+  local cfg = vault and (vault .. '/.obsidian/daily-notes.json')
+  if cfg and vim.fn.filereadable(cfg) == 1 then
+    local ok, decoded =
+      pcall(vim.json.decode, table.concat(vim.fn.readfile(cfg), '\n'))
+    if ok and type(decoded) == 'table' then
+      if type(decoded.folder) == 'string' and decoded.folder ~= '' then
+        return decoded.folder
+      end
+    end
+  end
+  return nil
+end
+
+--- Absolute path of today's note, or nil when the vault or folder is unknown.
+--- `date` is YYYYMMDD, matching the vault's existing filenames.
+function M.daily_note_path(vault, date)
+  local folder = vault and M.daily_folder(vault)
+  if not folder then
+    return nil
+  end
+  return ('%s/%s/%s.md'):format(vault, folder, date)
+end
+
 return M

@@ -59,7 +59,9 @@ return {
     },
 
     config = function()
-      -- load mason-nvim-dap here, after all adapters have been setup
+      --      load mason-nvim-dap here, after all adapters have been setup
+      -- mason-nvim-dap sets vim.env.MASON at runtime — this is where PHP/JS/Python
+      -- DAP configs read it. If you ever see a DAP path error, check this load order.
       local mason_nvim_dap =
         require('lazy.core.config').spec.plugins['mason-nvim-dap.nvim']
       local Plugin = require 'lazy.core.plugin'

@@ -164,13 +164,10 @@ return {
         cond = conditions.hide_in_width,
       }
 
-      ins_right {
-        function()
-          return os.date '%H:%M'
-        end,
-        icon = '',
-        color = 'LualineDiagnosticsWarn',
-      }
+      -- Clock removed 2026-10-12: the WezTerm tab bar already carries the
+      -- clock (events/right-status.lua, always visible above tmux), so this
+      -- third copy was pure redundancy. The right section now ends at the
+      -- git diff hunks, which is the buffer-level signal nothing else shows.
 
       lualine.setup(config)
     end,

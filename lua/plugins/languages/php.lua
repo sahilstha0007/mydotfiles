@@ -12,11 +12,17 @@ return {
     optional = true,
     opts = function()
       local dap = require 'dap'
-      local path = vim.fn.expand '$MASON/packages/php-debug-adapter'
+      local mason_pkg = vim.fn.expand '$MASON/packages/php-debug-adapter'
+      if mason_pkg == '$MASON/packages/php-debug-adapter' then
+        vim.notify(
+          'MASON env var not set — PHP DAP adapter path will be wrong',
+          vim.log.levels.WARN
+        )
+      end
       dap.adapters.php = {
         type = 'executable',
         command = 'node',
-        args = { path .. '/extension/out/phpDebug.js' },
+        args = { mason_pkg .. '/extension/out/phpDebug.js' },
       }
     end,
   },

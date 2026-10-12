@@ -391,10 +391,23 @@ return {
           }, '\n')
         end
 
+        -- Write into the vault, at the path Obsidian itself would use.
+        --
+        -- This used to be Snacks.scratch.open{ name = 'daily-'..date }, which
+        -- lands in stdpath('data')/scratch under a hashed filename -- invisible
+        -- to Obsidian, so the note never appeared in the vault, never synced,
+        -- and never showed up in the dashboard's date queries. A comment here
+        -- claimed the user made the vault copy with `min`/`m<CR>`; no such
+        -- mapping exists anywhere in this config (grepped), so the note simply
+        -- went nowhere while looking like it had been written.
+        --
+        -- `file` is what scratch.get() honours over `name` -- same module,
+        -- same editor UX, just a real destination. folder comes from
+        -- Obsidian's own daily-notes.json, so moving the folder in Obsidian
+        -- moves it here too.
+        local target = Templater.daily_note_path(vault, date)
         Snacks.scratch.open {
-          -- snacks writes into stdpath('data')/scratch; the vault copy is made
-          -- by the user with `min`/`m<CR>` as before, so nothing lands in the
-          -- vault without a deliberate action.
+          file = target,
           name = 'daily-' .. date,
           ft = 'markdown',
           template = body,
@@ -710,11 +723,11 @@ return {
     }
   end,
 
-  -- `<leader>nn` reads the vault's real template rather than keeping its own
-  -- copy, which is what let the copy drift. Same resolved root the handler
-  -- uses (VAULT_ROOT above) -- declared here only so the value is visible from
-  -- the spec. Overridable with ATLAS_VAULT for another machine.
-  opts = {
-    vault_path = VAULT_ROOT,
-  },
+  -- NOTE: an `opts = { vault_path = ... }` block used to live here, to make
+  -- the vault root visible from this spec. It has to stay out of `opts`:
+  -- snacks' setup iterates every key of this table and writes
+  -- `opts[k].enabled`, so a string value raises
+  -- "attempt to index a string value" (snacks/init.lua:152) and the whole
+  -- plugin fails to load. vault_path is not a snacks option either -- the
+  -- handler reads VAULT_ROOT directly, and that is what `<leader>nn` uses.
 }
