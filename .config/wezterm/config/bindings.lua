@@ -1,6 +1,7 @@
 local wezterm = require('wezterm')
 local platform = require('utils.platform')
 local backdrops = require('utils.backdrops')
+local workspaces = require('utils.workspaces')
 local act = wezterm.action
 
 local mod = {}
@@ -52,6 +53,91 @@ local picker_cancel = wezterm.action_callback(function(window, pane)
    window:perform_action(act.PopKeyTable, pane)
 end)
 
+-- ---------------------------------------------------------------------------
+-- Backdrops control panel (SUPER+o)
+--
+-- One popup holding every backdrop knob, so they stop being three separate
+-- keybindings you have to remember. It reuses the wallpaper_picker's idiom
+-- exactly — ActivateKeyTable to push, PopKeyTable to leave, the toast as the
+-- status line — so it is the same interaction the picker already trains.
+--
+-- The toast IS the panel: every action re-renders it. A separate window would
+-- need its own input handling, its own theme sync, and a place for a stray
+-- keystroke to get stuck; the toast is already themed, already in the corner
+-- we want, and already repaints for free.
+--
+-- Readout labels each knob by what it actually does, because the two alphas
+-- are NOT the same lever and the labels are the whole point of the panel:
+--   frost wash (k/j)  -> shapes the artwork wezterm draws INSIDE the window.
+--                       This is the one you can see.
+--   opacity  (h/l)    -> window_background_opacity, which fades toward
+--                       whatever the COMPOSITOR painted behind the window.
+--                       With no wallpaper daemon running that is Hyprland's
+--                       flat background, so it changes almost nothing on
+--                       screen. It persists, and it matters the moment a
+--                       desktop wallpaper exists — so it stays, labelled
+--                       honestly rather than hidden.
+-- ---------------------------------------------------------------------------
+
+local function panel_status(window)
+   local img = backdrops.images[backdrops.current_idx]
+   local name = img and img:match('([^/]+)$') or '?'
+   if #name > 34 then
+      name = name:sub(1, 31) .. '...'
+   end
+   window:toast_notification(
+      'Backdrops',
+      string.format(
+         'wash %.2f   opacity %.2f\n%s  %d/%d',
+         backdrops.wash,
+         backdrops.opacity,
+         name,
+         backdrops.current_idx,
+         #backdrops.images
+      ),
+      4000
+   )
+end
+
+-- The panel's own arrows are wrapped rather than reused from the bare
+-- SUPER+u / SUPER+y bindings: those toasts fire on every press and would
+-- immediately overwrite the panel readout, leaving the panel showing only
+-- whichever knob was touched last.
+local panel_wash_up = wezterm.action_callback(function(window, _)
+   backdrops:adjust_wash(window, 1)
+   panel_status(window)
+end)
+local panel_wash_down = wezterm.action_callback(function(window, _)
+   backdrops:adjust_wash(window, -1)
+   panel_status(window)
+end)
+local panel_opacity_up = wezterm.action_callback(function(window, _)
+   backdrops:adjust_opacity(window, 1)
+   panel_status(window)
+end)
+local panel_opacity_down = wezterm.action_callback(function(window, _)
+   backdrops:adjust_opacity(window, -1)
+   panel_status(window)
+end)
+local panel_wallpaper_next = wezterm.action_callback(function(window, _)
+   backdrops:preview_step(window, 1)
+   panel_status(window)
+end)
+local panel_wallpaper_prev = wezterm.action_callback(function(window, _)
+   backdrops:preview_step(window, -1)
+   panel_status(window)
+end)
+-- Reset lives in the module (backdrops:reset) because the session-start values
+-- it targets are captured there, in init(). See its docstring for why it snaps
+-- to the target rather than stepping there.
+local panel_reset = wezterm.action_callback(function(window, _)
+   backdrops:reset(window)
+   panel_status(window)
+end)
+local panel_close = wezterm.action_callback(function(window, pane)
+   window:perform_action(act.PopKeyTable, pane)
+end)
+
 -- stylua: ignore
 ---@type Key[]
 local keys = {
@@ -92,9 +178,18 @@ local keys = {
    },
 
    -- cursor movement --
-   { key = 'LeftArrow',  mods = mod.SUPER,     action = act.SendString('\u{1b}OH') },
-   { key = 'RightArrow', mods = mod.SUPER,     action = act.SendString('\u{1b}OF') },
    { key = 'Backspace',  mods = mod.SUPER,     action = act.SendString('\u{15}') },
+   -- NO Alt+Left / Alt+Right here. They were SendString('\u{1b}OH') /
+   -- ('\u{1b}OF') — Home/End, a Windows Terminal habit — and they silently ate
+   -- tmux's `bind -n M-Left previous-window` / `M-Right next-window`, because
+   -- the emulator resolves the key before the multiplexer ever sees the bytes.
+   -- Nothing errored; window cycling just did nothing in wezterm and worked in
+   -- kitty, which is the worst version of this bug: one key, two behaviours,
+   -- depending on which terminal you launched.
+   -- tmux owns windows (see the "Double chrome" rule), so the emulator keeps
+   -- no claim on these. Home/End still exist as their own keys.
+   -- Guarded by scripts/check-key-collisions.sh.
+
 
    -- copy/paste --
    { key = 'c',          mods = 'CTRL|SHIFT',  action = act.CopyTo('Clipboard') },
@@ -103,14 +198,49 @@ local keys = {
    -- (default pattern set: URLs, git hashes, hex colors, filenames...)
    { key = 'Space',      mods = 'CTRL|SHIFT',  action = act.QuickSelect },
 
-   { key = 'n',          mods = 'CTRL|SHIFT',  action = act.SendString('\u{2660}') },
-   { key = 's',          mods = 'CTRL|SHIFT',  action = act.SendString('\u{203D}') },
-
    -- tabs --
    -- tabs: spawn+close
    { key = 't',          mods = mod.SUPER,     action = act.SpawnTab('DefaultDomain') },
-   { key = 't',          mods = mod.SUPER_REV, action = act.SpawnTab({ DomainName = 'wsl:ubuntu-fish' }) },
    { key = 'w',          mods = mod.SUPER_REV, action = act.CloseCurrentTab({ confirm = false }) },
+
+   -- THE wezterm/tmux BRIDGE.
+   --
+   -- Both layers multiplex, and until now they had no meeting point: wezterm
+   -- owned tabs, tmux owned sessions, and moving between projects meant
+   -- remembering which layer held what. This key makes a wezterm TAB a tmux
+   -- SESSION — one press, pick a project with fzf, and the new tab attaches to
+   -- that project's session (creating it and seeding nvim on first visit).
+   --
+   -- It is the same script tmux's `Prefix f` popup runs, reused rather than
+   -- reimplemented: inside tmux it would switch-client, and here, with no
+   -- $TMUX in the tab's environment, it takes its own documented bare-shell
+   -- branch and attaches. One script, two entry points, no divergence.
+   --
+   -- Why a tab and not a pane: the existing wezterm chrome then describes the
+   -- session — tab-title.lua already renders the project basename, process
+   -- icon, progress ring and unseen dot — so the tab bar becomes a live
+   -- overview of every tmux session you have a tab open for. Nothing about
+   -- tmux changes; the outer layer just stops being blind to it.
+   --
+   -- SUPER_REV (not bare Alt) deliberately: bare Alt is tmux's root-table
+   -- namespace, and taking a key from it is the silent-steal bug this config
+   -- has been bitten by four times. scripts/check-key-collisions.sh enforces it.
+   -- Detaching the session closes the tab (exit_behavior = CloseOnCleanExit);
+   -- the session itself survives in tmux, as sessions do.
+   { key = 's',          mods = mod.SUPER_REV, action = act.SpawnCommandInNewTab {
+      args = { 'zsh', '-lc', 'exec "$HOME/.config/tmux/sessionizer.sh"' },
+   } },
+
+   -- PROJECT TASKS — the same dispatcher zed's tasks, tmux's `Prefix P` and the
+   -- pt* shell aliases call: ~/.local/bin/project-task detects the project
+   -- (Cargo / package.json + lockfile / pyproject / go.mod / composer+artisan)
+   -- and runs the run/test/lint/format command that project actually defines.
+   -- fzf picks the action; the task runs in a new TAB so a dev server or watcher
+   -- outlives the picker. SUPER_REV, never bare Alt: bare Alt is tmux's root-
+   -- table namespace (guarded by scripts/check-key-collisions.sh).
+   { key = 'r',          mods = mod.SUPER_REV, action = act.SpawnCommandInNewTab {
+      args = { 'zsh', '-lc', 'project-task; exec zsh -l' },
+   } },
 
    -- tabs: navigation
    { key = '[',          mods = mod.SUPER,     action = act.ActivateTabRelative(-1) },
@@ -123,7 +253,12 @@ local keys = {
    { key = '0',          mods = mod.SUPER_REV, action = act.EmitEvent('tabs.reset-tab-title') },
 
    -- tab: hide tab-bar
-   { key = '9',          mods = mod.SUPER,     action = act.EmitEvent('tabs.toggle-tab-bar'), },
+   -- SUPER_REV, not SUPER: bare Alt+9 is tmux's `bind -n M-9 select-window -t 9`
+   -- and the emulator would have won silently. Alt+1..8 were removed for this
+   -- exact reason (see the NOTE below); Alt+9 was missed because the tab-bar
+   -- toggle looked like chrome. It is chrome — it just picked a key the inner
+   -- layer already owned. Guarded by scripts/check-key-collisions.sh.
+   { key = '9',          mods = mod.SUPER_REV, action = act.EmitEvent('tabs.toggle-tab-bar'), },
 
    -- NOTE: no Alt+1..8 tab jumps here on purpose — wezterm would eat the
    -- key before tmux ever sees it, killing tmux's Alt+1..9 window jump
@@ -247,6 +382,66 @@ local keys = {
       end)
    },
 
+   -- Background opacity — the "fade the background" control, for when the
+   -- vibe changes. SUPER+y solidifies (more opaque, easier to read), SUPER+Shift+y
+   -- fades the whole window toward whatever the COMPOSITOR has behind it.
+   -- That is Hyprland's background, not wezterm's background.image — and
+   -- hyprpaper is not running here, so there is no desktop wallpaper to
+   -- reveal. It fades toward flat colour. For artwork alpha use SUPER+u.
+   -- This is the only window-level alpha lever in the stack: tmux has none of
+   -- its own, so any translucency has to live here, beneath tmux and nvim.
+   {
+      key = 'y',
+      mods = mod.SUPER,
+      action = wezterm.action_callback(function(window, _pane)
+         local o = backdrops:adjust_opacity(window, 1)
+         window:toast_notification(
+            'Background opacity',
+            string.format('%.2f  (more solid / easier to read)', o)
+         )
+      end),
+   },
+   {
+      key = 'Y',
+      mods = mod.SUPER,
+      action = wezterm.action_callback(function(window, _pane)
+         local o = backdrops:adjust_opacity(window, -1)
+         window:toast_notification(
+            'Background opacity',
+            string.format('%.2f  (more see-through / more mood)', o)
+         )
+      end),
+   },
+
+   -- Frost wash: how hard the dark wash sits over the wallpaper. SUPER+u /
+   -- SUPER+Shift+u shape the ARTWORK (more frost = darker, more flat), which
+   -- is a different job from the window alpha above. Only takes effect while
+   -- a wallpaper is loaded — in focus mode the background is a flat colour.
+   -- (SUPER+w was the first choice but is already CloseCurrentPane; a second
+   -- binding on the same key silently kills one of the two.)
+   {
+      key = 'u',
+      mods = mod.SUPER,
+      action = wezterm.action_callback(function(window, _pane)
+         local w = backdrops:adjust_wash(window, 1)
+         window:toast_notification(
+            'Frost wash',
+            string.format('%.2f  (darker / flatter)', w)
+         )
+      end),
+   },
+   {
+      key = 'U',
+      mods = mod.SUPER,
+      action = wezterm.action_callback(function(window, _pane)
+         local w = backdrops:adjust_wash(window, -1)
+         window:toast_notification(
+            'Frost wash',
+            string.format('%.2f  (more artwork / more glass)', w)
+         )
+      end),
+   },
+
    -- wallpaper picker: full-screen live preview (Enter applies, Esc cancels)
    {
       key = 'p',
@@ -272,6 +467,23 @@ local keys = {
       end),
    },
 
+   -- backdrop control panel: every backdrop knob in one place (SUPER+o)
+   {
+      key = 'o',
+      mods = mod.SUPER,
+      action = wezterm.action_callback(function(window, pane)
+         panel_status(window)
+         window:perform_action(
+            act.ActivateKeyTable({
+               name = 'backdrops_panel',
+               one_shot = false,
+               timeout_milliseconds = 20000,
+            }),
+            pane
+         )
+      end),
+   },
+
    -- panes --
    -- panes: split panes
    {
@@ -288,6 +500,19 @@ local keys = {
    -- panes: zoom+close pane
    { key = 'Enter', mods = mod.SUPER,     action = act.TogglePaneZoomState },
    { key = 'w',     mods = mod.SUPER,     action = act.CloseCurrentPane({ confirm = false }) },
+
+   -- app: quit
+   -- QuitApplication is a unit variant -- no parentheses. It exits without a
+   -- confirm dialog because window_close_confirmation is 'NeverPrompt'
+   -- (appearance.lua).
+   --
+   -- Alt+q (mod.SUPER alias on Linux/win) quits the whole WezTerm app.
+   -- Do not bind the literal Windows-key (SUPER) here: Hyprland owns that
+   -- key for killactive and forwards window-close; binding it in WezTerm
+   -- would only collide with the compositor. Universal Super+q closes the
+   -- single focused window (killactive.sh), Shift+Super+q kills all
+   -- instances.
+   { key = 'q',     mods = mod.SUPER,     action = act.QuitApplication },
 
    -- NOTE: no Ctrl+Alt+hjkl pane navigation here on purpose — wezterm
    -- would eat the key before tmux ever sees it, killing tmux.nvim's
@@ -325,11 +550,49 @@ local keys = {
          timeout_milliseconds = 1000,
       }),
    },
+   -- quit wezterm (default bindings are disabled, so we add our own)
+   -- Use the actual Windows/SUPER key, not ALT (mod.SUPER is ALT on Linux)
+   {
+      key = 'q',
+      mods = 'SUPER',
+      action = act.CloseCurrentPane({ confirm = true }),
+   },
+   {
+      key = 'Q',
+      mods = 'SUPER',
+      action = act.QuitApplication,
+   },
 }
+
+-- WSL tab. Appended after the table because domains.lua only defines the WSL
+-- domains on Windows — off-Windows this spawned a tab against a domain that
+-- does not exist. On Linux SUPER_REV is Alt|CTRL, so this was Alt+Ctrl+t.
+if platform.is_win then
+   table.insert(keys, {
+      key = 't',
+      mods = mod.SUPER_REV,
+      action = act.SpawnTab({ DomainName = 'wsl:ubuntu-fish' }),
+   })
+end
 
 -- stylua: ignore
 ---@type table<string, Key[]>
 local key_tables = {
+   backdrops_panel = {
+      { key = 'k',          action = panel_wash_up },
+      { key = 'UpArrow',    action = panel_wash_up },
+      { key = 'j',          action = panel_wash_down },
+      { key = 'DownArrow',  action = panel_wash_down },
+      { key = 'l',          action = panel_opacity_up },
+      { key = 'RightArrow', action = panel_opacity_up },
+      { key = 'h',          action = panel_opacity_down },
+      { key = 'LeftArrow',  action = panel_opacity_down },
+      { key = 'n',          action = panel_wallpaper_next },
+      { key = 'p',          action = panel_wallpaper_prev },
+      { key = 'r',          action = panel_reset },
+      { key = 'q',          action = panel_close },
+      { key = 'Escape',     action = 'PopKeyTable' },
+   },
    wallpaper_picker = {
       { key = 'h',          action = picker_prev },
       { key = 'LeftArrow',  action = picker_prev },

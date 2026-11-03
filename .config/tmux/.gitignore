@@ -1,0 +1,12 @@
+# CRITICAL: six vendored plugin repos live in plugins/ (catppuccin/tmux 3.7M,
+# tmux-resurrect, tpm, tmux.nvim, tmux-continuum, tmux-sensible) and five of
+# them carry their own .git dirs. `git add .` without this rule turns them into
+# embedded gitlinks — the push silently omits all the plugin code.
+plugins/
+
+# Dead config snapshots kept for reference. One file (tmux.conf.dead-2026-09-27),
+# superseded the same day. Not worth versioning; `git log` already has the history.
+archive/
+
+.DS_Store
+*.log

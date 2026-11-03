@@ -1,36 +1,22 @@
-
-# Playwright
-node_modules/
-/test-results/
-/playwright-report/
-/blob-report/
-/playwright/.cache/
-/playwright/.auth/
-
-# ---- mydotfiles repo hygiene ----
-# nested git repos (each config keeps its own history; only files go in here)
-/.config/nvim/.git/
-/.config/wezterm/.git/
-# not config: bundled screenshots + wallpaper binaries
-/.config/wezterm/.github/
+# Runtime state — lives here, never tracked.
+/.config/tmux/plugins/
 /.config/wezterm/backdrops/
-# external tool: ml4w dotfiles (installed by its own installer — not mine)
-/.mydotfiles/
-# kitty is not part of the stack (wezterm is)
+/.config/wezterm/.github/
+/.config/nvim/.git/
+/.config/nvim/.git.bak-mydotfiles/
+/.config/wezterm/.git.bak-mydotfiles/
+
+# Kitty is deliberately local-only; this repo is the WezTerm stack.
 /.config/kitty/
 
-# ---- AI tooling: watermark removal (user request) ----
+# AI tooling artifacts.
 .claude/
 .agents/
 skills-lock.json
 AGENTS.md
 CLAUDE.md
-# tpm-managed tmux plugins (installed by tpm, not part of dotfiles)
-/.config/tmux/plugins/
-/.config/nvim/.git.bak-mydotfiles/
-/.config/wezterm/.git.bak-mydotfiles/
-# herdr runtime state (logs/sessions/release notes — regenerated; only real
-# config files are versioned)
+
+# herdr runtime state (regenerated).
 /.config/herdr/herdr-client.log
 /.config/herdr/herdr-server.log
 /.config/herdr/session.json
@@ -38,13 +24,10 @@ CLAUDE.md
 /.config/herdr/.plugins.lock
 /.config/herdr/sessions/
 
-# mydotfiles tracks ONLY .config/{tmux,wezterm,nvim} + .gitignore — ignore the
-# rest of $HOME so the bare-repo status stays clean and nothing huge ever
-# gets staged again (the 34GB checkpoint disaster of 2026-09-09).
-/*
-!/config
-/.config/*
-!/.config/tmux
-!/.config/wezterm
-!/.config/nvim
-!/.config/zshrc
+# Playwright / Node noise.
+node_modules/
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+/playwright/.auth/

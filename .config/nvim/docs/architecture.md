@@ -38,13 +38,14 @@ duplicate) means it never gets missed, even if someone reorders later.
 │   ├── globals.lua           # vim.g settings + mise PATH + diagnostics
 │   ├── options.lua           # vim.opt.* core options
 │   ├── keymaps.lua           # custom keymaps
-│   ├── health.lua            # :checkhealth implementation
+│   ├── custom-neovim/
+│   │   └── health.lua        # :checkhealth implementation
 │   ├── lazy-init.lua         # bootstrap lazy.nvim + plugin import list
 │   └── plugins/
 │       ├── coding/           # LSP config, completion, treesitter, AI
 │       ├── dap/              # debug adapter
 │       ├── editor/           # nav, UI helpers, git, keymap helpers
-│       ├── formatting/       # conform + prettier
+│       ├── formatting/       # conform
 │       ├── languages/        # per-language plugin tweaks
 │       ├── linting/          # nvim-lint + phpstan
 │       ├── test/             # test runner

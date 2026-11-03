@@ -1,0 +1,87 @@
+.PHONY: test update fmt fmt-check lint check keymaps mutate
+
+# stylua lives in mason's package dir, not on PATH — nvim's own PATH munging in
+# globals.lua is not inherited by make. Fall back to PATH so this works on a
+# machine where stylua was installed another way.
+STYLUA := $(shell command -v stylua 2>/dev/null || echo $(HOME)/.local/share/nvim/mason/bin/stylua)
+# Same treatment: a `luarocks --local install` drops it in ~/.luarocks/bin,
+# which is not on PATH for a non-interactive make. PATH wins when it is set.
+LUACHECK := $(shell command -v luacheck 2>/dev/null || echo $(HOME)/.luarocks/bin/luacheck)
+LUA_SOURCES := init.lua lua tests scripts
+
+# Route to the real harness. scripts/test.sh runs each spec with `nvim -l` and
+# watches three failure channels at once (FAIL: lines, non-zero exit, and nvim
+# E-codes). Do NOT swap this for PlenaryBustedDirectory — the specs call
+# `vim.cmd 'cq'` themselves and are not written against plenary's busted runner.
+#
+# `test` deliberately does NOT depend on fmt/lint. 43 files in this tree have
+# pre-existing stylua drift; gating the suite on formatting would turn a green
+# run red for a reason that has nothing to do with the specs.
+test:
+	./scripts/test.sh
+
+# Headless update for scripted/agentic maintenance. The bang matters: it forces
+# re-cloning even when the git dir is already at the recorded commit.
+update:
+	nvim --headless "+Lazy! sync" +qa
+
+# Rewrite every lua file in stylua.toml's style. Separate rung from test.
+fmt:
+	@command -v $(STYLUA) >/dev/null 2>&1 || { echo "stylua not found at $(STYLUA)"; echo "install: nvim --headless '+MasonInstall stylua' +qa"; exit 1; }
+	$(STYLUA) $(LUA_SOURCES)
+	@echo "fmt: stylua rewrote $(LUA_SOURCES)"
+
+# Non-mutating form of fmt. The tree is stylua-clean, so this is green and
+# worth keeping green -- it is the gate that stops drift accumulating.
+#
+# It was red on 42 files, and the old comment here claimed that drift was
+# "load-bearing" because tests/terminal_colors_spec.lua located functions in
+# terminal-colors.lua by hardcoded line number. That was backwards: the
+# brittleness was the line anchors, not the formatting. The spec now finds each
+# region by matching the definition itself, so `make fmt` and `make test` no
+# longer conflict. If this ever goes red, run `make fmt` -- do NOT go looking
+# for line numbers to update.
+fmt-check:
+	@command -v $(STYLUA) >/dev/null 2>&1 || { echo "stylua not found at $(STYLUA)"; exit 1; }
+	$(STYLUA) --check $(LUA_SOURCES)
+
+# Now backed by a real .luacheckrc (std = luajit, vim + the plugin globals
+# declared). Before that this target could only report that it had no config to
+# lint against.
+#
+# `--lua-version=5.1` matters on THIS machine: luarocks defaults to the system
+# Lua 5.5, and luacheck 1.2.0 cannot load under 5.5 at all ("attempt to assign
+# to const variable 'field_name'"). LuaJIT is what nvim embeds, so 5.1 is also
+# the correct interpretation — loadstring/setfenv are legal here.
+lint:
+	@if [ -x "$(LUACHECK)" ] || command -v $(LUACHECK) >/dev/null 2>&1; then \
+		$(LUACHECK) $(LUA_SOURCES); \
+	else \
+		echo "luacheck not installed -- lint did NOT run."; \
+		echo "A skipping gate exits 0 and reports green while doing nothing."; \
+		echo "install: luarocks --local --lua-version=5.1 install luacheck"; \
+		exit 1; \
+	fi
+
+# Proves tests/terminal_colors_spec.lua is not vacuous: stages 9 deliberate
+# defects in a COPY of the tree and asserts the spec goes red for each, plus one
+# equivalent change (M9) that must stay green. Without this, a spec that
+# stopped testing anything would report green forever — the exact failure this
+# tree already suffered once (see the harness header).
+#
+# Its own target rather than a `check` dependency: it stages into /tmp and
+# re-copies the tree per mutant, so it is a deliberate, occasional gate, not
+# something to run on every edit. Costs ~0.5s if you do.
+mutate:
+	@bash tests/mutate-terminal-colors.sh
+
+# Everything that can be green today: the suite, plus whatever linters exist,
+# plus the style gate. fmt-check is safe to include now that the colour spec no
+# longer locates functions by line number — the reason it used to be excluded.
+check: test lint fmt-check
+
+# The verification path AGENT.md:242 documents for keymap changes. Bootstraps
+# its own probe git repo at /tmp/probe_repo so gitsigns' buffer maps attach.
+keymaps:
+	nvim --headless -u init.lua -c "luafile scripts/keymaps-dump.lua" -c "qa!"
+	@echo "keymaps: wrote ~/.cache/nvim/keymaps_dump.json"

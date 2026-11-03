@@ -35,7 +35,16 @@ M.setup = function()
       -- matugen -> tmux tokens -> config reload, so text follows the image.
       local cache = read_home('/.cache/wezterm-wallpaper')
       local synced = read_home('/.cache/wezterm-wallpaper.synced')
-      if cache and cache ~= synced then
+      -- .synced only means "already themed" while the palette it produced is
+      -- still on disk. Checking the image alone left a deleted or never-written
+      -- palette permanently unrecoverable: the image matched, so sync never ran
+      -- again and the theme stayed dead across every restart.
+      local pal = io.open(wezterm.home_dir .. '/.config/wezterm/colors/matugen.lua', 'r')
+      local has_palette = pal ~= nil
+      if pal then
+         pal:close()
+      end
+      if cache and (cache ~= synced or not has_palette) then
          backdrops:sync()
       end
    end)

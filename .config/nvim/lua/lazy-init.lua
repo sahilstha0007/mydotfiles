@@ -13,6 +13,7 @@ require('lazy').setup({
   spec = {
     'tpope/vim-sleuth',
     { import = 'plugins.coding.autopairs' },
+    { import = 'plugins.coding.autotag' },
     { import = 'plugins.coding.cmp' },
     { import = 'plugins.coding.dial' },
     { import = 'plugins.coding.lspconfig' },
@@ -27,22 +28,23 @@ require('lazy').setup({
     { import = 'plugins.editor.git-conflict' },
     { import = 'plugins.editor.gitsigns' },
     { import = 'plugins.editor.grug-far' },
-    { import = 'plugins.editor.hardtime' },
     { import = 'plugins.editor.lazygit' },
     { import = 'plugins.editor.lualine' },
     { import = 'plugins.editor.mini' },
     { import = 'plugins.editor.octo' },
     { import = 'plugins.editor.oil' },
     { import = 'plugins.editor.smear-cursor' },
-    { import = 'plugins.editor.disable-neotree' },
     { import = 'plugins.editor.bufferline' },
     { import = 'plugins.editor.diffview' },
     { import = 'plugins.editor.overseer' },
     { import = 'plugins.editor.snacks' },
+    { import = 'plugins.editor.snacks-bufdelete' },
+    { import = 'plugins.editor.snacks-extras' },
     { import = 'plugins.editor.pickers' },
     { import = 'plugins.editor.tmux' },
     { import = 'plugins.editor.ufo' },
-    { import = 'plugins.editor.agent-picker' },
+    { import = 'plugins.editor.undotree' },
+    { import = 'plugins.editor.checkpoints' },
     { import = 'plugins.editor.which-key' },
     { import = 'plugins.editor.yanky' },
     { import = 'plugins.formatting.conform' },
@@ -57,6 +59,9 @@ require('lazy').setup({
     -- nvim-lint linter definition loaded via require() from linting/core.lua
     { import = 'plugins.test.core' },
     { import = 'plugins.ui.terminal-colors' },
+    -- plugins.ui.hierarchy is NOT a spec and must not be imported here. It is
+    -- a plain module that terminal-colors.lua calls at the end of each re-tint;
+    -- as a second spec on the same plugin lazy rejected it ("changed dir").
     { import = 'plugins.ui.transparency' },
     { import = 'plugins.ui.dressing' },
     { import = 'plugins.ui.render-markdown' },
@@ -76,6 +81,9 @@ require('lazy').setup({
     },
   },
 }, {
+  -- No :Lazy update in this workflow, so the background checker's `git
+  -- ls-remote` fan-out across 65 plugins is pure startup latency.
+  checker = { enabled = false },
   ui = {
     -- If you are using a Nerd Font: set icons to an empty table which will use the
     -- default lazy.nvim defined Nerd Font icons, otherwise define a unicode icons table
@@ -86,27 +94,27 @@ require('lazy').setup({
       cmd = '⌘',
       config = vim.fn.nr2char(0xF0493), -- md-cog
       event = vim.fn.nr2char(0xF00ED), -- md-calendar
-      ft = vim.fn.nr2char(0xF024B),    -- md-folder
-      init = vim.fn.nr2char(0xF040A),  -- md-play
-      keys = vim.fn.nr2char(0xF030C),  -- md-keyboard
+      ft = vim.fn.nr2char(0xF024B), -- md-folder
+      init = vim.fn.nr2char(0xF040A), -- md-play
+      keys = vim.fn.nr2char(0xF030C), -- md-keyboard
       plugin = vim.fn.nr2char(0xF0431), -- md-puzzle
       runtime = vim.fn.nr2char(0xF018D), -- md-console
       require = vim.fn.nr2char(0xF01DA), -- md-download
       source = vim.fn.nr2char(0xF0214), -- md-file
       start = vim.fn.nr2char(0xF040A), -- md-play
-      task = vim.fn.nr2char(0xF012C),  -- md-check
+      task = vim.fn.nr2char(0xF012C), -- md-check
       lazy = vim.fn.nr2char(0xF04B2) .. ' ', -- md-sleep
     },
   },
 })
 
 -- Prevent codeAction alerts on buffers backed by basic LSPs
-vim.api.nvim_create_autocmd("LspAttach", {
+vim.api.nvim_create_autocmd('LspAttach', {
   callback = function(ev)
     local client = vim.lsp.get_client_by_id(ev.data.client_id)
-    if client and not client:supports_method("textDocument/codeAction") then
-      pcall(vim.keymap.del, "n", "<leader>ca", { buffer = ev.buf })
-      pcall(vim.keymap.del, "v", "<leader>ca", { buffer = ev.buf })
+    if client and not client:supports_method 'textDocument/codeAction' then
+      pcall(vim.keymap.del, 'n', '<leader>ca', { buffer = ev.buf })
+      pcall(vim.keymap.del, 'v', '<leader>ca', { buffer = ev.buf })
     end
   end,
 })

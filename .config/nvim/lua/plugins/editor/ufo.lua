@@ -29,7 +29,7 @@ return {
       { 'kevinhwang91/promise-async' },
       {
         'luukvbaal/statuscol.nvim',
-        config = function(opts)
+        config = function()
           local builtin = require 'statuscol.builtin'
           require('statuscol').setup {
             -- foldfunc = 'builtin',

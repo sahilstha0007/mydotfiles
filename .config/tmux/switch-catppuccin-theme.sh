@@ -1,4 +1,18 @@
 #!/bin/bash
+# DEAD SCRIPT — no callers anywhere in the repo (grep across tmux.conf, all
+# *.sh and *.md finds zero references), and it cannot work anyway:
+#
+#   1. tmux.conf:241 `source-file -q ~/.config/tmux/colors-matugen.conf` rewrites
+#      all 26 @thm_* tokens on every config load, overwriting whatever this set.
+#   2. The catppuccin/tmux @plugin line was removed from tmux.conf; nothing
+#      loads plugins/tmux/themes/*_tmux.conf anymore.
+#   3. THEME_DIR points into plugins/tmux/themes, which is gitignored -- so this
+#      depends on a directory that is not reproducible from a clean clone.
+#
+# Kept, not deleted, in case you want the catppuccin chain back. If you revive
+# it, drop the source-file at tmux.conf:241 or the two will fight.
+exit 0
+
 export PATH="/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:$PATH"
 
 echo "TMUX_SOCKET=$TMUX_SOCKET" > /tmp/tmux-debug.log

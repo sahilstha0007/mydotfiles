@@ -8,32 +8,39 @@ return {
       require('nvim-treesitter').setup()
 
       local ensure_installed = {
-        'astro',
+        -- language cores
         'bash',
         'c',
         'css',
-        'diff',
         'dockerfile',
         'editorconfig',
         'gitignore',
         'go',
-        'gomod',
-        'gosum',
-        'gowork',
         'html',
         'javascript',
         'json',
         'lua',
-        'luadoc',
         'markdown',
         'markdown_inline',
         'python',
+        'scss',
         'sql',
+        'svelte',
         'tsx',
         'typescript',
         'vim',
-        'vimdoc',
+        'vue',
         'yaml',
+        -- extras you actually use
+        'diff',
+        'luadoc',
+        'ninja', -- python build sys you use
+        'rst', -- python docs you use
+        'php',
+        'blade', -- laravel
+        'astro', -- you have astro.lua
+        'regex',
+        'toml',
       }
 
       require('nvim-treesitter').install(ensure_installed)
@@ -48,7 +55,8 @@ return {
         pattern = ensure_installed,
         callback = function(args)
           pcall(vim.treesitter.start, args.buf)
-          vim.bo[args.buf].indentexpr = "v:lua.require'nvim-treesitter'.indentexpr()"
+          vim.bo[args.buf].indentexpr =
+            "v:lua.require'nvim-treesitter'.indentexpr()"
         end,
       })
     end,

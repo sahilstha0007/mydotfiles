@@ -1,12 +1,15 @@
 -- The ACTIVE tab's raised "pill": clearly lighter than the terminal
 -- background so it reads as a raised chip. It borrows the same blue accent
--- wezterm's tab bar / tmux's window pill use (raised 0.08 -> 0.28 so the
--- shared accent is actually visible) while keeping light text readable.
+-- wezterm's tab bar / tmux's window pill use (raised 0.08 -> 0.36 so the
+-- shared accent reads a little closer to wezterm's solid pill — 2026-10-13)
+-- while keeping light text readable on the transparent strip.
 local function pill_tint(c)
   local function mix(hex_a, hex_b, t)
     local function to_rgb(hex)
       local h = hex:gsub('#', '')
-      return tonumber(h:sub(1, 2), 16), tonumber(h:sub(3, 4), 16), tonumber(h:sub(5, 6), 16)
+      return tonumber(h:sub(1, 2), 16),
+        tonumber(h:sub(3, 4), 16),
+        tonumber(h:sub(5, 6), 16)
     end
     local ar, ag, ab = to_rgb(hex_a)
     local br, bg, bb = to_rgb(hex_b)
@@ -17,7 +20,7 @@ local function pill_tint(c)
       math.floor(ab + (bb - ab) * t + 0.5)
     )
   end
-  return mix(c.surface2, c.blue, 0.28)
+  return mix(c.surface2, c.blue, 0.36)
 end
 
 -- The full highlight table (shared between opts and the ColorScheme re-tint).
@@ -121,7 +124,10 @@ return {
               table.insert(ids, c.id)
             end
             if #ids == 0 then
-              return vim.notify('bufferline: no buffers to sort', vim.log.levels.WARN)
+              return vim.notify(
+                'bufferline: no buffers to sort',
+                vim.log.levels.WARN
+              )
             end
             mru_snapshot = ids
             require('bufferline').sort_by 'directory'
@@ -195,10 +201,13 @@ return {
       -- and push each highlight group through bufferline's own name generator
       -- so the strip follows the terminal without a full re-setup.
       vim.api.nvim_create_autocmd('ColorScheme', {
-        group = vim.api.nvim_create_augroup('bufferline-palette', { clear = true }),
+        group = vim.api.nvim_create_augroup(
+          'bufferline-palette',
+          { clear = true }
+        ),
         callback = function()
           local c = require('utils.theme').palette()
-          local hl = require('bufferline.highlights')
+          local hl = require 'bufferline.highlights'
           for name, attrs in pairs(highlights_from(c)) do
             vim.api.nvim_set_hl(0, hl.generate_name(name), attrs)
           end

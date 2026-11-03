@@ -1,9 +1,30 @@
-
 tags
-test.sh
+# Anchored: bare `test.sh` would also swallow tests/*_spec helper scripts at
+# any depth. This one is the runner `make test` calls, so it must be tracked.
+/test.sh
 .luarc.json
-nvim
+# Anchored: an unanchored `nvim` matches any file OR DIRECTORY named nvim at
+# any depth, which would shadow a future nvim/ source dir.
+/nvim
 
 spell/
-lazy-lock.json
 
+# ml4w/git renames .git -> .git.bak-mydotfiles when it takes ownership of a
+# directory. That stranded 620KB of history shows as untracked and would be
+# swept into a commit. Never tracked, never pushed.
+.git.bak-mydotfiles/
+
+# agent tooling config, not neovim config — 11 files were tracked here
+.claude/
+.agents/
+
+.DS_Store
+*.log
+node_modules/
+
+# Scratch artifacts that showed up as `??` in the repo root. Named exactly, NOT
+# as a pattern: learn-nvim.html is a deliberately tracked 95K self-teaching
+# reference (docs/changelog.md), so a bare `*.html` rule would ignore it too --
+# and `git add .` would then stop tracking a file the project wants.
+/NvimTree_1
+/t.html

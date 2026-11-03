@@ -39,7 +39,13 @@ return {
     keys = {
       { "<leader>da", function() require("dap").continue({ before = get_args }) end, desc = "Run with Args" },
       { "<leader>db", function() require("dap").toggle_breakpoint() end, desc = "Toggle Breakpoint" },
-      { "<leader>dB", function() require("dap").set_breakpoint(vim.fn.input('Breakpoint condition: ')) end, desc = "Breakpoint Condition" },
+      {
+        "<leader>dB",
+        function()
+          require("dap").set_breakpoint(vim.fn.input('Breakpoint condition: '))
+        end,
+        desc = "Breakpoint Condition",
+      },
       { "<leader>dC", function() require("dap").run_to_cursor() end, desc = "Run to Cursor" },
       { "<leader>dc", function() require("dap").continue() end, desc = "Run/Continue" },
       { "<leader>de", function() require("dapui").eval() end, desc = "Evaluate" },
@@ -59,7 +65,9 @@ return {
     },
 
     config = function()
-      -- load mason-nvim-dap here, after all adapters have been setup
+      --      load mason-nvim-dap here, after all adapters have been setup
+      -- mason-nvim-dap sets vim.env.MASON at runtime — this is where PHP/JS/Python
+      -- DAP configs read it. If you ever see a DAP path error, check this load order.
       local mason_nvim_dap =
         require('lazy.core.config').spec.plugins['mason-nvim-dap.nvim']
       local Plugin = require 'lazy.core.plugin'

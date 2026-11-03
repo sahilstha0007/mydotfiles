@@ -1,9 +1,17 @@
 local platform = require('utils.platform')
+local home = require('wezterm').home_dir
 
 ---@type Config
 local options = {
    default_prog = {},
    launch_menu = {},
+   set_environment_variables = {
+      TERMINAL_STACK_PROFILE = 'wezterm',
+      -- TMUX_TMPDIR is owned by ~/.zshenv ($HOME/.cache/tmux) so kitty and
+      -- wezterm attach to the SAME tmux server and share sessions. Kept
+      -- here for non-zsh programs launched by wezterm; must match .zshenv.
+      TMUX_TMPDIR = home .. '/.cache/tmux',
+   },
 }
 
 if platform.is_win then
@@ -33,7 +41,7 @@ elseif platform.is_linux then
       { label = 'Zsh', args = { 'zsh', '-l' } },
       { label = 'Bash', args = { 'bash', '-l' } },
       { label = 'Fish', args = { 'fish', '-l' } },
-      { label = 'tmux (attach or start)', args = { 'zsh', '-l', '-c', 'tmux attach 2>/dev/null || tmux new' } },
+      { label = 'tmux (attach or start)', args = { 'zsh', '-l', '-c', 'tmux attach-session -t main 2>/dev/null || tmux new-session -s main' } },
    }
 end
 

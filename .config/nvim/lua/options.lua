@@ -115,3 +115,21 @@ vim.api.nvim_create_autocmd('FocusGained', {
     pcall(vim.cmd, 'checktime')
   end,
 })
+
+-- Auto-save: flush to disk when you leave insert mode or a buffer.
+-- `update` only writes when the buffer is actually modified, so it's a no-op on
+-- clean buffers and on quickfix/help/picker windows. CursorHold is deliberately
+-- NOT in this list: with updatetime=250 it re-fired `update` on every idle tick
+-- in every buffer, and InsertLeave already covers "you stopped typing".
+-- Toggle off mid-session with :let g:disable_autosave = 1
+vim.api.nvim_create_autocmd({ 'InsertLeave', 'BufLeave' }, {
+  group = vim.api.nvim_create_augroup('autosave', { clear = true }),
+  callback = function()
+    if vim.g.disable_autosave then
+      return
+    end
+    if vim.bo.buftype == '' and vim.bo.modifiable and not vim.bo.readonly then
+      pcall(vim.cmd, 'silent! update')
+    end
+  end,
+})

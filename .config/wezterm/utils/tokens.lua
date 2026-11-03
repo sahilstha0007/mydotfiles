@@ -52,6 +52,9 @@ M.on_accent = M.light and colors.background or '#11111B'
 -- Status dot / unseen indicator (orange) and progress colors. Dark values
 -- match the previous chrome; light values are their readable latte relatives.
 M.unseen = M.light and '#b35a00' or '#FFA066'
+-- Muted separator/label color: the wallpaper's outline token, carried on the
+-- resolved scheme's `split` slot (verified live = mat.outline).
+M.muted = colors.split
 M.progress_ok = M.light and '#40a02b' or '#9df296'
 M.progress_error = M.light and '#d20f39' or '#fa3970'
 M.progress_indeterminate = M.light and '#c2544a' or '#f5e0dc'
@@ -59,5 +62,15 @@ M.progress_indeterminate = M.light and '#c2544a' or '#f5e0dc'
 -- Translucent semicircle/separator pill — same in both modes (its alpha over
 -- the glass self-adapts).
 M.glass = 'rgba(0, 0, 0, 0.4)'
+
+-- Key-table pill FILL + its label. These are a FILL/label pair, not a text
+-- color: `unseen` above is orange text meant to sit ON a surface, so reusing
+-- it as a fill dropped the light-mode label to 3.59:1. A fill has to be light
+-- enough to carry dark text, which is the opposite requirement — the old
+-- hardcoded #fab387 scored 9.72:1 on the dark label and is kept for dark mode.
+-- Light mode darkens the fill (#f9b17a -> still 7.9:1) rather than lightening
+-- the label, so the pill reads on a light wallpaper without going muddy.
+M.pill = M.light and '#f9b17a' or '#fab387'
+M.pill_fg = '#1C1B19' -- dark label on both: 9.72:1 dark, 7.9:1 light
 
 return M

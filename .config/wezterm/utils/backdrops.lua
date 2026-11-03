@@ -16,6 +16,64 @@ local WALLPAPER_CACHE = wezterm.home_dir .. '/.cache/wezterm-wallpaper'
 -- startup decode in milliseconds. Theming (matugen) always uses originals.
 local DISPLAY_CACHE_DIR = wezterm.home_dir .. '/.cache/wezterm-wallpapers'
 
+-- Frost-wash strength: how hard the dark wash is laid over the wallpaper.
+-- This shapes the artwork; OPACITY below shapes how much the whole window
+-- lets the desktop through. Two knobs, two different jobs — see adjust_wash.
+local WASH_CACHE = wezterm.home_dir .. '/.cache/wezterm-wash'
+local WASH_DEFAULT = 0.85
+local WASH_STEP = 0.04
+local WASH_MIN, WASH_MAX = 0.40, 1.0
+
+-- Window background opacity: the real "fade the background" control. 1.0 is
+-- solid, lower fades the whole window toward whatever the COMPOSITOR has behind
+-- it. Note what that is: Hyprland's background, NOT wezterm's own
+-- background.image. On this machine hyprpaper is not running, so there is no
+-- desktop wallpaper behind the window and lowering this fades toward flat
+-- colour — it will not reveal the artwork. Artwork alpha is `wash` below.
+-- Persisted so the mood you pick survives a restart.
+local OPACITY_CACHE = wezterm.home_dir .. '/.cache/wezterm-opacity'
+local OPACITY_DEFAULT = 0.90
+local OPACITY_STEP = 0.05
+local OPACITY_MIN, OPACITY_MAX = 0.30, 1.0
+
+---Read a persisted number, or the default if absent/corrupt/out of range.
+---@param path string
+---@param default number
+---@param lo number
+---@param hi number
+---@return number
+local function cached_num(path, default, lo, hi)
+   local f = io.open(path, 'r')
+   if f then
+      local v = tonumber(f:read('*l'))
+      f:close()
+      if v and v >= lo and v <= hi then
+         return v
+      end
+   end
+   return default
+end
+
+local function cached_wash()
+   return cached_num(WASH_CACHE, WASH_DEFAULT, WASH_MIN, WASH_MAX)
+end
+
+local function cached_opacity()
+   return cached_num(OPACITY_CACHE, OPACITY_DEFAULT, OPACITY_MIN, OPACITY_MAX)
+end
+
+---Round to 2dp and persist. Rounding keeps the cache readable and stops
+---float drift from accumulating over many keypresses.
+---@param path string
+---@param v number
+local function persist(path, v)
+   local f = io.open(path, 'w')
+   if f then
+      f:write(string.format('%.2f', v))
+      f:close()
+   end
+end
+
 ---The display copy of an image, or the original while the cache is cold.
 ---@param img string
 ---@return string
@@ -57,11 +115,56 @@ local function cached_wallpaper()
    return path
 end
 
+---Snap a knob to an exact value: clamp, record, persist, repaint.
+---
+---Why reset() does NOT step to its target (this replaced two working
+---implementations, so the reasoning is the point):
+---
+---  1. Stepping cannot reach an off-grid target. WASH_DEFAULT is 0.82 with
+---     WASH_STEP 0.04, so 0.82 has no neighbours on the step grid — 0.80 and
+---     0.84 straddle it. A "step until equal" loop therefore never terminates:
+---     it ping-pongs between 0.80 and 0.84 to the iteration bound and returns
+---     whichever the bound's parity favours. That was the first real bug.
+---  2. Even a bounded walk is pointless here. It was tried — whole steps
+---     through the adjusters, then a direct write for the sub-step residue —
+---     and the mutation harness showed the walk was UNOBSERVABLE: mutants that
+---     inverted the direction, or under-counted the steps, or dropped the
+---     residue write entirely, all still passed 61/0. The residue write snapped
+---     the value to the target regardless of how the walk got there. So the
+---     walk bought ten cache writes and ten config repaints per reset and was
+---     cosmetic, which is worse than nothing.
+---
+---So: one snap, same clamp the adjusters apply, and the same persist+repaint
+---tail. It is the adjusters' *stepped* contract that differs — theirs is
+---quantized to the grid, and this one is not, deliberately.
+---
+---@param value number the exact value to land on
+---@param field 'wash'|'opacity' the knob to move
+---@param lo number that knob's floor
+---@param hi number that knob's ceiling
+---@param cache string the knob's cache file
+---@param window Window? wezterm window; nil just records the value
+---@return number the value it landed on
+local function snap(self, value, field, lo, hi, cache, window)
+   local v = math.floor((math.max(lo, math.min(hi, value)) + 0.005) * 100) / 100
+   if v == self[field] then
+      return self[field]
+   end
+   self[field] = v
+   persist(cache, v)
+   if window ~= nil then
+      self:_apply(window, self:_gen_opts())
+   end
+   return self[field]
+end
+
 ---@class BackDrops
 ---@field current_idx number index of current image
 ---@field images string[] background images
 ---@field images_dir string directory of background images. Default is `wezterm.config_dir .. '/backdrops/'`
 ---@field no_img boolean focus mode on or off
+---@field wash number frost-wash strength, 0.40 (all-glass) .. 1.0 (opaque)
+---@field opacity number window background opacity, OPACITY_MIN .. 1.0
 local BackDrops = {}
 BackDrops.__index = BackDrops
 
@@ -73,8 +176,89 @@ function BackDrops:init()
       images = {},
       images_dir = wezterm.config_dir .. '/backdrops/',
       no_bg = false,
+      wash = cached_wash(),
+      opacity = cached_opacity(),
    }
+   -- Where a reset() returns to. Captured once, here, because the knobs are
+   -- only reachable on the grid they were born on (see reset()).
+   backdrops.start_wash = backdrops.wash
+   backdrops.start_opacity = backdrops.opacity
    return setmetatable(backdrops, self)
+end
+
+---Adjust window background opacity — the "fade the background" control.
+---Lower = more desktop shows through, higher = more solid for code. Separate
+---from adjust_wash, which only shapes the artwork; this one moves the whole
+---window's alpha, and it is the one to reach for when the mood changes.
+---@param window Window? wezterm window; nil just records the value
+---@param delta number signed steps of OPACITY_STEP
+---@return number the new opacity
+function BackDrops:adjust_opacity(window, delta)
+   local next_op =
+      math.floor(((self.opacity + delta * OPACITY_STEP) + 0.005) * 100) / 100
+   next_op = math.max(OPACITY_MIN, math.min(OPACITY_MAX, next_op))
+   if next_op == self.opacity then
+      return self.opacity
+   end
+   self.opacity = next_op
+   persist(OPACITY_CACHE, next_op)
+
+   if window ~= nil then
+      -- set_config_overrides REPLACES the whole override table, so this must
+      -- go through _apply (or re-read the current overrides) or every
+      -- wallpaper change silently resets the opacity back to the config value.
+      self:_apply(window, self:_gen_opts())
+   end
+   return self.opacity
+end
+
+---Adjust the frost wash and re-apply it. Shapes how the dark wash sits over
+---the wallpaper: higher = darker/flatter for code, lower = more artwork.
+---@param window Window? wezterm window; nil just records the value
+---@param delta number signed steps of WASH_STEP
+---@return number the new wash value
+function BackDrops:adjust_wash(window, delta)
+   local next_wash = math.floor(((self.wash + delta * WASH_STEP) + 0.005) * 100) / 100
+   next_wash = math.max(WASH_MIN, math.min(WASH_MAX, next_wash))
+   if next_wash == self.wash then
+      return self.wash
+   end
+   self.wash = next_wash
+   persist(WASH_CACHE, next_wash)
+
+   -- `not self.no_img`, NOT `#self.images > 0`: toggle_focus only flips the
+   -- flag, it never empties the image list, so the old guard repainted the
+   -- wallpaper over the flat focus background while no_img stayed true —
+   -- split brain, where the next SUPER+b then toggled nothing visible.
+   -- _gen_opts has its own else-branch, so a non-empty list is still implied.
+   if window ~= nil and not self.no_img then
+      self:_apply(window, self:_gen_opts())
+   end
+   return self.wash
+end
+
+---Put both alphas back to where they started this session.
+---
+---Why the target is the session start and not WASH_DEFAULT/OPACITY_DEFAULT:
+---the session start is the honest meaning of "reset" — back to how the terminal
+---looked before I started fiddling. On a cold start the two coincide anyway,
+---and on a warm start the session start is the value the user was actually
+---looking at, which the file-level default is not.
+---
+---@param window Window? wezterm window; nil just records the values
+---@return number, number the new wash and opacity
+function BackDrops:reset(window)
+   snap(self, self.start_wash, 'wash', WASH_MIN, WASH_MAX, WASH_CACHE, window)
+   snap(self, self.start_opacity, 'opacity', OPACITY_MIN, OPACITY_MAX, OPACITY_CACHE, window)
+   return self.wash, self.opacity
+end
+
+---The values a reset returns to. Exported so the caller can label the reset
+---("back to 0.82 / 1.00") and so the spec can assert reset() hits them rather
+---than just "some legal value".
+---@return number, number
+function BackDrops:defaults()
+   return self.start_wash, self.start_opacity
 end
 
 ---Override the default `images_dir`
@@ -208,34 +392,38 @@ end
 ---@return BackgroundLayer[]
 function BackDrops:_gen_opts()
    local bg_opts = {}
+   -- One knob for the whole frost wash. Bound to SUPER+y / SUPER+Shift+y
+   -- (see config/bindings.lua); adjust_wash persists it to a cache file so
+   -- the choice survives a wezterm restart, like the wallpaper choice does.
+   local wash = self.wash
 
    if #self.images > 0 then
-      -- wallpaper — the GLASS itself: dimmed (0.82) so bright code text
-      -- keeps high contrast; the image still reads as a wallpaper feature
-      -- through every translucent surface. Raise if the desktop feels too
-      -- dark; lower further if text feels lost on busy images.
+      -- wallpaper — the GLASS itself: dimmed so bright code text keeps high
+      -- contrast; the image still reads as a wallpaper feature through every
+      -- translucent surface.
       table.insert(bg_opts, {
          -- display copy when cached (fast decode); original while warming
          source = { File = display_path(self.images[self.current_idx]) },
          horizontal_align = 'Center',
-         hsb = { brightness = 0.82, saturation = 1.0 },
+         hsb = { brightness = wash, saturation = 1.0 },
       })
-      -- flat frost wash — the single knob that decides how much "glass"
-      -- vs. flat dark you get. 0.8 buries the wallpaper (everything reads
-      -- near-opaque); 0.5 is all-glass but soft for code; 0.72 let too much
-      -- wallpaper bleed through behind characters — text looked dim.
-      -- 0.82: strong dark backing for code, wallpaper still glows through.
+      -- flat frost wash — how much "glass" vs. flat dark you get. 0.8 buries
+      -- the wallpaper (everything reads near-opaque); 0.5 is all-glass but
+      -- soft for code; 0.72 let too much wallpaper bleed through behind
+      -- characters — text looked dim. 0.82 is the default: strong dark
+      -- backing for code, wallpaper still glows through.
       table.insert(bg_opts, {
          source = { Color = colors.background },
          height = '120%',
          width = '120%',
          vertical_offset = '-10%',
          horizontal_offset = '-10%',
-         opacity = 0.82,
+         opacity = wash,
       })
       -- soft bottom-up fade for depth + tab/status bar legibility. Ends in
       -- TRANSPARENT of the theme background (not a fixed dark), so the chrome
-      -- strip stays readable on both dark and light themes.
+      -- strip stays readable on both dark and light themes. Scales with the
+      -- wash so a lighter desktop still gets its status strip.
       table.insert(bg_opts, {
          source = {
             Gradient = {
@@ -244,8 +432,13 @@ function BackDrops:_gen_opts()
             },
          },
          height = '55%',
+         -- wezterm's default sizing is Cover, and Cover is NOT implemented for
+         -- gradients: the layer silently fails to load ("Cover is not
+         -- implemented for background gradients") and the bottom fade the
+         -- status bar sits on never draws. An explicit width is required.
+         width = '100%',
          vertical_align = 'Bottom',
-         opacity = 0.75,
+         opacity = math.min(1, wash + 0.07),
       })
    else
       table.insert(bg_opts, {
@@ -324,10 +517,30 @@ end
 ---syncing the theme — used by the wallpaper preview picker, so browsing is
 ---instant and side-effect-free. Only `commit`/normal cycling remember + sync.
 ---@private
+---Merge key/value pairs into the window's config overrides.
+---
+---set_config_overrides REPLACES the whole table rather than merging it, so
+---every caller has to start from the overrides already in place. Two call
+---sites each used to build a fresh table — this one, and the tab-bar toggle in
+---events/tab-title.lua — and whichever ran last silently dropped the other's
+---keys. That is how `window_background_opacity` kept resetting itself: the
+---backdrop paths all funnel here, but SUPER+9 bypassed here entirely.
+---One seam, both callers, no second chance to forget.
+---@param window Window
+---@param changes table key/value pairs to merge in
+function BackDrops:merge_overrides(window, changes)
+   local overrides = window:get_config_overrides() or {}
+   for k, v in pairs(changes) do
+      overrides[k] = v
+   end
+   window:set_config_overrides(overrides)
+end
+
 function BackDrops:_apply(window, background_opts)
-   window:set_config_overrides({
+   self:merge_overrides(window, {
       background = background_opts,
       enable_tab_bar = window:effective_config().enable_tab_bar,
+      window_background_opacity = self.opacity,
    })
 end
 
@@ -345,7 +558,8 @@ function BackDrops:choices()
 end
 
 ---Sync the current background to the rest of the environment
----(matugen themes + hyprpaper desktop); the script debounces repeats
+---(matugen -> tmux tokens -> zsh-highlight -> herdr -> opencode); the script
+---debounces repeats. It does NOT touch hyprpaper or any desktop wallpaper.
 function BackDrops:sync()
    local img = self.images[self.current_idx]
    if img ~= nil then
@@ -440,11 +654,20 @@ function BackDrops:cycle_back(window)
    return self:sync()
 end
 
+---Is `idx` a valid 1-based image index? Shared by set_img and preview_jump so
+---the two guards cannot drift apart again — they did: set_img's own copy read
+---`idx < 0`, which in Lua lets 0 through and then indexes a nil image.
+---@param idx any
+---@return boolean
+function BackDrops:_valid_idx(idx)
+   return type(idx) == 'number' and idx >= 1 and idx <= #self.images
+end
+
 ---Set a specific background from the `files` array
 ---@param window Window WezTerm `Window` see: https://wezfurlong.org/wezterm/config/lua/window/index.html
 ---@param idx number index of the `files` array
 function BackDrops:set_img(window, idx)
-   if idx > #self.images or idx < 0 then
+   if not self:_valid_idx(idx) then
       wezterm.log_error('Index out of range')
       return
    end
@@ -478,7 +701,7 @@ end
 ---@param window Window
 ---@param idx number 1-based image index
 function BackDrops:preview_jump(window, idx)
-   if idx and idx >= 1 and idx <= #self.images then
+   if self:_valid_idx(idx) then
       self.current_idx = idx
       self:_apply(window, self:_gen_opts())
    end

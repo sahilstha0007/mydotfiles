@@ -3,6 +3,7 @@
 ------------------------------------------------------------------------------------------
 
 local wezterm = require('wezterm')
+local backdrops = require('utils.backdrops')
 local Cells = require('utils.cells')
 local OptsValidator = require('utils.opts-validator')
 local ustr = require('utils.str')
@@ -212,6 +213,159 @@ local function clean_process_name(proc)
    return a:gsub('%.exe$', '')
 end
 
+-- Zoom marker for the active tab. md_fullscreen on a patched font; the ASCII
+-- fallback keeps the concat (and the marker) safe on a font that lacks it.
+local GLYPH_ZOOM = nf.md_fullscreen or '[Z]'
+
+-- Bell marker, drawn in the same slot as the unseen-output dot (a bell
+-- outranks a dot: it is the louder, human-issued signal). One "attention"
+-- slot keeps the render tables flat -- a second optional segment would
+-- quadruple them.
+local GLYPH_BELL = nf.md_bell_ring_outline or '!'
+
+-- Tabs that rang a bell and have not been looked at since: tab_id -> true.
+-- wezterm exposes no per-tab bell state in TabInformation, so the `bell`
+-- event is the only source; the marker clears when the tab is activated (the
+-- format-tab-title handler below). Entries for tabs that die are inert.
+local bell_tabs = {}
+
+---Working directory of a PaneInformation snapshot.
+---
+---`tab.active_pane` in this event is a PaneInformation (a plain snapshot
+---table), where the cwd is the FIELD `current_working_dir` — a
+---"file://host/path" string. The old code called it as a method
+---(`:get_current_working_dir()`), which raised "unknown field" on every tab
+---re-render, so the project-name prefix in the tab title never rendered. Read
+---the field; keep a pcall'd method fallback for builds that expose one.
+---@param pane any
+---@return string?
+local function pane_cwd(pane)
+   if not pane then
+      return nil
+   end
+   if type(pane.current_working_dir) == 'string' and pane.current_working_dir ~= '' then
+      return pane.current_working_dir
+   end
+   local ok, url = pcall(function()
+      return pane:get_current_working_dir()
+   end)
+   if ok and url then
+      return tostring(url)
+   end
+   return nil
+end
+
+---Whether a PaneInformation snapshot's pane is zoomed (FIELD), with a method
+---fallback. The old `:is_zoomed()` call was inside a pcall, so it failed
+---silently and the zoom marker was never drawn.
+---@param pane any
+---@return boolean
+local function pane_zoomed(pane)
+   if not pane then
+      return false
+   end
+   if type(pane.is_zoomed) == 'boolean' then
+      return pane.is_zoomed
+   end
+   local ok, z = pcall(function()
+      return pane:is_zoomed()
+   end)
+   return ok and z == true or false
+end
+
+---Live Tab id, tolerating both the method and field spellings across builds.
+---@param tab any
+---@return integer?
+local function tab_id_of(tab)
+   if not tab then
+      return nil
+   end
+   local ok, id = pcall(function()
+      return tab:tab_id()
+   end)
+   if ok and id ~= nil then
+      return id
+   end
+   return tab.tab_id
+end
+
+---Which glyph the attention slot shows, and whether looking clears it. A bell
+---outranks unseen output; an ACTIVE tab shows neither (unseen self-clears via
+--- pane state, the bell via bell_tabs at the call site).
+---
+---Exposed as M.attention_icon for tests/check-tab-title.lua.
+---@param is_active boolean
+---@param bell boolean?
+---@param unseen string?
+---@param glyph string
+---@return string?
+local function attention_icon(is_active, bell, unseen, glyph)
+   if is_active then
+      return nil
+   end
+   if bell then
+      return glyph
+   end
+   return unseen
+end
+M.attention_icon = attention_icon
+
+---Basename of wezterm's cwd report ("file://host/home/sahil/work" -> "work";
+---$HOME -> "~"). Returns nil when there is nothing to show — a pane that has
+---never reported OSC 7 (or an unparseable URL) must fall back to the old
+---title form, not render an empty segment.
+---@param cwd string?
+---@return string?
+local function cwd_basename(cwd)
+   if not cwd or cwd == '' then
+      return nil
+   end
+   local path = cwd:gsub('^file://[^/]+', ''):gsub('/+$', '')
+   if path == '' then
+      return nil
+   end
+   local home = (wezterm.home_dir or ''):gsub('/+$', '')
+   if home ~= '' and path == home then
+      return '~'
+   end
+   local base = path:gsub('.*/', '')
+   if base == '' then
+      return path
+   end
+   return base
+end
+
+---Compose the tab title text before padding. With a reported cwd the project
+---basename LEADS ("Atlas ~ Terminal Stack Home.md") — when every tab runs
+---nvim, the directory is the differentiator, and the process name is not
+---lost: it already lives in the right-status pane-command badge (hud.lua),
+---which hides shells and shows the rest. Without a cwd (no OSC 7 yet) the
+---original "process ~ title" form stands.
+---
+---Exposed as M.compose_title so tests/check-tab-title.lua can assert the
+---parsing/composition without a live window.
+---@param process_name string
+---@param cwd string?
+---@param base_title string
+---@return string
+local function compose_title(process_name, cwd, base_title)
+   local dir = cwd_basename(cwd)
+   if dir then
+      return dir .. ' ~ ' .. base_title
+   end
+   if process_name:len() > 0 then
+      return process_name .. ' ~ ' .. base_title
+   end
+   return base_title
+end
+M.compose_title = compose_title
+
+-- Exposed so tests/check-tab-title.lua can prove the PaneInformation reads
+-- from the FIELD spelling — the bug that made these raise "unknown field" and
+-- silently killed the project prefix / zoom marker.
+M.pane_cwd = pane_cwd
+M.pane_zoomed = pane_zoomed
+
 ---@generic T
 ---@param pane_title string
 ---@param process_name string
@@ -254,19 +408,10 @@ local function create_base_title(pane_title, process_name)
    return base_title, prefix_icon
 end
 
----@param process_name string
----@param base_title string
+---@param title string pre-composed title text (compose_title + zoom marker)
 ---@param max_width number
 ---@param inset number
-local function create_title(process_name, base_title, max_width, inset)
-   local title
-
-   if process_name:len() > 0 then
-      title = process_name .. ' ~ ' .. base_title
-   else
-      title = base_title
-   end
-
+local function create_title(title, max_width, inset)
    if wezterm.column_width(title) > max_width - inset then
       local diff = wezterm.column_width(title) - max_width + inset
       title = wezterm.truncate_right(title, wezterm.column_width(title) - diff)
@@ -456,7 +601,13 @@ function Tab:update_cells(event_opts, tab, hover, max_width)
 
    local process_name = clean_process_name(tab.active_pane.foreground_process_name)
    local base_title, prefix_icon = create_base_title(tab.active_pane.title, process_name)
+   -- Unseen output icon; a bell on this tab takes the same slot (louder
+   -- signal wins), and looking at the tab clears its bell.
    local unseen_icon = check_unseen_output(event_opts, tab.is_active, tab.panes)
+   if tab.is_active then
+      bell_tabs[tab.tab_id] = nil
+   end
+   unseen_icon = attention_icon(tab.is_active, bell_tabs[tab.tab_id], unseen_icon, GLYPH_BELL)
    local progress = check_progress(event_opts, tab.tab_index, tab.panes)
    local inset = TITLE_INSET.default
 
@@ -502,9 +653,17 @@ function Tab:update_cells(event_opts, tab, hover, max_width)
    if self.title_locked then
       process_name = ''
       base_title = self.locked_title
+      -- A locked title is the user's own label: no cwd, no zoom marker on it.
+      title = create_title(compose_title(process_name, nil, base_title), max_width, inset)
+   else
+      title = compose_title(process_name, pane_cwd(tab.active_pane), base_title)
+      -- Zoom marker, front and center on the ACTIVE tab only: a zoomed pane
+      -- is indistinguishable from a lone pane otherwise.
+      if tab.is_active and pane_zoomed(tab.active_pane) then
+         title = GLYPH_ZOOM .. ' ' .. title
+      end
+      title = create_title(title, max_width, inset)
    end
-
-   local title = create_title(process_name, base_title, max_width, inset)
 
    title_cells:update_segment_text(RS.title, title)
 
@@ -556,6 +715,23 @@ M.setup = function(opts)
       valid_opts.show_progress = false
    end
 
+   -- A bell in ANY pane marks its tab; the marker is drawn (and cleared) by
+   -- the format-tab-title handler above. pcall-guarded: a bell from a pane
+   -- whose tab cannot be resolved is simply not marked, never an error in
+   -- the event path.
+   wezterm.on('bell', function(_window, pane)
+      local ok, tab = pcall(function()
+         return pane:tab()
+      end)
+      if not ok then
+         return
+      end
+      local id = tab_id_of(tab)
+      if id ~= nil then
+         bell_tabs[id] = true
+      end
+   end)
+
    -- CUSTOM EVENT
    -- Event listener to manually update the tab name
    -- Tab name will remain locked until the `reset-tab-title` is triggered
@@ -601,7 +777,11 @@ M.setup = function(opts)
    wezterm.on('tabs.toggle-tab-bar', function(window, _pane)
       ---@cast window Window
       local effective_config = window:effective_config()
-      window:set_config_overrides({
+      -- merge_overrides, not set_config_overrides: the latter REPLACES the whole
+      -- table, so building a fresh two-key table here dropped the backdrop's
+      -- window_background_opacity and snapped the window back to opaque on
+      -- every SUPER+9. `backdrops` is the same singleton appearance.lua holds.
+      backdrops:merge_overrides(window, {
          enable_tab_bar = not effective_config.enable_tab_bar,
          background = effective_config.background,
       })

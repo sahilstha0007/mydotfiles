@@ -8,6 +8,8 @@
 -- in sync from this one file.
 -- stylua: ignore
 
+local wezterm = require('wezterm')
+
 local function luminance(hex)
    local r = tonumber(hex:sub(2, 3), 16) or 0
    local g = tonumber(hex:sub(4, 5), 16) or 0
@@ -75,27 +77,142 @@ local latte = {
    crust     = '#dce0e8',
 }
 
--- Readability guard — same rule as tmux's colors-from-matugen.sh (its
--- guard() uses limits 102000/160000 on a 0..255000 luminance scale, i.e.
--- 0.40 / 0.63 here). Wallpaper tokens can land below readable contrast on
--- the theme background: this wallpaper's "success" token is a dark olive
--- that vanished into the near-black bg and made code green unreadable in
--- every CLI tool. A token failing the luminance gate falls back to the
--- catppuccin base color for that slot. Keep in sync with colors-from-matugen.sh.
-local function guard(hex, fallback, light)
+-- WCAG relative luminance + contrast ratio. The old gate was a hand-picked
+-- threshold on the 0.299/0.587/0.114 "luminance" number, which is a display-
+-- brightness approximation and not a readability measure. It let #6e6e6a
+-- (ratio 3.64:1) and #787878 (4.20:1) through as "readable" on a near-black
+-- bg, because their 0.43/0.47 brightness scores cleared the 0.40 cut — grey
+-- code text shipping at under 4.5:1. Contrast ratio answers the actual
+-- question: is this token legible on THIS background, in either direction.
+local MIN_CONTRAST = 4.5 -- WCAG AA for normal text
+
+local function channel(c)
+   c = c / 255
+   if c <= 0.04045 then
+      return c / 12.92
+   end
+   return ((c + 0.055) / 1.055) ^ 2.4
+end
+
+---WCAG relative luminance (0..1) of a '#rrggbb' string.
+---@param hex string
+---@return number
+local function rel_lum(hex)
+   if type(hex) ~= 'string' or not hex:match('^#%x%x%x%x%x%x$') then
+      return -1
+   end
+   local r = tonumber(hex:sub(2, 3), 16) or 0
+   local g = tonumber(hex:sub(4, 5), 16) or 0
+   local b = tonumber(hex:sub(6, 7), 16) or 0
+   return 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b)
+end
+
+---WCAG contrast ratio (1..21) between two '#rrggbb' strings. Symmetric, so it
+---works for a dark token on a light bg and a light token on a dark one.
+---@param a string
+---@param b string
+---@return number
+local function contrast(a, b)
+   local la, lb = rel_lum(a), rel_lum(b)
+   if la < 0 or lb < 0 then
+      return 0
+   end
+   local hi, lo = la > lb and la or lb, la < lb and la or lb
+   return (hi + 0.05) / (lo + 0.05)
+end
+
+-- Readability guard — a wallpaper token must reach MIN_CONTRAST against the
+-- theme background, else it falls back to the catppuccin base for that slot.
+-- Same rule in tmux's colors-from-matugen.sh and nvim's terminal-colors.lua;
+-- keep all three in sync. (This wallpaper's "success" is a dark olive at
+-- 2.87:1 on the near-black bg, which is why code green falls back to catppuccin.)
+---@param hex string? the wallpaper token
+---@param fallback string the catppuccin base colour for the slot
+---@param bg string the theme background the token must read against
+---@return string
+local function guard(hex, fallback, bg)
    if not hex then
       return fallback
    end
-   local l = luminance(hex)
-   if light then
-      if l > 160 / 255 then -- lighter than ~63% vanishes into the paper
-         return fallback
-      end
-   elseif l < 102 / 255 then -- darker than ~40% vanishes into the glass
+   if contrast(hex, bg) < MIN_CONTRAST then
       return fallback
    end
    return hex
 end
+
+---Blend two hexes in sRGB. Deliberately NOT perceptual: every use here is a
+---short hop between two colours that are already close (bg->accent tint,
+---slot->extreme lift), where gamma-space interpolation is what an eyedropper
+---would produce and keeps the hue steady. Linear-light mixing would swing the
+---hue of a saturated accent and break the "same palette" promise.
+---@param a string
+---@param b string
+---@param t number 0 = a, 1 = b
+---@return string
+local function blend(a, b, t)
+   local function rgb(hex)
+      return tonumber(hex:sub(2, 3), 16), tonumber(hex:sub(4, 5), 16), tonumber(hex:sub(6, 7), 16)
+   end
+   local ar, ag, ab = rgb(a)
+   local br, bg_, bb = rgb(b)
+   return string.format(
+      '#%02x%02x%02x',
+      math.floor(ar + (br - ar) * t + 0.5),
+      math.floor(ag + (bg_ - ag) * t + 0.5),
+      math.floor(ab + (bb - ab) * t + 0.5)
+   )
+end
+
+-- Two derived colours, and the reason each one exists.
+--
+-- Every value below was picked by measuring, not by taste: run the numbers in
+-- the comment next to each constant before changing it. The pairing that
+-- matters is the WORST case over every palette this config can resolve —
+-- stock mocha, stock latte, and whatever matugen last wrote — not the one
+-- palette sitting on disk right now.
+--
+-- BRIGHT_LIFT: how far an ANSI slot travels toward the theme extreme (white
+-- on dark themes, black on light) to become its `brights` counterpart.
+-- Before this, five of eight slots were byte-identical to their normal
+-- counterpart — green, yellow, blue, magenta and cyan all emitted the SAME
+-- hex for ansi[n] and brights[n]. `bold` on a colour (wezterm's
+-- bold_brightens_ansi_colors, on by default) then rendered identically to
+-- plain text, which is why bright CLI output read flat. 0.40 is the smallest
+-- blend that lifts every slot of every palette the test suite exercises by a
+-- contrast step of at least 1.10 over its normal slot (mocha's yellow, the
+-- hardest case: #f9e2af -> #fcebcd, 1.10) while keeping the slot itself on the
+-- right side of MIN_CONTRAST against the background. Larger only greys the
+-- darks out further — mocha's black slot reaches 5.2:1 at 0.40 and keeps
+-- climbing toward white.
+local BRIGHT_LIFT = 0.40
+
+-- SELECTION_LIFT: how far the background travels toward the wallpaper accent
+-- to make the selection block. This is deliberately NOT a saturated accent
+-- fill. Over a wallpaper, a block painted in the accent itself is a garish
+-- slab of colour sitting in the middle of the artwork; a low-alpha accent
+-- tint reads as the glass lifting under the text instead, which is the whole
+-- point of the mood. 0.42 is where it clears a visible step from the
+-- background (mocha 2.5:1, live wallpaper 2.9:1) AND still leaves selection_fg
+-- comfortably over MIN_CONTRAST. See SELECTION_FG for why that second half is
+-- not automatic.
+local SELECTION_LIFT = 0.42
+
+-- SELECTION_FG is the palette extremity — pure white on dark themes, pure
+-- black on light — rather than the theme's own foreground.
+--
+-- Why it cannot be `foreground`: a selection tint moves the background toward
+-- the accent, and on LIGHT themes that walk ends somewhere the guard-checked
+-- foreground no longer clears 4.5:1. Measured, latte: foreground #4c4f69 on
+-- the #97b7f5 selection is 3.96:1 — a real AA failure, and it is the value
+-- that shipped. Pure black on the same block is 10.41:1.
+--
+-- Why it cannot be 'none' (keep each cell's own colour): wezterm's docs say a
+-- transparent selection_fg falls back to the CURRENT text colour, which for a
+-- selection spanning coloured output is the cell's own ANSI slot. Measured on
+-- the same block, that puts ansi black (#45475a dark / #bcc0cc light) at
+-- 1.40:1 and 1.11:1 — invisible. So the pair has to be set explicitly: a
+-- mid-tint accent block with one strong label colour on it.
+local SELECTION_FG = { dark = '#ffffff', light = '#000000' }
 
 -- Apply the wallpaper's matugen tokens over the chosen catppuccin base.
 -- Mirrored by ~/.config/tmux/colors-from-matugen.sh — keep in sync.
@@ -104,29 +221,75 @@ local function apply_wallpaper(base, mat, light)
    for k, v in pairs(base) do
       c[k] = v
    end
-   c.text      = guard(mat.foreground, base.text, light)
-   -- Brighten text toward near-white (same hue family) so it reads over the
-   -- fully transparent window — but code ACCENTS carry their own darker
-   -- lightness (nvim derive_accents caps at l68), and the plain-text fg
-   -- sits at 55% toward white: bright enough to read (≈13:1), not glaring
-   -- white. Light themes keep their guard-checked token untouched.
-   if not light and c.text then
-      local function ch(i)
-         local v = tonumber(c.text:sub(i, i + 1), 16) or 0
-         return string.format('%02x', math.floor(v + (255 - v) * 0.55 + 0.5))
-      end
-      c.text = '#' .. ch(2) .. ch(4) .. ch(6)
-   end
    c.base      = mat.background
    c.mantle    = mat.background
    c.crust     = mat.background
-   c.red       = guard(mat.error, base.red, light)
-   c.green     = guard(mat.success, base.green, light)
-   c.yellow    = guard(mat.tertiary, base.yellow, light)
-   c.blue      = guard(mat.primary, base.blue, light)
-   c.pink      = guard(mat.secondary, base.pink, light)
-   c.teal      = guard(mat.primary, base.teal, light)
-   c.rosewater = guard(mat.primary, base.rosewater, light)
+   -- Every token is checked against the background it will actually sit on,
+   -- so the guard needs the resolved bg, not the light/dark flag.
+   local bg = c.base
+   c.text      = guard(mat.foreground, base.text, bg)
+   -- Push plain text AWAY from the background, because the background is not
+   -- the background the text actually sits on: utils/backdrops.lua composites
+   -- the wallpaper UNDER this colour (hsb brightness = wash, then a flat wash
+   -- of the bg at the same opacity). Where the artwork is bright, the real
+   -- backdrop is far lighter than `bg` and text loses contrast there — that
+   -- is the "wallpaper is busy here" case, and no amount of guarding `bg`
+   -- sees it, because the guard only knows the flat colour.
+   --
+   -- 0.55 is measured against the nine wallpapers in ~/.cache/wezterm-wallpapers
+   -- at the default wash of 0.82: worst composited backdrop #474743 (mocha) /
+   -- #3d3e2d (live olive), where raw text scores 6.45 and 8.45 and this scores
+   -- 7.97 and 9.73. Raising it to 0.70 buys only +0.44 more at that wash and
+   -- is not worth the loss of the hue.
+   --
+   -- The original version brightened on dark themes and left light themes on
+   -- the raw token, because there was no measured reason to move them. There
+   -- is one now: a bright wallpaper has dark regions in it, they composite
+   -- through the wash exactly the same way, and latte's #4c4f69 scores 4.67
+   -- on the #c4c6c9 that a black region produces at wash 0.82 — under 4.5
+   -- the moment anything shifts. Darkening the same distance restores 9.01.
+   -- Move away from the background; the direction is the only thing that flips.
+   if c.text then
+      c.text = blend(c.text, light and '#000000' or '#ffffff', 0.55)
+   end
+   c.red       = guard(mat.error, base.red, bg)
+   c.green     = guard(mat.success, base.green, bg)
+   c.yellow    = guard(mat.tertiary, base.yellow, bg)
+   c.blue      = guard(mat.primary, base.blue, bg)
+   c.pink      = guard(mat.secondary, base.pink, bg)
+   c.teal      = guard(mat.primary, base.teal, bg)
+   c.rosewater = guard(mat.primary, base.rosewater, bg)
+   -- A wallpaper is not a designed 16-colour set, and routing its tokens
+   -- straight into the accents assumes it is. Two collisions follow from that:
+   --
+   --   1. matugen routinely emits secondary == tertiary (the live wallpaper:
+   --      #b7cea2 twice), so magenta and yellow got the same sage.
+   --   2. the primary is deliberately routed into blue AND teal AND rosewater
+   --      (blue owning it is the point -- it is the pill/cursor token), so
+   --      blue, cyan and rosewater all landed on #f3bd6e.
+   --
+   -- Brights are derived by lifting a normal slot, so each collision also
+   -- poisons its bright twin (color4==color6, color3==color5, color11==
+   -- color13, color12==color14 -- 6 of 16 slots duplicated). Editors map
+   -- syntax onto these slots, so the visible effect is that functions, types,
+   -- keywords and properties all collapse onto the wallpaper's one hue: the
+   -- code reads as "the wallpaper colour", which is exactly what it is.
+   --
+   -- Keep the first slot to claim a hue and give every later duplicate the
+   -- stock catppuccin accent for its own slot. That is the same fallback
+   -- guard() already uses, and it keeps the accent count at 8 instead of
+   -- letting a monochrome wallpaper flatten the palette.
+   local claimed = {}
+   for _, name in ipairs({ 'red', 'green', 'yellow', 'blue', 'pink', 'teal', 'rosewater' }) do
+      local v = c[name]
+      if v ~= nil then
+         if claimed[v] and claimed[v] ~= name then
+            c[name] = base[name]
+         else
+            claimed[v] = name
+         end
+      end
+   end
    c.surface0  = mat.surface0
    c.surface1  = mat.surface1
    c.surface2  = mat.surface2
@@ -135,10 +298,27 @@ local function apply_wallpaper(base, mat, light)
 end
 
 local base = mocha -- fallback: stock catppuccin mocha if matugen never ran
-local ok, matugen = pcall(dofile, os.getenv('HOME') .. '/.config/wezterm/colors/matugen.lua')
+-- The palette lives BESIDE this file, so resolve the path from wezterm, never
+-- from the environment. `os.getenv('HOME')` is nil under a systemd unit, a
+-- flatpak, or any launcher that scrubs the environment -- and the concat then
+-- raises, taking the ENTIRE config down with it (verified: `env -u HOME
+-- wezterm start` dies here with "attempt to concatenate a nil value", not
+-- with a quiet fallback).
+--
+-- wezterm.config_dir is the directory of the config file actually being run,
+-- so this also survives a checkout that is NOT at ~/.config/wezterm.
+-- wezterm.home_dir is the fallback for a build without it; unlike os.getenv
+-- it is resolved from the passwd entry, not the environment.
+local palette_path = (wezterm.config_dir or wezterm.home_dir .. '/.config/wezterm')
+   .. '/colors/matugen.lua'
+local ok, matugen = pcall(dofile, palette_path)
+-- Which way this palette points. Default dark, because `base` above falls back
+-- to mocha when no palette is readable. Needed below by the derived colours
+-- (brights, selection, cursor), which each pick one of two values by it.
+local light = false
 if ok and type(matugen) == 'table' and matugen.background then
    -- Bright wallpaper background -> light theme (latte), dark -> mocha.
-   local light = luminance(matugen.background) >= 0.5
+   light = luminance(matugen.background) >= 0.5
    base = apply_wallpaper(light and latte or mocha, matugen, light)
 end
 
@@ -152,38 +332,88 @@ local function rgba(hex, a)
    return string.format('rgba(%d, %d, %d, %s)', r, g, b, tostring(a))
 end
 
+-- The 8 normal ANSI slots, in wezterm's order. Built here as a value (not
+-- inlined in the table below) because `brights` is DERIVED from it -- see
+-- BRIGHT_LIFT for why the two can no longer be written independently.
+local ansi = {
+   base.surface1, -- black
+   base.red,      -- red
+   base.green,    -- green
+   base.yellow,   -- yellow
+   base.blue,     -- blue
+   base.pink,     -- magenta
+   base.teal,     -- cyan
+   base.subtext1, -- white
+}
+
+-- The palette extremity for this theme direction. Dark themes brighten toward
+-- white, light themes darken toward black -- always AWAY from the background,
+-- which is what keeps a lifted slot more readable than the one it came from.
+local extreme = light and '#000000' or '#ffffff'
+
+---Lift one slot to its `brights` counterpart.
+---@param slot string
+---@return string
+local function brighten(slot)
+   return blend(slot, extreme, BRIGHT_LIFT)
+end
+
+-- The cursor.
+--
+-- It used to be rosewater with a crust label, which is invisible on light
+-- themes: latte rosewater #dc8a78 against the #eff1f5 background is 2.34:1,
+-- and its #dce0e8 label on that block is 2.00:1 — a 4.5:1 failure on the
+-- block AND a 2.00:1 failure on the character sitting inside it. The cursor is
+-- the one thing that must never be hard to find, so it now comes from the
+-- shared accent instead: base.blue is the wallpaper primary in the ANSI blue
+-- slot (the same token the tab pill, pane-select chip and tmux pill use), so
+-- the cursor belongs to the palette rather than to a hardcoded rose.
+--
+-- On light themes the accent is mid-dark (latte #1e66f5 = 4.34:1 on its own
+-- background, just under MIN_CONTRAST), so it is run through brighten() the
+-- same way an ANSI slot would be. That lands #1445a7 at 7.61:1 -- the label
+-- and the block are the same 7.61:1 either way, because a block cursor paints
+-- the cell and its glyph with one fg/bg pair. 8.08:1 dark.
+--
+-- guard() keeps the plain accent whenever it already clears MIN_CONTRAST, so
+-- dark themes get the saturated primary (10.90:1 on the live wallpaper) and
+-- only light themes pay for the lift. Darkening on a light theme and
+-- lightening on a dark one are the same operation: move away from the page.
+local cursor = guard(base.blue, brighten(base.blue), base.base)
+
+-- The selection: a soft accent lift, with the label pinned to the extreme so
+-- the pair always clears MIN_CONTRAST. Both numbers are argued in
+-- SELECTION_LIFT / SELECTION_FG above.
+local selection_bg = blend(base.base, cursor, SELECTION_LIFT)
+
 local colorscheme = {
    foreground = base.text,
    background = base.base,
-   cursor_bg = base.rosewater,
-   cursor_border = base.rosewater,
-   cursor_fg = base.crust,
-   selection_bg = base.surface2,
-   selection_fg = base.text,
+   cursor_bg = cursor,
+   cursor_border = cursor,
+   -- The glyph inside the block: the background colour, so cursor contrast is
+   -- symmetric with the block's own contrast against the page. A hardcoded
+   -- `crust` cannot do this — crust IS base.base on a wallpaper theme (both
+   -- are aliased to mat.background), so it worked by accident and would break
+   -- the moment the two stopped being the same value.
+   cursor_fg = base.base,
+   selection_bg = selection_bg,
+   selection_fg = light and SELECTION_FG.light or SELECTION_FG.dark,
    -- quick_select_* need `ColorSpec` tables on this wezterm version
    quick_select_label_bg = { Color = base.surface1 },
    quick_select_label_fg = { Color = base.text },
    quick_select_match_bg = { Color = base.yellow },
    quick_select_match_fg = { Color = base.crust },
-   ansi = {
-      base.surface1, -- black
-      base.red,      -- red
-      base.green,    -- green
-      base.yellow,   -- yellow
-      base.blue,     -- blue
-      base.pink,     -- magenta
-      base.teal,     -- cyan
-      base.subtext1, -- white
-   },
+   ansi = ansi,
    brights = {
-      base.surface2, -- black
-      base.maroon,   -- red
-      base.green,    -- green
-      base.yellow,   -- yellow
-      base.blue,     -- blue
-      base.pink,     -- magenta
-      base.teal,     -- cyan
-      base.text,     -- white
+      brighten(ansi[1]), -- black
+      brighten(ansi[2]), -- red
+      brighten(ansi[3]), -- green
+      brighten(ansi[4]), -- yellow
+      brighten(ansi[5]), -- blue
+      brighten(ansi[6]), -- magenta
+      brighten(ansi[7]), -- cyan
+      brighten(ansi[8]), -- white
    },
    tab_bar = {
       background = rgba(base.base, 0.4),

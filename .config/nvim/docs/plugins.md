@@ -69,10 +69,6 @@ gitsigns.nvim. Inline git change markers in the sign column plus `:Gitsigns:*
 grug-far.nvim. Project-wide search-and-replace UI. Good alternative to
 `vim.lsp.buf.codeaction` refactor when there's no LSP support.
 
-### `lua/plugins/editor/hardtime.lua`
-hardtime.nvim. Prevents the kind of bad muscle-memory habits (`dd`, `x`,
-`j` mash) that wear your hands and your wrists.
-
 ### `lua/plugins/editor/lazygit.lua`
 lazygit.nvim. Opens lazygit in a floating terminal. Usually `<leader>gg`.
 
@@ -123,10 +119,9 @@ on `nvim <dir>` — also read by the snacks dashboard).
 
 ### `lua/plugins/formatting/conform.lua`
 conform.nvim. Runs formatters on save. Per-filetype formatters configured here.
-
-### `lua/plugins/formatting/prettier.lua`
-Optional Prettier shim if conform doesn't pick up `prettier` automatically.
-Loaded eagerly so other plugin specs can assume it's available.
+`prettier`/`prettierd` are already listed for every web filetype here, and
+`biome` wins whenever the project has a `biome.json`, so a separate
+prettier shim would only have double-registered the same formatters.
 
 ## Languages
 

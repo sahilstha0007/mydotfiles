@@ -34,7 +34,9 @@ return {
         'tailwindcss',
         'cssls',
         'gopls',
-        -- ruff replaces pyright for Python (lint + type-checking + format)
+        -- Python: pyright owns completion / hover / go-to-def / type-checking;
+        -- ruff owns lint + format (hover disabled in lsp/ruff.lua).
+        'pyright',
         'ruff',
         'intelephense',
         'astro',
@@ -81,7 +83,12 @@ return {
             )
           end
 
-          map('<leader>ca', vim.lsp.buf.code_action, 'Code Action', { 'n', 'x' })
+          map(
+            '<leader>ca',
+            vim.lsp.buf.code_action,
+            'Code Action',
+            { 'n', 'x' }
+          )
 
           local client = vim.lsp.get_client_by_id(event.data.client_id)
 
@@ -93,10 +100,8 @@ return {
               vim.lsp.protocol.Methods.textDocument_documentHighlight
             )
           then
-            local hl = vim.api.nvim_create_augroup(
-              'lsp-highlight',
-              { clear = false }
-            )
+            local hl =
+              vim.api.nvim_create_augroup('lsp-highlight', { clear = false })
             vim.api.nvim_create_autocmd({ 'CursorHold', 'CursorHoldI' }, {
               buffer = event.buf,
               group = hl,
@@ -149,7 +154,7 @@ return {
           'css-lsp',
           -- gopls is provided by mise (go: backend) so it lands on PATH as a
           -- shim; mason can't install it because mise overrides GOBIN.
-          -- pyright removed: ruff replaces it (see servers list above).
+          'pyright',
           'ruff',
           'astro-language-server',
           'dockerfile-language-server',

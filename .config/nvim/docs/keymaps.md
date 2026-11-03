@@ -32,6 +32,7 @@ Every custom keybinding in this config, grouped by purpose. Leader = `Space`.
 | `<leader>g` | Git |
 | `<leader>s` | Search |
 | `<leader>t` | Test |
+| `<leader>n` | Notes |
 | `<leader>q` | Session |
 | `gz` | Surround |
 
@@ -60,6 +61,7 @@ Every custom keybinding in this config, grouped by purpose. Leader = `Space`.
 | `<leader>ss` / `<leader>sS` | Symbols: document / workspace |
 | `<leader>sy` | Yank history (clipboard ring) |
 | `<leader>sr` | grug-far: replace across project |
+| `<leader>su` | Grep the **selection** across the project (falls back to `<leader>sg` in normal mode) |
 | `s` (n/x/o) | **Flash: jump to any visible word** (1 key) |
 | `S` (o/x) | Flash: treesitter node jump (visual/operator) |
 | `R` (op/visual) | Flash: treesitter search |
@@ -67,6 +69,8 @@ Every custom keybinding in this config, grouped by purpose. Leader = `Space`.
 | `]p` / `[p` | Cycle last put through yank ring (yanky) — use right after `p` |
 | `<C-/>` or `<C-_>` | n, t | Toggle terminal (snacks.terminal); t-mode map closes it from inside |
 | `<leader>ft` / `<leader>fT` | Toggle terminal: cwd / git root |
+| `<leader>nn` | Today's Atlas daily note, frontmatter pre-filled (`date`/`tags`/`cssclasses`/trackers) |
+| `<leader>nN` | Scratch buffer — saved to `stdpath('data')/scratch`, never lands in the vault |
 
 ## Code / LSP
 
@@ -105,6 +109,7 @@ Bound buffer-local on `LspAttach` (`lua/plugins/coding/lspconfig.lua`) unless no
 | `<leader>gbs` / `<leader>gbr` | Stage / reset buffer |
 | `<leader>gbl` | Toggle blame on current line |
 | `<leader>gB` | Blame line popup: full commit info (gitsigns `blame_line {full=true}`) |
+| `<leader>gG` | Open the current file/line on GitHub (snacks `gitbrowse`) |
 | `<leader>gdi` / `<leader>gdc` | Diff vs index / vs commit |
 | `<leader>gds` | Toggle deleted lines |
 | `<leader>l` | Lazy actions picker (sync / update / clean / …) |

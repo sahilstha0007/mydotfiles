@@ -14,10 +14,30 @@ return {
       { 'ge', desc = 'Spider-ge (subword)' },
     },
     config = function()
-      vim.keymap.set({ 'n', 'o', 'x' }, 'w', "<cmd>lua require('spider').motion('w')<CR>", { desc = 'Spider-w (subword)' })
-      vim.keymap.set({ 'n', 'o', 'x' }, 'e', "<cmd>lua require('spider').motion('e')<CR>", { desc = 'Spider-e (subword)' })
-      vim.keymap.set({ 'n', 'o', 'x' }, 'b', "<cmd>lua require('spider').motion('b')<CR>", { desc = 'Spider-b (subword)' })
-      vim.keymap.set({ 'n', 'o', 'x' }, 'ge', "<cmd>lua require('spider').motion('ge')<CR>", { desc = 'Spider-ge (subword)' })
+      vim.keymap.set(
+        { 'n', 'o', 'x' },
+        'w',
+        "<cmd>lua require('spider').motion('w')<CR>",
+        { desc = 'Spider-w (subword)' }
+      )
+      vim.keymap.set(
+        { 'n', 'o', 'x' },
+        'e',
+        "<cmd>lua require('spider').motion('e')<CR>",
+        { desc = 'Spider-e (subword)' }
+      )
+      vim.keymap.set(
+        { 'n', 'o', 'x' },
+        'b',
+        "<cmd>lua require('spider').motion('b')<CR>",
+        { desc = 'Spider-b (subword)' }
+      )
+      vim.keymap.set(
+        { 'n', 'o', 'x' },
+        'ge',
+        "<cmd>lua require('spider').motion('ge')<CR>",
+        { desc = 'Spider-ge (subword)' }
+      )
     end,
   },
 }

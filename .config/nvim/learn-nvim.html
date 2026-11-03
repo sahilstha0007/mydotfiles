@@ -383,7 +383,8 @@ vim.opt.scrolloff = <span class="s">10</span></pre>
   <div class="krow"><span class="k"><kbd>x</kbd> <kbd>X</kbd></span><span class="d">Delete char under / before the cursor.</span></div>
   <div class="krow"><span class="k"><kbd>dd</kbd> <kbd>yy</kbd> <kbd>p</kbd> <kbd>P</kbd></span><span class="d">Delete line, copy line, paste <b>after</b> cursor, paste <b>before</b>. <kbd>3dd</kbd> cuts three lines.</span></div>
   <div class="krow"><span class="k"><kbd>dw</kbd> <kbd>d$</kbd> <kbd>d0</kbd></span><span class="d">Delete word, to end of line, to start of line.</span></div>
-  <div class="krow"><span class="k"><kbd>u</kbd> <kbd>C-r</kbd></span><span class="d">Undo / redo. Your undo <b>survives restarts</b> (undofile is on).</span></div>
+  <div class="krow"><span class="k"><kbd>u</kbd> <kbd>U</kbd></span><span class="d">Undo / redo (<kbd>U</kbd> is your mapping; native <kbd>C-r</kbd> still works too). Your undo <b>survives restarts</b> (undofile is on).</span></div>
+  <div class="krow"><span class="k"><kbd>gc</kbd><kbd>c</kbd> <kbd>gc</kbd><kbd>i</kbd><kbd>p</kbd></span><span class="d">Toggle comment on a line / an inner paragraph (mini.comment). Works in visual too.</span></div>
   <div class="krow"><span class="k"><kbd>.</kbd></span><span class="d">Repeat the last change. <kbd>dd</kbd> then <kbd>.</kbd> <kbd>.</kbd> <kbd>.</kbd> deletes line after line. The most powerful key in vim.</span></div>
   <div class="krow"><span class="k"><kbd>r</kbd><kbd>x</kbd> <kbd>~</kbd></span><span class="d">Replace one char with <code>x</code>; flip case of a char.</span></div>
   <div class="krow"><span class="k"><kbd>J</kbd></span><span class="d">Join the next line onto this one.</span></div>
@@ -409,7 +410,7 @@ vim.opt.clipboard = <span class="s">'unnamedplus'</span>  <span class="cm">-- ya
 <span class="k">vim.keymap.set</span>(<span class="s">'v'</span>, <span class="s">'&gt;'</span>, <span class="s">'&gt;gv'</span>)</pre>
   </div>
 
-  <div class="tip"><b>Hardtime is watching:</b> your setup runs <code>hardtime.nvim</code> to break the <kbd>dd</kbd>/<kbd>x</kbd> mashing habit. It intentionally makes those slower until you start using motions + counts — the exact skills these lessons teach.</div>
+  <div class="tip"><b>No hardtime here:</b> this config used to run <code>hardtime.nvim</code> to break the <kbd>dd</kbd>/<kbd>x</kbd> mashing habit, but it was removed — <kbd>dd</kbd> and <kbd>x</kbd> are plain deletes here. The habits still pay off; nothing enforces them.</div>
 </section>
 
 <!-- ============ 03 INSERT ============ -->
@@ -434,7 +435,9 @@ vim.opt.clipboard = <span class="s">'unnamedplus'</span>  <span class="cm">-- ya
 <span class="k">vim.keymap.set</span>(<span class="s">'i'</span>, <span class="s">'&lt;C-l&gt;'</span>, <span class="k">function</span>() <span class="cm">-- returns '&lt;Right&gt;' if on a closing char</span> <span class="k">end</span>, { expr = <span class="s">true</span> })
 
 <span class="cm">-- nvim-autopairs closes brackets for you</span>
-<span class="k">type</span> <span class="s">(</span>  →  <span class="s">()</span>  <span class="cm">cursor lands inside</span></pre>
+<span class="k">type</span> <span class="s">(</span>  →  <span class="s">()</span>  <span class="cm">cursor lands inside</span>
+<span class="k">type</span> <span class="s">&lt;</span>  →  <span class="s">&lt;&gt;</span>  <span class="cm">in html/xml/vue/svelte/astro/php/blade — markup filetypes only; code keeps &lt; as an operator</span>
+<span class="cm">-- nvim-ts-autotag: typing &gt; after &lt;p inserts &lt;p&gt;&lt;/p&gt; (cursor inside); editing an opening tag name renames its closing twin</span></pre>
   </div>
 
   <div class="tip"><b>Escape early, escape often.</b> The moment your thought is typed, <kbd>Esc</kbd> and move on. Speed in vim comes from <i>not</i> living in insert.</div>
@@ -855,7 +858,7 @@ sources = { default = { <span class="s">'lsp'</span>, <span class="s">'path'</sp
 
   <div class="krow"><span class="k"><kbd>:w</kbd></span><span class="d">Saving runs the formatter. That's the whole workflow.</span></div>
   <div class="krow"><span class="k">stylua</span><span class="d">Lua formatter (your own config files).</span></div>
-  <div class="krow"><span class="k">biome / prettier</span><span class="d">JS/TS/JSON/CSS — Biome is preferred if <code>biome.json</code> exists, Prettier otherwise.</span></div>
+  <div class="krow"><span class="k">bun fmt / prettier</span><span class="d">JS/TS/JSON/CSS/HTML/YAML — bun fmt is preferred, falling back to Prettier (or Biome if <code>biome.json</code> exists).</span></div>
   <div class="krow"><span class="k">ruff</span><span class="d">Python lint + type-check + format in one (replaces pyright entirely).</span></div>
   <div class="krow"><span class="k">phpstan</span><span class="d">PHP static analysis, runs via nvim-lint on save.</span></div>
   <div class="krow"><span class="k"><kbd>Space</kbd><kbd>sd</kbd></span><span class="d">See lint errors in the snacks picker; the gutter icons are diagnostics.</span></div>
@@ -864,10 +867,10 @@ sources = { default = { <span class="s">'lsp'</span>, <span class="s">'path'</sp
     <div class="yh"><span class="tag">your config</span> · <code>lua/plugins/formatting/conform.lua</code> + <code>linting/core.lua</code></div>
 <pre>formatters_by_ft = {
   lua = { <span class="s">'stylua'</span> },
-  javascript = { <span class="s">'biome'</span>, <span class="s">'prettier'</span>, <span class="s">'prettierd'</span> },
-  typescript = { <span class="s">'biome'</span>, <span class="s">'prettier'</span>, <span class="s">'prettierd'</span> },
-  html = { <span class="s">'prettier'</span>, <span class="s">'prettierd'</span> },
-  yaml = { <span class="s">'prettier'</span>, <span class="s">'prettierd'</span> },
+  javascript = { <span class="s">'bun_fmt'</span>, <span class="s">'prettier'</span>, <span class="s">'prettierd'</span> },
+  typescript = { <span class="s">'bun_fmt'</span>, <span class="s">'prettier'</span>, <span class="s">'prettierd'</span> },
+  html = { <span class="s">'bun_fmt'</span>, <span class="s">'prettier'</span>, <span class="s">'prettierd'</span> },
+  yaml = { <span class="s">'bun_fmt'</span>, <span class="s">'prettier'</span>, <span class="s">'prettierd'</span> },
 }
 <span class="cm">-- linters: phpstan for PHP (nvim-lint), ESLint via its LSP, ruff for Python</span></pre>
   </div>
@@ -976,7 +979,7 @@ keys = { { <span class="s">'&lt;leader&gt;gg'</span>, <span class="s">'&lt;cmd&g
   <div class="krow"><span class="k"><kbd>C-h</kbd> <kbd>C-j</kbd> <kbd>C-k</kbd> <kbd>C-l</kbd></span><span class="d"><b>Your config:</b> move focus between nvim and tmux panes as if they were one editor.</span></div>
   <div class="krow"><span class="k">prefix <kbd>C</kbd> + arrows</span><span class="d">tmux.nvim resize bindings.</span></div>
 
-  <div class="tip"><b>The payoff:</b> <kbd>Space</kbd><kbd>a</kbd> for the AI, <kbd>C-l</kbd> back into nvim, tests in another pane — all with the same fingers. That's the whole point of this setup.</div>
+  <div class="tip"><b>The payoff:</b> <kbd>Space</kbd><kbd>o</kbd> for the task runner, <kbd>C-l</kbd> back into nvim, tests in another pane — all with the same fingers. That's the whole point of this setup.</div>
 
   <div class="yset">
     <div class="yh"><span class="tag">your config</span> · <code>lua/plugins/editor/tmux.lua</code></div>
@@ -1150,7 +1153,6 @@ keys = { { <span class="s">'&lt;leader&gt;gg'</span>, <span class="s">'&lt;cmd&g
     <tr><td><kbd>l</kbd></td><td>Lazy actions picker (sync, update, clean, …)</td></tr>
     <tr><td><kbd>fr</kbd></td><td>File ring (recent files, harpoon-style)</td></tr>
     <tr><td><kbd>bp</kbd></td><td>Pick buffer from the tab strip</td></tr>
-    <tr><td><kbd>a</kbd></td><td>Pick AI agent (Claude Code / opencode) — right tmux pane inside tmux</td></tr>
     <tr><td><kbd>ut</kbd></td><td>Toggle treesitter-context</td></tr>
     <tr><td><kbd>th</kbd></td><td>Toggle inlay hints</td></tr>
     <tr><td><kbd>Space</kbd><kbd>Tab</kbd><kbd>d</kbd></td><td>Close tab</td></tr>

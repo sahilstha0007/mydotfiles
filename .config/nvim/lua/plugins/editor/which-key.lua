@@ -42,11 +42,6 @@ return {
       -- Document existing key chains
       spec = {
         {
-          '<leader>a',
-          group = 'AI Agent',
-          icon = { icon = '󰊩', color = 'green' },
-        },
-        {
           '<leader>d',
           group = 'Debug (DAP)',
           icon = { icon = '󰃭', color = 'red' },

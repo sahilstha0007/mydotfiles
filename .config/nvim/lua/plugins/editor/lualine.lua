@@ -15,7 +15,10 @@ return {
       -- the terminal theme changes, which fires ColorScheme; refresh() rebuilds
       -- the Lualine* groups and the mode→color map from the new palette.
       vim.api.nvim_create_autocmd('ColorScheme', {
-        group = vim.api.nvim_create_augroup('lualine-palette', { clear = true }),
+        group = vim.api.nvim_create_augroup(
+          'lualine-palette',
+          { clear = true }
+        ),
         callback = function()
           pcall(require('plugins.editor.lualine-theme').refresh)
         end,
@@ -25,7 +28,7 @@ return {
       -- on ColorScheme, so lookups stay cheap and stay in sync with palette
       -- changes. (The mode color component runs on every cursor move / mode
       -- change, so anything computed inside it is a hot path.)
-      local theme = require('plugins.editor.lualine-theme')
+      local theme = require 'plugins.editor.lualine-theme'
       local mode_color = theme.mode_colors
 
       local conditions = {
@@ -83,9 +86,25 @@ return {
       end
 
       ins_left {
-        -- mode component
+        -- mode component: glyph + a short TEXT label. Colour alone is not a
+        -- sufficient mode cue (a same-hue wallpaper can collapse two modes to
+        -- one colour) — the same 'never depend on hue alone' rule the tmux
+        -- window pill follows. A 1-2 char label keeps it scannable without a
+        -- full word; unknown modes fall through to the raw mode() string.
         function()
-          return ''
+          local labels = {
+            n = 'N',
+            i = 'I',
+            v = 'V',
+            V = 'VL',
+            ['\22'] = 'VB',
+            c = 'C',
+            R = 'R',
+            t = 'T',
+            ['!'] = 'SH',
+          }
+          local m = vim.fn.mode()
+          return ' ' .. (labels[m] or m)
         end,
         color = function()
           -- Cheap per-redraw: a table lookup against the precomputed map.
@@ -161,13 +180,30 @@ return {
         cond = conditions.hide_in_width,
       }
 
+      -- Buffer-level signals nvim uniquely owns (2026-10-13): nothing else in
+      -- the stack shows these, so they fit the one-owner-per-signal contract.
+      -- Muted tones (see lualine-theme) keep them below branch/diff/lsp.
       ins_right {
-        function()
-          return os.date '%H:%M'
-        end,
-        icon = '',
-        color = 'LualineDiagnosticsWarn',
+        'filetype',
+        icon_only = false,
+        cond = conditions.buffer_not_empty,
+        color = 'LualineFiletype',
       }
+
+      ins_right {
+        'location',
+        color = 'LualineLocation',
+      }
+
+      ins_right {
+        'progress',
+        color = 'LualineProgress',
+      }
+
+      -- Clock removed 2026-10-12: the WezTerm tab bar already carries the
+      -- clock (events/right-status.lua, always visible above tmux), so this
+      -- third copy was pure redundancy. The right section now ends at the
+      -- git diff hunks, which is the buffer-level signal nothing else shows.
 
       lualine.setup(config)
     end,

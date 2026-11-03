@@ -97,6 +97,7 @@ Ghostty/wezterm ── tmux (prefix C-a) ── nvim
 | `<leader>ghs ghr ghu ghp` | Stage / reset / undo-stage / preview hunk |
 | `<leader>gbs` `gbr` `gbl` | Stage / reset buffer, blame line |
 | `<leader>gB` | **Blame popup** — full commit (author/date/message) for current line |
+| `<leader>gG` | Open current file/line on GitHub (snacks gitbrowse) |
 | `<leader>gdi` `gdc` `gds` | Diff vs index / commit, show deleted |
 
 ### Tests / Debug
@@ -112,12 +113,10 @@ Ghostty/wezterm ── tmux (prefix C-a) ── nvim
 | `<leader>e` | nvim-tree (right side, quits on open) |
 | `<C-/>` | **Terminal toggle** (snacks.terminal float; also `<C-_>` spelling) |
 | `<leader>ft` / `fT` | Terminal toggle: cwd / git root |
-| `<leader>a` | AI agent picker (Claude Code / opencode) → right tmux pane or float |
 | `<leader>l` | Lazy actions picker (sync/update/clean/…) |
 | `<leader>o*` | Overseer tasks (run, toggle list, quick action) |
 | `<leader>pi pr pd pn ps` | Octo: issues / PRs / discussions / notifications / search |
 | `<leader>qq` `ql` `qs` | Session save / load / select |
-| `<leader>uh` | Toggle hardtime trainer (OFF by default) |
 | `<leader>ut` | Toggle treesitter-context |
 | `<leader>xx` `cd` `cD` `cs` `cl` | Trouble: toggle diagnostics / buffer diag / workspace diag / symbols / LSP list |
 | `zR` `zM` | Fold open all / close all (ufo) |
@@ -178,7 +177,6 @@ nvim sessions (mini.sessions) layer on top, so `nvim <dir>` + tmux restore ≈ f
    it's filtered via explicit `vim.lsp.config` in lspconfig.lua).
 9. **`nvim-tree` opens on `nvim <dir>`** via a BufEnter autocmd (plugin is lazy).
 10. **Session auto-save skips the fresh dashboard** (no named buffer + single window check in mini.lua).
-11. **hardtime is disabled by default** — enable via `<leader>uh` only after native motions feel natural.
 12. **tmux OSC fallback:** inside tmux, OSC palette queries are eaten, so terminal-colors.lua
     reads the terminal's config file directly (kitty/wezterm), detected via env vars that survive tmux.
 
@@ -236,7 +234,6 @@ tree buffer (maparg shows buffer-local callback taking precedence).
 - ~~`<leader>bs` sort buffers by directory~~ ✅ DONE 2026-09-07 (toggle MRU ↔ directory;
   snapshot-based restore — `insert_after_current` "respects current order", so plain
   clear of `custom_sort` would NOT restore MRU; see bufferline.lua comment).
-- Enable `hardtime` for 1 week once you stop reaching for arrows — locks in the speed gains.
 
 ---
 
@@ -244,14 +241,24 @@ tree buffer (maparg shows buffer-local callback taking precedence).
 
 ```bash
 # Full keymap dump (all modes, global + buffer-local) → ~/.cache/nvim/keymaps_dump.json
-nvim --headless -u ~/.config/nvim/init.lua \
-  -c "luafile ~/.config/nvim/scripts/keymaps-dump.lua" -c "qa!"
+make keymaps
 
 # Config health + LSP/tool check
+# Bare :checkhealth now includes the custom-neovim section. nvim globs
+# /lua/**/**/health.lua (runtime/lua/vim/health.lua:336) and `**` needs >=1 dir,
+# so the health module must live at lua/<name>/health.lua -- it was at
+# lua/health.lua for the life of the repo and never ran once.
+# To run just ours: :checkhealth custom-neovim
 nvim -c "checkhealth"
 
 # Startup profile
 nvim --startuptime /tmp/startup.log   # or <leader>l → Profile
+
+# Other rungs (independent — see Makefile for why test does not depend on these)
+make fmt        # rewrite the tree with stylua
+make fmt-check  # non-mutating; currently RED on pre-existing drift
+make lint       # luacheck; prints "not installed" and exits 0 if absent
+make test       # the spec suite — the only gate that must stay green
 ```
 
 Conflict check inside nvim: `<leader>sk` (snacks keymaps picker) → search the key.

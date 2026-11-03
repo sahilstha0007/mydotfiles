@@ -15,13 +15,11 @@
 --     catppuccin integration (treesitter, blink, gitsigns, snacks, trouble,
 --     neo-tree, lualine, bufferline, …) follows the terminal automatically.
 --   * If the terminal never answers (no OSC support / non-tty, or nvim runs
---     inside tmux which eats OSC queries), we fall back to reading the ACTIVE
---     terminal's config file — kitty's colors-*.conf or wezterm's
---     colors/custom.lua (ml4w writes both on theme switch). The file is
---     detected from env vars (KITTY_WINDOW_ID / WEZTERM_PANE, which survive
---     into tmux) and FILE-WATCHED for instant live re-tints (a slow poll
---     remains only as a safety net). If no palette source answers,
---     we keep stock catppuccin mocha — the config degrades gracefully.
+--     inside tmux which eats OSC queries), WezTerm reads its colors/custom.lua
+--     file and watches it for live re-tints. TERMINAL_STACK_PROFILE selects the
+--     source; legacy KITTY_WINDOW_ID / WEZTERM_PANE markers remain supported.
+--     Kitty and unknown profiles keep stock Catppuccin mocha rather than
+--     guessing a wallpaper source.
 
 local M = {}
 
@@ -30,8 +28,8 @@ local M = {}
 -- ---------------------------------------------------------------------------
 local pal = {
   ansi = {}, -- [0..15] -> '#rrggbb'
-  fg = nil,  -- OSC 10
-  bg = nil,  -- OSC 11
+  fg = nil, -- OSC 10
+  bg = nil, -- OSC 11
 }
 
 -- True once the 16 ANSI colors have been collected. fg/bg are optional —
@@ -79,7 +77,9 @@ end
 -- Mix two '#rrggbb' colors by fraction t (0..1) toward the second.
 local function mix(a, b, t)
   local function rgb(hex)
-    return tonumber(hex:sub(2, 3), 16), tonumber(hex:sub(4, 5), 16), tonumber(hex:sub(6, 7), 16)
+    return tonumber(hex:sub(2, 3), 16),
+      tonumber(hex:sub(4, 5), 16),
+      tonumber(hex:sub(6, 7), 16)
   end
   local ar, ag, ab = rgb(a)
   local br, bg, bb = rgb(b)
@@ -89,12 +89,12 @@ local function mix(a, b, t)
   return '#' .. ch(ar, br) .. ch(ag, bg) .. ch(ab, bb)
 end
 
--- Perceived luminance (0..1) of a '#rrggbb' color. The wallpaper decides the
--- theme direction (matugen -m smart writes it into the palette): bright
--- background -> light theme (dark text), dark -> dark theme (bright text).
--- This mirrors the rule in wezterm's colors/custom.lua and tmux's
--- colors-from-matugen.sh so all three flip together. (Defined before acc(),
--- which needs it for its readability gate.)
+-- Perceived luminance (0..1) of a '#rrggbb' color. Used ONLY to pick the theme
+-- direction from the wallpaper: bright background -> light theme (dark text),
+-- dark -> dark theme (bright text). This mirrors the rule in wezterm's
+-- colors/custom.lua and tmux's colors-from-matugen.sh so all three flip
+-- together. Token readability is a separate question, answered by contrast()
+-- below — this brightness approximation is not a readability measure.
 local function luminance(hex)
   local r = tonumber(hex:sub(2, 3), 16) or 0
   local g = tonumber(hex:sub(4, 5), 16) or 0
@@ -105,6 +105,43 @@ end
 local function is_light_bg()
   local bg = pal.bg
   return bg and bg:match '^#[%x][%x][%x][%x][%x][%x]$' and luminance(bg) >= 0.5
+end
+
+-- WCAG relative luminance + contrast ratio. The readability gate used to be a
+-- hand-picked cut on `luminance()` (0.40 dark / 0.63 light), which is a display-
+-- brightness approximation rather than a readability measure — it let #6e6e6a
+-- (3.64:1) and #787878 (4.20:1) through as readable on a near-black bg. Same
+-- rule and same constant in wezterm's colors/custom.lua and tmux's
+-- colors-from-matugen.sh; keep the three in sync.
+local MIN_CONTRAST = 4.5 -- WCAG AA for normal text
+
+local function channel(c)
+  c = c / 255
+  if c <= 0.04045 then
+    return c / 12.92
+  end
+  return ((c + 0.055) / 1.055) ^ 2.4
+end
+
+---WCAG relative luminance (0..1) of a '#rrggbb' colour.
+---@param hex string
+---@return number
+local function rel_lum(hex)
+  local r = tonumber(hex:sub(2, 3), 16) or 0
+  local g = tonumber(hex:sub(4, 5), 16) or 0
+  local b = tonumber(hex:sub(6, 7), 16) or 0
+  return 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b)
+end
+
+---WCAG contrast ratio (1..21) between two colours; symmetric, so it covers
+---both a dark token on a light bg and a light token on a dark one.
+---@param a string
+---@param b string
+---@return number
+local function contrast(a, b)
+  local la, lb = rel_lum(a), rel_lum(b)
+  local hi, lo = la > lb and la or lb, la < lb and la or lb
+  return (hi + 0.05) / (lo + 0.05)
 end
 
 -- Saturation (0..1) of a '#rrggbb' color. Terminal palettes occasionally map
@@ -126,25 +163,21 @@ end
 -- Pick an accent from an ANSI pair (base + bright). Prefers the bright variant
 -- (terminals design those to read on dark backgrounds), falling back to the
 -- base variant when only that one is colorful. Returns nil when both are gray
--- or too dark to read on the adopted background — the caller then keeps
--- catppuccin's own accent. (Same readability rule as tmux's guard(): a token
--- darker than ~40% luminance vanishes into a dark bg. Saturation alone passed
--- this wallpaper's dark olive success token as "green" code text.)
+-- or fail the MIN_CONTRAST check against the adopted background — the caller
+-- then keeps catppuccin's own accent. (Saturation alone passed this wallpaper's
+-- dark olive success token as "green" code text; it reads at 2.87:1.)
 local ACCENT_MIN_SAT = 0.2
 local function acc(idx, bright)
   local base, bv = pal.ansi[idx], pal.ansi[bright]
-  local dark_bg = not is_light_bg()
+  local bg = pal.bg
   local function readable(hex)
     if not hex then
       return false
     end
-    if dark_bg and luminance(hex) < 102 / 255 then
-      return false
+    if not bg then
+      return true
     end
-    if not dark_bg and luminance(hex) > 160 / 255 then
-      return false
-    end
-    return true
+    return contrast(hex, bg) >= MIN_CONTRAST
   end
   if readable(bv) and saturation(bv) >= ACCENT_MIN_SAT then
     return bv
@@ -193,7 +226,7 @@ end
 local MIN_HUE_SEP = 40
 local function pick_accents()
   local chosen = {} -- slot -> hex
-  local taken = {}  -- accepted hues
+  local taken = {} -- accepted hues
 
   local primary = acc(4, 12) -- wallpaper primary -> blue slot, always
   if primary then
@@ -202,9 +235,18 @@ local function pick_accents()
   end
 
   local candidates = {
-    { 'lavender', 4, 12 }, { 'sapphire', 6, 14 }, { 'sky', 6, 14 }, { 'teal', 6, 14 },
-    { 'green', 2, 10 }, { 'yellow', 3, 11 }, { 'peach', 3, 11 }, { 'red', 1, 9 },
-    { 'maroon', 1, 9 }, { 'mauve', 5, 13 }, { 'pink', 5, 13 }, { 'flamingo', 1, 9 },
+    { 'lavender', 4, 12 },
+    { 'sapphire', 6, 14 },
+    { 'sky', 6, 14 },
+    { 'teal', 6, 14 },
+    { 'green', 2, 10 },
+    { 'yellow', 3, 11 },
+    { 'peach', 3, 11 },
+    { 'red', 1, 9 },
+    { 'maroon', 1, 9 },
+    { 'mauve', 5, 13 },
+    { 'pink', 5, 13 },
+    { 'flamingo', 1, 9 },
   }
   for _, c in ipairs(candidates) do
     local hex = acc(c[2], c[3])
@@ -230,23 +272,55 @@ end
 -- Map the terminal palette onto catppuccin mocha slots
 -- ---------------------------------------------------------------------------
 local MOCHA_DEFAULTS = {
-  base = '#1e1e2e', text = '#cdd6f4', surface0 = '#313244', surface1 = '#45475a',
-  surface2 = '#585b70', overlay0 = '#6c7086', overlay1 = '#7f849c', overlay2 = '#9399b2',
-  blue = '#89b4fa', lavender = '#b4befe', sapphire = '#74c7ec', sky = '#89dceb',
-  teal = '#94e2d5', green = '#a6e3a1', yellow = '#f9e2af', peach = '#fab387',
-  red = '#f38ba8', maroon = '#eba0ac', mauve = '#cba6f7', pink = '#f5c2e7',
-  flamingo = '#f2cdcd', rosewater = '#f5e0dc',
+  base = '#1e1e2e',
+  text = '#cdd6f4',
+  surface0 = '#313244',
+  surface1 = '#45475a',
+  surface2 = '#585b70',
+  overlay0 = '#6c7086',
+  overlay1 = '#7f849c',
+  overlay2 = '#9399b2',
+  blue = '#89b4fa',
+  lavender = '#b4befe',
+  sapphire = '#74c7ec',
+  sky = '#89dceb',
+  teal = '#94e2d5',
+  green = '#a6e3a1',
+  yellow = '#f9e2af',
+  peach = '#fab387',
+  red = '#f38ba8',
+  maroon = '#eba0ac',
+  mauve = '#cba6f7',
+  pink = '#f5c2e7',
+  flamingo = '#f2cdcd',
+  rosewater = '#f5e0dc',
 }
 
 -- Light (latte) defaults — used when the adopted background is bright, so
 -- gray ANSI slots fall back to colors that actually read on light surfaces.
 local LATTE_DEFAULTS = {
-  base = '#eff1f5', text = '#4c4f69', surface0 = '#ccd0da', surface1 = '#bcc0cc',
-  surface2 = '#acb0be', overlay0 = '#9ca0b0', overlay1 = '#8c8fa1', overlay2 = '#7c7f93',
-  blue = '#1e66f5', lavender = '#7287fd', sapphire = '#209fb5', sky = '#04a5e5',
-  teal = '#179299', green = '#40a02b', yellow = '#df8e1d', peach = '#fe640b',
-  red = '#d20f39', maroon = '#e64553', mauve = '#8839ef', pink = '#ea76cb',
-  flamingo = '#dd7878', rosewater = '#dc8a78',
+  base = '#eff1f5',
+  text = '#4c4f69',
+  surface0 = '#ccd0da',
+  surface1 = '#bcc0cc',
+  surface2 = '#acb0be',
+  overlay0 = '#9ca0b0',
+  overlay1 = '#8c8fa1',
+  overlay2 = '#7c7f93',
+  blue = '#1e66f5',
+  lavender = '#7287fd',
+  sapphire = '#209fb5',
+  sky = '#04a5e5',
+  teal = '#179299',
+  green = '#40a02b',
+  yellow = '#df8e1d',
+  peach = '#fe640b',
+  red = '#d20f39',
+  maroon = '#e64553',
+  mauve = '#8839ef',
+  pink = '#ea76cb',
+  flamingo = '#dd7878',
+  rosewater = '#dc8a78',
 }
 
 -- HSLUV-space helpers via catppuccin's bundled lib: perceptually uniform
@@ -256,20 +330,8 @@ local hsluv = require 'catppuccin.lib.hsluv'
 
 -- Hue (HSLUV space) of a hex color.
 local function hsluv_hue(hex)
-  local h, s, l = unpack(hsluv.hex_to_hsluv(hex))
+  local h = unpack(hsluv.hex_to_hsluv(hex))
   return h
-end
-
--- Rebuild a hex color keeping HSLUV saturation+lightness, changing hue.
-local function hsluv_rehue(hex, new_hue)
-  local _, s, l = unpack(hsluv.hex_to_hsluv(hex))
-  return hsluv.hsluv_to_hex { new_hue, s, l }
-end
-
--- Perceptual hue distance (degrees, circular).
-local function hsluv_dist(a, b)
-  local d = math.abs(a - b) % 360
-  return math.min(d, 360 - d)
 end
 
 -- Derive a full, FUNCTIONALLY DISTINCT accent set for code syntax.
@@ -320,8 +382,8 @@ local function derive_accents(chosen, primary_hex, D)
   local ref = primary_hex or D.blue
   local base_hue = hsluv_hue(ref)
   local _, s, l = unpack(hsluv.hex_to_hsluv(ref))
-  s = math.min(s or 55, 55)
-  l = math.min(l or 80, 78)
+  s = math.min(s or 85, 85)
+  l = math.min(l or 80, 68)
   for slot, offset in pairs(OFFSETS) do
     if not chosen[slot] and ref then
       chosen[slot] = hsluv.hsluv_to_hex { (base_hue + offset) % 360, s, l }
@@ -346,7 +408,7 @@ local function build_overrides()
     for slot, hex in pairs(A) do
       local h = hsluv_hue(hex)
       if h >= 0 then
-        A[slot] = hsluv.hsluv_to_hex { h, 55, 78 }
+        A[slot] = hsluv.hsluv_to_hex { h, 85, 68 }
       end
     end
   end
@@ -357,6 +419,30 @@ local function build_overrides()
   -- out gray boxes when adopted as surface0.
   local surface0 = mix(base, text, 0.08)
 
+  -- Neutral ramp gate. The ACCENT slots are vetted by acc() (contrast,
+  -- saturation, hue separation), but these are fixed blend ratios — so a
+  -- wallpaper whose own text token is low-contrast lands overlay1 at 3.8:1
+  -- on a dark bg and 2.3:1 on a light one. overlay1 IS the Comment /
+  -- @comment colour and overlay0 IS LineNr / @operator / SignColumn: the most
+  -- read glyphs on screen, failing WCAG AA while the comment above them
+  -- claimed otherwise.
+  --
+  -- Fix in the ramp itself, not at each call site: keep the demote intent by
+  -- taking the SMALLEST lift off `base` that clears MIN_CONTRAST, so a healthy
+  -- wallpaper is bit-for-bit unchanged and only a failing one moves.
+  local function readable(t)
+    if contrast(mix(text, base, t), base) >= MIN_CONTRAST then
+      return mix(text, base, t)
+    end
+    for lift = t - 0.05, 0, -0.05 do
+      local c = mix(text, base, lift)
+      if contrast(c, base) >= MIN_CONTRAST then
+        return c
+      end
+    end
+    return text -- nothing in the ramp passes; full-contrast text is the floor
+  end
+
   return {
     base = base,
     mantle = mix(base, '#000000', 0.15),
@@ -364,12 +450,12 @@ local function build_overrides()
     surface0 = surface0,
     surface1 = mix(surface0, text, 0.12),
     surface2 = mix(surface0, text, 0.25),
-    overlay0 = mix(text, base, 0.68),
-    overlay1 = mix(text, base, 0.55),
-    overlay2 = mix(text, base, 0.4),
+    overlay0 = readable(0.68),
+    overlay1 = readable(0.55),
+    overlay2 = readable(0.4),
     text = text,
-    subtext0 = mix(text, base, 0.3),
-    subtext1 = mix(text, base, 0.15),
+    subtext0 = readable(0.3),
+    subtext1 = readable(0.15),
     -- Accents: wallpaper primary owns blue (chrome + functions stay themed);
     -- every other accent is adopted only when hue-distinct (pick_accents), so
     -- monochromatic wallpapers fall back to catppuccin's spread-out syntax
@@ -407,17 +493,17 @@ local function catppuccin_opts()
     transparent_background = true, -- let kitty/wezterm opacity show through
     color_overrides = { [flavour] = build_overrides() },
     integrations = {
-      nvimtree           = true,
-      treesitter         = true,
-      blink_cmp          = true,
-      gitsigns           = true,
-      which_key          = true,
-      mini               = { enabled = true },
-      snacks             = true,
-      lsp_trouble        = true,
+      nvimtree = true,
+      treesitter = true,
+      blink_cmp = true,
+      gitsigns = true,
+      which_key = true,
+      mini = { enabled = true },
+      snacks = true,
+      lsp_trouble = true,
       treesitter_context = true,
-      ufo                = true,
-      flash              = true,
+      ufo = true,
+      flash = true,
     },
     highlight_overrides = {
       [flavour] = function(c)
@@ -428,76 +514,98 @@ local function catppuccin_opts()
         local rim = mix(c.surface2, c.blue, 0.35) -- luminous blue float border
         -- Octo's *Dark* tokens want a deeper tone on dark themes and a
         -- softened tone on light ones (same luminance rule as the rest).
-        local darken = is_light_bg() and function(hex) return mix(hex, c.base, 0.45) end
-          or function(hex) return mix(hex, '#000000', 0.45) end
+        local darken = is_light_bg()
+            and function(hex)
+              return mix(hex, c.base, 0.45)
+            end
+          or function(hex)
+            return mix(hex, '#000000', 0.45)
+          end
         return {
-          -- Comments: catppuccin uses overlay0 (#6c7086, ~3.8:1 on this
-          -- background) which reads as barely-there gray. overlay1 keeps
-          -- the "receded" feel but clears the WCAG AA bar (~4.9:1).
+          -- Comments: catppuccin uses overlay0, the most-demoted slot, which
+          -- reads as barely-there gray. overlay1 keeps the "receded" feel one
+          -- step brighter. build_overrides' readable() gate is what actually
+          -- holds this at MIN_CONTRAST — do not trust the fixed 0.55 blend
+          -- ratio to do it, it lands at 3.8:1 on a typical dark wallpaper.
           Comment = { fg = c.overlay1, italic = true },
 
-          -- Explorer blends with terminal. nvim-tree.lua is the active tree
-          -- (neo-tree is disabled in editor/disable-neotree.lua), so these are
-          -- NvimTree* groups; catppuccin's nvimtree integration themes the rest.
-          NvimTreeNormal       = { bg = 'NONE', fg = c.text },
-          NvimTreeNormalNC     = { bg = 'NONE' },
-          NvimTreeEndOfBuffer  = { bg = 'NONE' },
+          -- Explorer blends with terminal. nvim-tree.lua is the active tree,
+          -- so these are NvimTree* groups; catppuccin's nvimtree integration
+          -- themes the rest.
+          NvimTreeNormal = { bg = 'NONE', fg = c.text },
+          NvimTreeNormalNC = { bg = 'NONE' },
+          NvimTreeEndOfBuffer = { bg = 'NONE' },
           NvimTreeWinSeparator = { fg = c.surface1, bg = 'NONE' },
 
           -- Completion popup: FULL TRANSPARENCY (user preference) — body is
           -- NONE like every other float; active row = blue bold underline.
-          Pmenu      = { bg = 'NONE', fg = c.text },
-          PmenuSel   = { bg = 'NONE', fg = c.blue, bold = true, underline = true },
+          Pmenu = { bg = 'NONE', fg = c.text },
+          PmenuSel = { bg = 'NONE', fg = c.blue, bold = true, underline = true },
           PmenuMatchSel = { bg = 'NONE', fg = c.blue, bold = true },
           PmenuKindSel = { bg = 'NONE', fg = c.blue, bold = true },
           PmenuExtraSel = { bg = 'NONE', fg = c.text, bold = true },
-          PmenuSbar  = { bg = 'NONE' },
+          PmenuSbar = { bg = 'NONE' },
           PmenuThumb = { bg = c.blue },
 
           -- blink.cmp overlays: FULL TRANSPARENCY — body NONE so the menu
           -- floats directly over the wallpaper; active row = underline.
-          BlinkCmpMenu          = { bg = 'NONE', fg = c.text },
+          BlinkCmpMenu = { bg = 'NONE', fg = c.text },
           -- border bg pinned to transparent so the rounded corners read as
           -- clean curves over the wallpaper
-          BlinkCmpMenuBorder    = { fg = rim, bg = 'NONE' },
+          BlinkCmpMenuBorder = { fg = rim, bg = 'NONE' },
           BlinkCmpMenuSelection = {
             bg = 'NONE',
             fg = c.blue,
             bold = true,
             underline = true,
           },
-          BlinkCmpScrollBarThumb  = { bg = c.blue },
+          BlinkCmpScrollBarThumb = { bg = c.blue },
           BlinkCmpScrollBarGutter = { bg = 'NONE' },
-          BlinkCmpLabel         = { fg = c.text },
-          BlinkCmpLabelMatch    = { fg = c.blue, bold = true },
-          BlinkCmpLabelDetail   = { fg = c.overlay1 },
-          BlinkCmpDoc           = { bg = 'NONE' },
-          BlinkCmpDocBorder     = { fg = rim, bg = 'NONE' },
+          BlinkCmpLabel = { fg = c.text },
+          BlinkCmpLabelMatch = { fg = c.blue, bold = true },
+          BlinkCmpLabelDetail = { fg = c.overlay1 },
+          BlinkCmpDoc = { bg = 'NONE' },
+          BlinkCmpDocBorder = { fg = rim, bg = 'NONE' },
           BlinkCmpSignatureHelp = { bg = 'NONE' },
           BlinkCmpSignatureHelpBorder = { fg = rim, bg = 'NONE' },
-          BlinkCmpGhostText     = { fg = c.overlay0 },
-          BlinkCmpKindFunction  = { fg = c.blue },
-          BlinkCmpKindMethod    = { fg = c.blue },
-          BlinkCmpKindVariable  = { fg = c.red },
-          BlinkCmpKindConstant  = { fg = c.yellow },
-          BlinkCmpKindClass     = { fg = c.yellow },
-          BlinkCmpKindKeyword   = { fg = c.mauve },
-          BlinkCmpKindSnippet   = { fg = c.green },
-          BlinkCmpKindText      = { fg = c.subtext0 },
-          BlinkCmpKindProperty  = { fg = c.subtext0 },
+          BlinkCmpGhostText = { fg = c.overlay0 },
+          BlinkCmpKindFunction = { fg = c.blue },
+          BlinkCmpKindMethod = { fg = c.blue },
+          BlinkCmpKindVariable = { fg = c.red },
+          BlinkCmpKindConstant = { fg = c.yellow },
+          BlinkCmpKindClass = { fg = c.yellow },
+          BlinkCmpKindKeyword = { fg = c.mauve },
+          BlinkCmpKindSnippet = { fg = c.green },
+          BlinkCmpKindText = { fg = c.subtext0 },
+          BlinkCmpKindProperty = { fg = c.subtext0 },
 
           -- contrast polish — underline/fg based, no filled boxes (full
           -- transparency: wallpaper visible through everything)
-          Search      = { bg = 'NONE', fg = c.blue, bold = true, underline = true },
-          CurSearch   = { bg = 'NONE', fg = c.yellow, bold = true, underline = true },
-          Visual      = { bg = 'NONE', fg = c.text, bold = true },
-          MatchParen  = { bg = 'NONE', fg = c.blue, bold = true, underline = true },
-          IncSearch   = { bg = 'NONE', fg = c.peach, bold = true, underline = true },
+          Search = { bg = 'NONE', fg = c.blue, bold = true, underline = true },
+          CurSearch = {
+            bg = 'NONE',
+            fg = c.yellow,
+            bold = true,
+            underline = true,
+          },
+          Visual = { bg = 'NONE', fg = c.text, bold = true },
+          MatchParen = {
+            bg = 'NONE',
+            fg = c.blue,
+            bold = true,
+            underline = true,
+          },
+          IncSearch = {
+            bg = 'NONE',
+            fg = c.peach,
+            bold = true,
+            underline = true,
+          },
           WinSeparator = { fg = c.surface1 },
 
           -- Active line: NO bg (full transparency) — the cursor row is
           -- marked by the blue bold line number alone.
-          CursorLine   = { bg = 'NONE' },
+          CursorLine = { bg = 'NONE' },
           CursorLineNr = { fg = c.blue, bold = true },
 
           -- Floating windows (hover, diagnostics popup, dressing, which-key):
@@ -511,7 +619,12 @@ local function catppuccin_opts()
           -- -----------------------------------------------------------------
           -- Snacks picker — the single picker (telescope removed)
           -- -----------------------------------------------------------------
-          SnacksPickerSelected = { bg = 'NONE', fg = c.blue, bold = true, underline = true },
+          SnacksPickerSelected = {
+            bg = 'NONE',
+            fg = c.blue,
+            bold = true,
+            underline = true,
+          },
           SnacksPickerMatch = { fg = c.blue, bold = true },
           SnacksPickerPrompt = { fg = c.flamingo },
           SnacksPickerTitle = { fg = c.blue, bg = 'NONE' },
@@ -523,8 +636,8 @@ local function catppuccin_opts()
           -- Notifications — accent-colored text, transparent body
           -- -----------------------------------------------------------------
           -- Notifications — accent-colored text, transparent body
-          SnacksNotifierInfo  = { fg = c.blue },
-          SnacksNotifierWarn  = { fg = c.yellow },
+          SnacksNotifierInfo = { fg = c.blue },
+          SnacksNotifierWarn = { fg = c.yellow },
           SnacksNotifierError = { fg = c.red },
           SnacksNotifierDebug = { fg = c.peach },
           SnacksNotifierTrace = { fg = c.rosewater },
@@ -535,20 +648,20 @@ local function catppuccin_opts()
           -- Octo's semantic colors map onto the wallpaper palette: status
           -- dots, timeline markers, and merge-state chips all re-tint when
           -- the wallpaper changes (catppuccin re-applies this table).
-          OctoWhite      = { fg = c.text },
-          OctoGrey       = { fg = c.overlay1 },
-          OctoBlack      = { fg = c.base },
-          OctoRed        = { fg = c.red },
-          OctoDarkRed    = { fg = darken(c.red) },
-          OctoGreen      = { fg = c.green },
-          OctoDarkGreen  = { fg = darken(c.green) },
-          OctoYellow     = { fg = c.yellow },
+          OctoWhite = { fg = c.text },
+          OctoGrey = { fg = c.overlay1 },
+          OctoBlack = { fg = c.base },
+          OctoRed = { fg = c.red },
+          OctoDarkRed = { fg = darken(c.red) },
+          OctoGreen = { fg = c.green },
+          OctoDarkGreen = { fg = darken(c.green) },
+          OctoYellow = { fg = c.yellow },
           OctoDarkYellow = { fg = darken(c.yellow) },
-          OctoBlue       = { fg = c.blue },
-          OctoDarkBlue   = { fg = darken(c.blue) },
-          OctoPurple     = { fg = c.mauve },
+          OctoBlue = { fg = c.blue },
+          OctoDarkBlue = { fg = darken(c.blue) },
+          OctoPurple = { fg = c.mauve },
           -- merge-state chips: filled pills (text flips to the surface color)
-          OctoStateOpen   = { fg = c.base, bg = c.green },
+          OctoStateOpen = { fg = c.base, bg = c.green },
           OctoStateClosed = { fg = c.base, bg = c.red },
           OctoStateMerged = { fg = c.base, bg = c.mauve },
         }
@@ -556,7 +669,6 @@ local function catppuccin_opts()
     },
   }
 end
-
 
 -- ---------------------------------------------------------------------------
 -- Terminal query + live update
@@ -578,6 +690,12 @@ local function apply()
   local ok, err = pcall(function()
     require('catppuccin').setup(opts)
     vim.cmd.colorscheme 'catppuccin'
+    -- Hierarchy rides on the SAME re-tint. It was its own lazy spec once and
+    -- that was the bug: two specs naming one plugin cannot agree on `dir`
+    -- (this file renames it to 'catppuccin', a bare 'catppuccin/nvim' resolves
+    -- to lazy/nvim) and lazy rejects the second with "Plugin changed dir". One
+    -- owner for the palette; the hierarchy is just the last step of it.
+    require('plugins.ui.hierarchy').apply()
   end)
   if not ok then
     vim.notify('terminal-colors: ' .. tostring(err), vim.log.levels.ERROR)
@@ -655,19 +773,6 @@ end
 -- inside tmux and updates when the file changes.
 
 local palette_file = nil -- resolved palette file once found
-
--- Which terminal are we inside? Env vars survive into tmux (verified:
--- WEZTERM_PANE and KITTY_WINDOW_ID both propagate). WEZTERM_PANE wins when
--- both are set — that happens when wezterm itself is launched from a kitty
--- window, and nvim's palette should follow the terminal it's ACTUALLY in.
-local function detect_terminal()
-  if vim.env.WEZTERM_PANE or vim.env.TERM_PROGRAM == 'WezTerm' then
-    return 'wezterm'
-  elseif vim.env.KITTY_WINDOW_ID or vim.env.TERM_PROGRAM == 'kitty' then
-    return 'kitty'
-  end
-  return nil
-end
 
 -- Follow `include` lines in a kitty config file. Returns a list of
 -- { path, content } pairs for every file in the chain (resolved relative
@@ -759,12 +864,41 @@ local function read_wezterm_palette()
   end
   local src = f:read '*a'
   f:close()
+
+  -- custom.lua starts with `local wezterm = require('wezterm')` and builds its
+  -- palette path from `wezterm.config_dir`. Outside wezterm that require
+  -- ALWAYS fails, so this read returned false on every call and nvim silently
+  -- fell through to kitty's file — a different wallpaper, from a different
+  -- cascade — while the tmux bar and the chrome around it wore the wezterm
+  -- palette. That is the "colours get loose" bug: one colour source for the
+  -- stack, another for the editor, and no error anywhere to say so.
+  --
+  -- The fix is the same stub utils/kitty-palette.sh already uses to read the
+  -- resolved ANSI slots out of this exact file. It is only ever consulted for
+  -- config_dir/home_dir, so a two-field table is a faithful stand-in, and the
+  -- values that come back are the terminal's REAL slots — after the
+  -- readability guard, after brights are derived, with primary already mapped
+  -- into ANSI blue.
+  local stub_dir = home .. '/.config/wezterm'
+  local had_preload = package.preload['wezterm']
+  package.preload['wezterm'] = function()
+    return { config_dir = stub_dir, home_dir = home }
+  end
   local fn, err = loadstring(src)
   if not fn then
-    vim.notify('terminal-colors: wezterm palette parse: ' .. tostring(err), vim.log.levels.WARN)
+    package.preload['wezterm'] = had_preload
+    vim.notify(
+      'terminal-colors: wezterm palette parse: ' .. tostring(err),
+      vim.log.levels.WARN
+    )
     return false
   end
   local ok, cs = pcall(fn)
+  -- Restore unconditionally and before any early return: leaving the stub in
+  -- package.preload would make every later `require('wezterm')` in this nvim
+  -- resolve to a table instead of raising, which is a much harder bug to find
+  -- than the one it fixes.
+  package.preload['wezterm'] = had_preload
   if not ok or type(cs) ~= 'table' or not cs.ansi then
     return false
   end
@@ -797,20 +931,36 @@ local function read_wezterm_palette()
   return true
 end
 
--- Read the active terminal's palette file into pal. Tries the detected
--- terminal first, then the other one as a fallback — a missing/broken file
--- in one terminal should never leave the editor on stock mocha.
-local function read_terminal_palette()
-  local term = detect_terminal()
-  if term == 'wezterm' then
-    return read_wezterm_palette() or read_kitty_palette()
-  elseif term == 'kitty' then
-    return read_kitty_palette() or read_wezterm_palette()
+-- Which terminal is nvim running inside? Inside tmux the OSC query path is
+-- dead, so use the explicit terminal profile or legacy emulator markers,
+-- which survive the tmux boundary. WezTerm adopts its wallpaper palette;
+-- Kitty and unknown profiles stay on stock Catppuccin.
+local function host_terminal()
+  local profile = os.getenv 'TERMINAL_STACK_PROFILE'
+  if profile then
+    if profile == 'kitty' or profile == 'wezterm' then
+      return profile
+    end
+    return nil
   end
-  -- Unknown terminal (headless, plain ssh, ...): prefer the wallpaper-synced
-  -- wezterm palette — colors/custom.lua is the source of truth sync-wallpaper.sh
-  -- writes — before kitty's (which ml4w may leave stale).
-  return read_wezterm_palette() or read_kitty_palette()
+  if os.getenv 'KITTY_WINDOW_ID' then
+    return 'kitty'
+  end
+  if os.getenv 'WEZTERM_PANE' then
+    return 'wezterm'
+  end
+  return nil
+end
+
+-- Read the palette owned by the active terminal profile. Kitty stays on stock
+-- Catppuccin mocha; WezTerm alone owns the wallpaper cascade. Unknown profiles
+-- keep the stock palette rather than guessing from whichever config exists.
+local function read_terminal_palette()
+  local host = host_terminal()
+  if host == 'wezterm' then
+    return read_wezterm_palette()
+  end
+  return false
 end
 
 -- Re-read the palette file and report whether any color changed — the 16
@@ -820,6 +970,14 @@ local function poll_palette_file()
   local before_fg, before_bg = pal.fg, pal.bg
   local ok = read_terminal_palette()
   if not ok then
+    -- Roll back a PARTIAL read. Both readers assign into `pal` slot by slot
+    -- and report failure when one is missing — a matugen write caught
+    -- mid-flight, a file swapped under us, a slot that fails to parse. Left in
+    -- place, that half-populated palette becomes the next read's "before"
+    -- state, so the following successful read can decide nothing changed and
+    -- never re-tint: the editor keeps a mix of two wallpapers until nvim
+    -- restarts. Restoring the snapshot makes a failed read a true no-op.
+    pal.ansi, pal.fg, pal.bg = before_ansi, before_fg, before_bg
     return false
   end
   if pal.fg ~= before_fg or pal.bg ~= before_bg then
@@ -843,11 +1001,15 @@ local function refresh_from_file()
   else
     refresh_timer = vim.uv.new_timer()
   end
-  refresh_timer:start(200, 0, vim.schedule_wrap(function()
-    if poll_palette_file() and complete() then
-      apply()
-    end
-  end))
+  refresh_timer:start(
+    200,
+    0,
+    vim.schedule_wrap(function()
+      if poll_palette_file() and complete() then
+        apply()
+      end
+    end)
+  )
 end
 
 -- Live palette updates when OSC is dead (inside tmux, or over ssh where no
@@ -857,38 +1019,75 @@ end
 -- A slow poll is kept as a safety net for sources that miss fs events
 -- (e.g. atomic renames that some watchers don't surface).
 local watch_timer
-local watch_handle
+local watch_handles = {}
+
+-- Watch every directory a palette can appear in. Two reasons this is a list
+-- and not the single `palette_file` dir it used to be:
+--
+--   * the file that actually CHANGES is colors/matugen.lua, not the
+--     custom.lua whose dir was being watched. They happen to share a
+--     directory today, so this worked by luck rather than by design.
+--   * when neither read succeeded at startup, `palette_file` was nil, the
+--     watcher returned early, and nvim went the REST OF THE SESSION with no
+--     file watch at all — only the 3s poll and a focus event could revive it.
+--     A first paint that fails now still gets live updates once a palette
+--     lands on disk.
 local function start_palette_watch()
   if watch_timer then
     return
   end
-  if not palette_file then
-    return -- colors came from OSC only; live updates arrive via TermResponse
-  end
 
   watch_timer = vim.uv.new_timer()
-  watch_timer:start(3000, 3000, vim.schedule_wrap(function()
-    if poll_palette_file() and complete() then
-      apply()
-    end
-  end))
+  watch_timer:start(
+    3000,
+    3000,
+    vim.schedule_wrap(function()
+      if poll_palette_file() and complete() then
+        apply()
+      end
+    end)
+  )
 
-  local handle = vim.uv.new_fs_event()
-  if not handle then
-    return
-  end
-  watch_handle = handle
-  local dir = vim.fs.dirname(palette_file) or vim.env.HOME or '/'
-  local ok_start = watch_handle:start(dir, {}, vim.schedule_wrap(function(err2)
-    if err2 then
+  local home = vim.env.HOME or ''
+  local seen = {}
+  local function watch_dir(dir)
+    if not dir or dir == '' or seen[dir] then
       return
     end
-    refresh_from_file()
-  end))
-  if not ok_start then
-    watch_handle:close()
-    watch_handle = nil
+    seen[dir] = true
+    -- fs_stat first: watching a directory that does not exist returns an
+    -- error through the callback on every event, which is noise, not a signal.
+    if not vim.uv.fs_stat(dir) then
+      return
+    end
+    local handle = vim.uv.new_fs_event()
+    if not handle then
+      return
+    end
+    local ok_start = handle:start(
+      dir,
+      {},
+      vim.schedule_wrap(function(err2)
+        if err2 then
+          return
+        end
+        refresh_from_file()
+      end)
+    )
+    if ok_start then
+      watch_handles[#watch_handles + 1] = handle
+    else
+      handle:close()
+    end
   end
+
+  -- The dir of whatever file answered, so the host terminal's own source is
+  -- covered even when it is not one of the two well-known paths.
+  watch_dir(vim.fs.dirname(palette_file or ''))
+  -- The cascade's write target (matugen.lua lands here).
+  watch_dir(home .. '/.config/wezterm/colors')
+  -- ml4w's desktop path for kitty.
+  watch_dir(home .. '/.config/kitty')
 end
 
 -- ---------------------------------------------------------------------------
@@ -902,33 +1101,48 @@ local function setup()
     callback = on_termresponse,
   })
 
-  -- Read the terminal's config file FIRST (fast, works inside tmux) so the
-  -- very first paint already uses the terminal palette — the editor never
-  -- flashes stock mocha at boot. ml4w keeps the palette in these files, so
-  -- this is the authoritative source even before OSC answers.
-  read_terminal_palette()
+  local host = host_terminal()
 
-  -- Paint immediately with whatever we have: the terminal palette when the
-  -- file read above succeeded, stock mocha as a last resort.
-  apply()
-  query()
+  -- Only WezTerm adopts and watches the wallpaper palette. Kitty and unknown
+  -- terminals stay on stock Catppuccin mocha without querying a guessed source.
+  if host == 'wezterm' then
+    -- Read the terminal's config file FIRST (fast, works inside tmux) so the
+    -- very first paint already uses the terminal palette — the editor never
+    -- flashes stock mocha at boot. ml4w keeps the palette in these files, so
+    -- this is the authoritative source even before OSC answers. Goes through
+    -- the polling reader so a half-written file rolls back instead of seeding
+    -- the session with a partial palette.
+    poll_palette_file()
 
-  -- Direct-terminal case: OSC answers refine/confirm the palette within ~300ms.
-  -- If the file read already filled everything, complete() is true and this
-  -- returns immediately (no boot delay).
-  vim.wait(300, complete, 5)
-  if complete() then
+    -- Paint immediately with whatever we have: the terminal palette when the
+    -- file read above succeeded, stock mocha as a last resort.
+    apply()
+    query()
+
+    -- Direct-terminal case: OSC answers refine/confirm the palette within ~300ms.
+    -- If the file read already filled everything, complete() is true and this
+    -- returns immediately (no boot delay).
+    vim.wait(300, complete, 5)
+    if complete() then
+      apply()
+    end
+
+    -- Live updates: kitty/wezterm push OSC 4 to the app when the terminal
+    -- colorscheme changes (caught by on_termresponse). Under tmux OSC is dead,
+    -- so poll the terminal's palette file instead. Re-query on focus too, in
+    -- case the palette changed while nvim was unfocused.
+    start_palette_watch()
+  else
+    -- Kitty and unknown profiles: stock Catppuccin mocha, no adoption.
     apply()
   end
 
-  -- Live updates: kitty/wezterm push OSC 4 to the app when the terminal
-  -- colorscheme changes (caught by on_termresponse). Under tmux OSC is dead,
-  -- so poll the terminal's palette file instead. Re-query on focus too, in
-  -- case the palette changed while nvim was unfocused.
-  start_palette_watch()
   vim.api.nvim_create_autocmd('FocusGained', {
     group = augroup,
     callback = function()
+      if host ~= 'wezterm' then
+        return
+      end
       vim.schedule(function()
         query()
         -- also re-read the palette file (covers tmux where OSC is dead)
@@ -941,6 +1155,24 @@ local function setup()
 end
 
 M.setup = setup
+-- Re-assert the current palette. Exposed for plugins that define their own
+-- highlight groups at setup time and clobber ours (Octo does). Re-running
+-- `colorscheme catppuccin` directly would rebuild the cache from the LAST
+-- color_overrides we set — which is only correct while nothing else has
+-- re-run it since. Going through apply() guarantees catppuccin.setup() sees
+-- the palette as it is right now.
+M.reassert = apply
+
+-- Publish M where a caller can actually reach it.
+--
+-- A lazy.nvim spec file has to RETURN the spec (below), so this module cannot
+-- also return M. octo.lua required `plugins.ui.terminal-colors` and tested
+-- `type(tc.reassert) == 'function'` — it got the spec table, so that test was
+-- always false and Octo's stock Octo* groups were never re-themed by our
+-- palette. The call looked present, guarded and correct, and never ran.
+--
+-- The spec return is untouched; the API lives under its own module name.
+package.loaded['utils.terminal-colors'] = M
 
 -- ---------------------------------------------------------------------------
 -- lazy.nvim spec

@@ -21,6 +21,10 @@ return {
       'Noto Color Emoji',
    }),
    font_size = font_size,
+   -- Slight vertical breathing room at 9.75pt (wezterm defaults line_height to
+   -- 1.0, tight for JetBrainsMono at this size). 1.1 is denser than 1.2 but
+   -- easier to scan than the default; A/B with SUPER+k/j if it feels loose.
+   line_height = 1.1,
 
    --ref: https://wezfurlong.org/wezterm/config/lua/config/freetype_pcf_long_family_names.html#why-doesnt-wezterm-use-the-distro-freetype-or-match-its-configuration
    freetype_load_target = 'Normal', ---@type 'Normal'|'Light'|'Mono'|'HorizontalLcd'

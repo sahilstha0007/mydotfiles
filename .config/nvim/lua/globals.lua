@@ -46,5 +46,15 @@ vim.diagnostic.config {
   float = { border = 'rounded', source = 'if_many' },
 }
 
--- Prepend mise shims to PATH
-vim.env.PATH = vim.env.HOME .. '/.local/share/mise/shims:' .. vim.env.PATH
+-- Prepend bun bin and mise shims to PATH
+vim.env.PATH = vim.env.HOME
+  .. '/.bun/bin:'
+  .. vim.env.HOME
+  .. '/.local/share/mise/shims:'
+  .. vim.env.PATH
+
+-- Node.js provider: use Bun's globally managed neovim-node-host when present
+local bun_node_host = vim.env.HOME .. '/.bun/bin/neovim-node-host'
+if vim.fn.executable(bun_node_host) == 1 then
+  vim.g.node_host_prog = bun_node_host
+end

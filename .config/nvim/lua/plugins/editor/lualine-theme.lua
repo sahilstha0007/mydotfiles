@@ -3,10 +3,26 @@ local M = {}
 -- mode → palette-slot map, resolved per refresh so the statusline mode
 -- color follows the terminal palette too
 local MODE_SLOTS = {
-  n = 'red', i = 'green', v = 'blue', [''] = 'blue', V = 'blue',
-  c = 'magenta', no = 'red', s = 'orange', S = 'orange', ['\22'] = 'orange',
-  ic = 'yellow', R = 'violet', Rv = 'violet', cv = 'red', ce = 'red',
-  r = 'cyan', rm = 'cyan', ['r?'] = 'cyan', ['!'] = 'red', t = 'red',
+  n = 'red',
+  i = 'green',
+  v = 'blue',
+  [''] = 'blue',
+  V = 'blue',
+  c = 'magenta',
+  no = 'red',
+  s = 'orange',
+  S = 'orange',
+  ['\22'] = 'orange',
+  ic = 'yellow',
+  R = 'violet',
+  Rv = 'violet',
+  cv = 'red',
+  ce = 'red',
+  r = 'cyan',
+  rm = 'cyan',
+  ['r?'] = 'cyan',
+  ['!'] = 'red',
+  t = 'red',
 }
 
 -- Populated by refresh(): catppuccin.palettes.get_palette() reads the live
@@ -54,7 +70,11 @@ function M.apply_highlights()
   vim.api.nvim_set_hl(0, 'LualineFilename', { fg = c.fg, bg = 'NONE' })
 
   vim.api.nvim_set_hl(0, 'LualineDiagnosticsError', { bg = 'NONE', fg = c.red })
-  vim.api.nvim_set_hl(0, 'LualineDiagnosticsWarn', { bg = 'NONE', fg = c.yellow })
+  vim.api.nvim_set_hl(
+    0,
+    'LualineDiagnosticsWarn',
+    { bg = 'NONE', fg = c.yellow }
+  )
   vim.api.nvim_set_hl(0, 'LualineDiagnosticsInfo', { bg = 'NONE', fg = c.cyan })
   vim.api.nvim_set_hl(0, 'LualineLsp', { bg = 'NONE', fg = c.pink })
   vim.api.nvim_set_hl(
@@ -77,6 +97,12 @@ function M.apply_highlights()
     'LualineDiffRemoved',
     { bg = 'NONE', fg = c.red, bold = true }
   )
+
+  -- Buffer-level signals nvim uniquely owns (2026-10-13): muted tones so they
+  -- sit below the accent branch/diff/lsp without competing.
+  vim.api.nvim_set_hl(0, 'LualineFiletype', { bg = 'NONE', fg = c.overlay1 })
+  vim.api.nvim_set_hl(0, 'LualineLocation', { bg = 'NONE', fg = c.text })
+  vim.api.nvim_set_hl(0, 'LualineProgress', { bg = 'NONE', fg = c.overlay0 })
 
   -- add more as needed
 end
