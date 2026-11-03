@@ -149,6 +149,11 @@ return {
                 not vim.lsp.inlay_hint.is_enabled { bufnr = event.buf }
               )
             end, 'Toggle Inlay Hints')
+            map('<leader>uh', function()
+              vim.lsp.inlay_hint.enable(
+                not vim.lsp.inlay_hint.is_enabled { bufnr = event.buf }
+              )
+            end, 'Toggle Inlay Hints')
           end
         end,
       })

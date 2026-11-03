@@ -70,5 +70,10 @@ return {
          regex = '\\b\\w+@[\\w-]+(\\.[\\w-]+)+\\b',
          format = 'mailto:$0',
       },
+      -- Clickable compiler errors and stack traces: path/to/file.ext:42:15 or file.ext:42
+      {
+         regex = '([\\w\\d_./-]+\\.[a-zA-Z0-9_-]+):(\\d+)(?::(\\d+))?',
+         format = 'file://$1#$2',
+      },
    },
 }

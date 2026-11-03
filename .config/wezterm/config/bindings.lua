@@ -528,6 +528,17 @@ local keys = {
    -- NOTE: no bare PageUp/PageDown binds — wezterm would eat them before
    -- tmux sees them, killing tmux's `bind -n PageUp copy-mode -u` scrollback
    -- entry. The default (pass through to the app) is what we want.
+   -- Semantic shell zones: Shift+PageUp/Down jump directly between command prompts
+   {
+      key = 'PageUp',
+      mods = 'SHIFT',
+      action = act.ScrollToPrompt(-1),
+   },
+   {
+      key = 'PageDown',
+      mods = 'SHIFT',
+      action = act.ScrollToPrompt(1),
+   },
 
    -- key-tables --
    -- resizes fonts

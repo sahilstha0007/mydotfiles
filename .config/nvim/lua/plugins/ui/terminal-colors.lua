@@ -635,6 +635,9 @@ local function catppuccin_opts()
           -- Todo / notes: bright accent
           Todo = { fg = c.yellow, bold = true },
 
+          -- Inlay hints: soft muted text, no background fill
+          LspInlayHint = { fg = c.overlay0, bg = 'NONE', italic = true },
+
           -- -----------------------------------------------------------------
           -- Snacks picker — the single picker (telescope removed)
           -- -----------------------------------------------------------------
