@@ -242,8 +242,8 @@ do
     }
     local mk = build()
     check(
-      mk.read_terminal_palette() == true and mk.palette_file() == KITTY_CONF,
-      'kitty profile reads its own ML4W palette file, even inside tmux',
+      mk.read_terminal_palette() == false and mk.palette_file() == nil,
+      'kitty profile keeps the stock editor palette and does not read either wallpaper file',
       tostring(mk.palette_file())
     )
 
@@ -258,9 +258,9 @@ do
     set_env { KITTY_WINDOW_ID = '1', TERM = 'xterm-kitty' }
     local legacy_kitty = build()
     check(
-      legacy_kitty.read_terminal_palette() == true
-        and legacy_kitty.palette_file() == KITTY_CONF,
-      'kitty marker fallback reads kitty palette file',
+      legacy_kitty.read_terminal_palette() == false
+        and legacy_kitty.palette_file() == nil,
+      'kitty marker fallback preserves the stock editor palette',
       tostring(legacy_kitty.palette_file())
     )
 
