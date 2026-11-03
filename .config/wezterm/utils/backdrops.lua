@@ -407,11 +407,8 @@ function BackDrops:_gen_opts()
          horizontal_align = 'Center',
          hsb = { brightness = 1.0, saturation = 1.0 },
       })
-      -- flat frost wash — how much "glass" vs. flat dark you get. 0.8 buries
-      -- the wallpaper (everything reads near-opaque); 0.5 is all-glass but
-      -- soft for code; 0.72 let too much wallpaper bleed through behind
-      -- characters — text looked dim. 0.85 is the default: strong dark
-      -- backing for code, wallpaper still glows through.
+      -- flat frost wash — how much "glass" vs. flat dark you get across the
+      -- entire window uniformly with no partition or middle seam.
       table.insert(bg_opts, {
          source = { Color = colors.background },
          height = '120%',
@@ -419,26 +416,6 @@ function BackDrops:_gen_opts()
          vertical_offset = '-10%',
          horizontal_offset = '-10%',
          opacity = wash,
-      })
-      -- soft bottom-up fade for depth + tab/status bar legibility. Ends in
-      -- TRANSPARENT of the theme background (not a fixed dark), so the chrome
-      -- strip stays readable on both dark and light themes. Scales with the
-      -- wash so a lighter desktop still gets its status strip.
-      table.insert(bg_opts, {
-         source = {
-            Gradient = {
-               colors = { colors.background, rgba(colors.background, 0) },
-               orientation = { Linear = { angle = 90 } },
-            },
-         },
-         height = '55%',
-         -- wezterm's default sizing is Cover, and Cover is NOT implemented for
-         -- gradients: the layer silently fails to load ("Cover is not
-         -- implemented for background gradients") and the bottom fade the
-         -- status bar sits on never draws. An explicit width is required.
-         width = '100%',
-         vertical_align = 'Bottom',
-         opacity = math.min(1, wash + 0.07),
       })
    else
       table.insert(bg_opts, {
