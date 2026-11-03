@@ -2,6 +2,7 @@
 /.config/tmux/plugins/
 /.config/wezterm/backdrops/
 /.config/wezterm/.github/
+/.config/wezterm/*.log
 /.config/nvim/.git/
 /.config/nvim/.git.bak-mydotfiles/
 /.config/wezterm/.git.bak-mydotfiles/
