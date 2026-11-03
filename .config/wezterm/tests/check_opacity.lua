@@ -414,7 +414,7 @@ do
    --
    -- Deliberately NOT "lands on the step grid". The whole bug this check grew
    -- out of is that a correct reset can and must land OFF the grid — a cold
-   -- start sits on WASH_DEFAULT 0.82, which has no neighbours on the 0.04
+   -- start sits on WASH_DEFAULT 0.85, which has no neighbours on the 0.04
    -- grid. Asserting grid membership here would have rejected the fix and
    -- passed the broken version.
    local function two_dp(v)
@@ -486,7 +486,7 @@ do
       string.format('%s/%s', tostring(select(1, bd:defaults())), tostring(select(2, bd:defaults()))))
 
    -- Against a cache-free instance: a fresh require is the closest thing to a
-   -- wezterm restart. Its start is WASH_DEFAULT 0.82, which is OFF the 0.04
+   -- wezterm restart. Its start is WASH_DEFAULT 0.85, which is OFF the 0.04
    -- step grid — so this is the case that a grid-equality check would have
    -- rejected and that a plain "step until equal" walk cannot reach. Drive it
    -- to the far end and back; the walk must return exactly.
@@ -515,15 +515,15 @@ do
    -- round-trip passes 59/0 while reset() quietly targets a value the user
    -- never had. Mutation M11 did exactly that and the suite stayed green.
    --
-   -- So pin the cold start to a number the SPEC owns. 0.82 and 1.0 duplicate
+   -- So pin the cold start to a number the SPEC owns. 0.85 and 0.90 duplicate
    -- WASH_DEFAULT/OPACITY_DEFAULT (module-locals, unreadable from here) on
    -- purpose: an independent copy is the only thing that can disagree. If you
    -- change a default in utils/backdrops.lua, change it here too — the failure
    -- is the point, and it is a one-line fix in a file you are already editing.
    check('a cold start begins on the documented defaults, not on a corrupted capture',
-      cold.wash == 0.82 and cold.opacity == 1.0
-         and select(1, cold:defaults()) == 0.82 and select(2, cold:defaults()) == 1.0,
-      string.format('cold starts at %s/%s, defaults() reports %s/%s, spec pins 0.82/1.0',
+      cold.wash == 0.85 and cold.opacity == 0.90
+         and select(1, cold:defaults()) == 0.85 and select(2, cold:defaults()) == 0.90,
+      string.format('cold starts at %s/%s, defaults() reports %s/%s, spec pins 0.85/0.90',
          tostring(cold.wash), tostring(cold.opacity),
          tostring(select(1, cold:defaults())), tostring(select(2, cold:defaults()))))
 

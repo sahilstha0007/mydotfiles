@@ -42,12 +42,17 @@ for _ in {1..30}; do
   sleep 0.1
 done
 
-[[ "$kitty_blue" == '#89b4fa' ]] || {
-  echo "FAIL: Kitty tmux blue should be Catppuccin mocha (#89b4fa), got '$kitty_blue'" >&2
+expected_blue=$(grep '^set -g @thm_blue ' "$conf_dir/colors-matugen.conf" | tail -1 | sed -E 's/.*"(#[0-9a-fA-F]{6})".*/\1/')
+[[ -n "$expected_blue" ]] || {
+  echo "FAIL: could not read @thm_blue from $conf_dir/colors-matugen.conf" >&2
   exit 1
 }
-[[ "$wezterm_blue" != "$kitty_blue" ]] || {
-  echo "FAIL: WezTerm tmux should use its wallpaper palette, got '$wezterm_blue'" >&2
+[[ "$kitty_blue" == "$expected_blue" ]] || {
+  echo "FAIL: Kitty tmux should use the shared wallpaper palette ($expected_blue), got '$kitty_blue'" >&2
+  exit 1
+}
+[[ "$wezterm_blue" == "$expected_blue" ]] || {
+  echo "FAIL: WezTerm tmux should use the shared wallpaper palette ($expected_blue), got '$wezterm_blue'" >&2
   exit 1
 }
 
@@ -76,4 +81,4 @@ wezterm_env=$(TMUX_TMPDIR="$work/wezterm" tmux show-environment -g TERMINAL_STAC
   exit 1
 }
 
-echo "PASS: Kitty and WezTerm use distinct sockets, themes, profiles, and restore paths"
+echo "PASS: Kitty and WezTerm share one wallpaper palette; sockets, profiles, and restore paths stay distinct"

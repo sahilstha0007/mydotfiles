@@ -120,10 +120,10 @@ end
 ---Why reset() does NOT step to its target (this replaced two working
 ---implementations, so the reasoning is the point):
 ---
----  1. Stepping cannot reach an off-grid target. WASH_DEFAULT is 0.82 with
----     WASH_STEP 0.04, so 0.82 has no neighbours on the step grid — 0.80 and
----     0.84 straddle it. A "step until equal" loop therefore never terminates:
----     it ping-pongs between 0.80 and 0.84 to the iteration bound and returns
+---  1. Stepping cannot reach an off-grid target. WASH_DEFAULT is 0.85 with
+---     WASH_STEP 0.04, so 0.85 has no neighbours on the step grid — 0.84 and
+---     0.88 straddle it. A "step until equal" loop therefore never terminates:
+---     it ping-pongs between 0.84 and 0.88 to the iteration bound and returns
 ---     whichever the bound's parity favours. That was the first real bug.
 ---  2. Even a bounded walk is pointless here. It was tried — whole steps
 ---     through the adjusters, then a direct write for the sub-step residue —
@@ -254,7 +254,7 @@ function BackDrops:reset(window)
 end
 
 ---The values a reset returns to. Exported so the caller can label the reset
----("back to 0.82 / 1.00") and so the spec can assert reset() hits them rather
+---("back to 0.85 / 0.90") and so the spec can assert reset() hits them rather
 ---than just "some legal value".
 ---@return number, number
 function BackDrops:defaults()
@@ -410,7 +410,7 @@ function BackDrops:_gen_opts()
       -- flat frost wash — how much "glass" vs. flat dark you get. 0.8 buries
       -- the wallpaper (everything reads near-opaque); 0.5 is all-glass but
       -- soft for code; 0.72 let too much wallpaper bleed through behind
-      -- characters — text looked dim. 0.82 is the default: strong dark
+      -- characters — text looked dim. 0.85 is the default: strong dark
       -- backing for code, wallpaper still glows through.
       table.insert(bg_opts, {
          source = { Color = colors.background },

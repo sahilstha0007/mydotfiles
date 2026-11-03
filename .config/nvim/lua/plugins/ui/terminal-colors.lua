@@ -1021,9 +1021,9 @@ local function host_terminal()
   return nil
 end
 
--- Read the wallpaper palette that drives the stack. Both kitty and WezTerm
--- share it now (kitty's colors are regenerated from wezterm's resolved
--- palette), so the host only decides whether we know where to read from.
+-- Read the wallpaper palette that drives the stack:
+-- - WezTerm uses the dev stack's custom wallpaper cascade (~/.config/wezterm/colors/custom.lua).
+-- - Kitty (daily driver) uses ML4W's palette (~/.config/kitty/colors-matugen.conf).
 -- Unknown profiles keep the stock palette rather than guessing.
 local function read_terminal_palette()
   local host = host_terminal()
@@ -1031,9 +1031,9 @@ local function read_terminal_palette()
     return read_wezterm_palette()
   end
   if host == 'kitty' then
-    -- Same cascade first; kitty's own file is the fallback for the window
-    -- before the first sync has written matugen.lua.
-    return read_wezterm_palette() or read_kitty_palette()
+    -- Kitty is the daily driver with ML4W-managed config. Read Kitty's own
+    -- palette directly, preserving clear boundaries from WezTerm.
+    return read_kitty_palette()
   end
   return false
 end

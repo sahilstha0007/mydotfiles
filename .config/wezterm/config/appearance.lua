@@ -123,11 +123,10 @@ return {
    adjust_window_size_when_changing_font_size = false,
    use_resize_increments = true,
    window_close_confirmation = 'NeverPrompt',
-   -- dim inactive panes so the focused pane pops (sharper focus than the
-   -- 0.8 glassy pass, but not as muddy as the original 0.72)
+   -- dim inactive panes so the focused pane pops without feeling washed out or dead
    inactive_pane_hsb = {
-      saturation = 0.88,
-      brightness = 0.74,
+      saturation = 0.90,
+      brightness = 0.78,
    },
 
    visual_bell = {

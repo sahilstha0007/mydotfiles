@@ -36,19 +36,16 @@ return {
         },
       },
       config = function()
+        -- vim.env.MASON is set by mason.nvim at runtime. Guard against nil so
+        -- the adapter path is always valid even if mason hasn't initialised yet.
+        local mason = vim.env.MASON or (vim.fn.stdpath 'data' .. '/mason')
         if vim.fn.has 'win32' == 1 then
           require('dap-python').setup(
-            vim.env.MASON
-              .. '/packages/'
-              .. 'debugpy'
-              .. '/venv/Scripts/pythonw.exe'
+            mason .. '/packages/debugpy/venv/Scripts/pythonw.exe'
           )
         else
           require('dap-python').setup(
-            vim.env.MASON .. '/packages/' .. 'debugpy' .. '/venv/bin/python'
-            -- NOTE: vim.env.MASON is set by mason.nvim at runtime, not by the shell.
-            -- If it is nil here, the Python DAP adapter path will be wrong at debug time.
-            -- Verify with `:lua =vim.env.MASON` after nvim starts.
+            mason .. '/packages/debugpy/venv/bin/python'
           )
         end
       end,

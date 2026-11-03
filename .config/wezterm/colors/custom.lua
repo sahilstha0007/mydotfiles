@@ -237,7 +237,8 @@ local function apply_wallpaper(base, mat, light)
    -- sees it, because the guard only knows the flat colour.
    --
    -- 0.55 is measured against the nine wallpapers in ~/.cache/wezterm-wallpapers
-   -- at the default wash of 0.82: worst composited backdrop #474743 (mocha) /
+   -- at a wash of 0.82 (the older default; the current 0.85 is darker, so
+   -- these are conservative lower bounds): worst composited backdrop #474743 (mocha) /
    -- #3d3e2d (live olive), where raw text scores 6.45 and 8.45 and this scores
    -- 7.97 and 9.73. Raising it to 0.70 buys only +0.44 more at that wash and
    -- is not worth the loss of the hue.

@@ -6,10 +6,15 @@
 -- it. That file opens with `local wezterm = require('wezterm')`, and outside
 -- wezterm that require ALWAYS raises — so the function returned false on every
 -- call for as long as it existed, and read_terminal_palette() silently fell
--- through to kitty's file instead. wezterm and kitty are deliberately themed
+-- through to kitty's file instead. At the time wezterm and kitty were themed
 -- from DIFFERENT wallpapers (wezterm = the dev-stack cascade, kitty = ml4w's
 -- desktop path), so the editor wore one wallpaper's palette while the tmux bar
 -- and the chrome around it wore another. Nothing errored. Nothing logged.
+--
+-- The two terminal profiles maintain clear boundaries:
+-- - WezTerm uses the dev stack's custom wallpaper cascade (~/.config/wezterm/colors/custom.lua).
+-- - Kitty (daily driver) uses ML4W's palette (~/.config/kitty/colors-matugen.conf).
+-- Both profiles resolve their own palette independently, and neither overwrites the other.
 --
 -- The existing terminal_colors_spec.lua could not catch this: it tests the
 -- colour MATHS (contrast, acc, pick_accents) against synthetic palettes and
@@ -152,35 +157,49 @@ do
 end
 
 -- ---------------------------------------------------------------------------
--- CHECK 4: wezterm's palette and kitty's are actually DIFFERENT on this
--- machine. If they were identical, reading the wrong one would be invisible
--- and none of the above would matter — this check is what gives the bug teeth.
+-- CHECK 4: kitty's reader SUCCEEDS on its ML4W-managed config.
+-- Kitty is the daily driver and reads ~/.config/kitty/colors-matugen.conf,
+-- maintaining clear boundaries from WezTerm's wallpaper cascade.
 -- ---------------------------------------------------------------------------
 do
-  local Mw = build()
-  Mw.read_wezterm_palette()
-  local wpal = Mw.pal()
-
   local fk = io.open(KITTY_CONF, 'r')
   if not fk then
-    print 'SKIP: kitty palette file absent; cross-source check not run'
+    print 'SKIP: kitty palette file absent; kitty reader check not run'
   else
     fk:close()
-    local Mk = build()
-    Mk.read_kitty_palette()
-    local kpal = Mk.pal()
+    local Mk, kpal = build()
+    local ok = Mk.read_kitty_palette()
     check(
-      wpal.bg ~= kpal.bg,
-      'wezterm and kitty resolve different backgrounds (they follow different wallpapers)',
-      ('wezterm bg=%s kitty bg=%s'):format(tostring(wpal.bg), tostring(kpal.bg))
+      ok == true,
+      'read_kitty_palette() parses colors-matugen.conf successfully',
+      'returned ' .. tostring(ok)
+    )
+
+    local missing = {}
+    for i = 0, 15 do
+      if not hex6(kpal.ansi[i]) then
+        missing[#missing + 1] = i
+      end
+    end
+    check(
+      #missing == 0,
+      'all 16 ANSI slots were populated from kitty config',
+      'missing: ' .. table.concat(missing, ',')
+    )
+    check(hex6(kpal.fg), 'kitty foreground came through', tostring(kpal.fg))
+    check(hex6(kpal.bg), 'kitty background came through', tostring(kpal.bg))
+    check(
+      Mk.palette_file() == KITTY_CONF,
+      'kitty palette file is recorded for the fs watcher',
+      tostring(Mk.palette_file())
     )
   end
 end
 
 -- ---------------------------------------------------------------------------
 -- CHECK 5: explicit terminal profile selects the palette policy even inside tmux.
--- Kitty stays on the stock Catppuccin base; WezTerm alone reads the wallpaper
--- cascade. Every env var touched is restored.
+-- WezTerm reads the WezTerm custom cascade, while Kitty reads its own ML4W kitty config.
+-- Only an unknown terminal stays on the stock palette. Every env var touched is restored.
 -- ---------------------------------------------------------------------------
 do
   local KEYS = {
@@ -215,7 +234,7 @@ do
     kitty_existed:close()
   end
 
-  if wez_existed ~= nil then
+  if wez_existed ~= nil and kitty_existed ~= nil then
     set_env {
       TERMINAL_STACK_PROFILE = 'kitty',
       KITTY_WINDOW_ID = '1',
@@ -223,8 +242,8 @@ do
     }
     local mk = build()
     check(
-      mk.read_terminal_palette() == false and mk.palette_file() == nil,
-      'kitty profile keeps the stock editor palette and does not read either wallpaper file',
+      mk.read_terminal_palette() == true and mk.palette_file() == KITTY_CONF,
+      'kitty profile reads its own ML4W palette file, even inside tmux',
       tostring(mk.palette_file())
     )
 
@@ -239,9 +258,9 @@ do
     set_env { KITTY_WINDOW_ID = '1', TERM = 'xterm-kitty' }
     local legacy_kitty = build()
     check(
-      legacy_kitty.read_terminal_palette() == false
-        and legacy_kitty.palette_file() == nil,
-      'kitty marker fallback preserves the stock editor palette',
+      legacy_kitty.read_terminal_palette() == true
+        and legacy_kitty.palette_file() == KITTY_CONF,
+      'kitty marker fallback reads kitty palette file',
       tostring(legacy_kitty.palette_file())
     )
 

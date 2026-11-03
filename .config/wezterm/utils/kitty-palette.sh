@@ -10,27 +10,17 @@
 # those resolved values (rather than approximating a second mapping from
 # matugen tokens) is what makes kitty's colours identical to wezterm's.
 #
-# ⚠ UNUSED — MANUAL ONLY (state re-verified 2026-10-17)
+# ⚠ UNUSED — MANUAL ONLY (boundary restored 2026-11-03)
 #
-# Nothing calls this script. `sync-wallpaper.sh` deliberately does not invoke
-# it (its own comment: "kitty is not in this cascade — it is pure ml4w and
-# follows its own matugen config") and no other file in ~/.config references
-# it. It is kept because it is the tested way to move kitty ONTO the cascade if
-# that is ever wanted — but it must not be run casually.
+# Nothing calls this script in the regular workflow. `sync-wallpaper.sh`
+# deliberately does not invoke it and kitty is configured as the user's daily
+# driver following ML4W's desktop wallpaper template (`[templates.kitty]` in
+# ~/.config/matugen/config.toml).
 #
-# The paragraph that used to sit here claimed ml4w's `[templates.kitty]` block
-# "is removed there". It is NOT removed. It is live at
-# ~/.config/matugen/config.toml:7-10, it is the single writer of
-# ~/.config/kitty/colors-matugen.conf, it renders from the DESKTOP wallpaper,
-# and its post-hook is `pkill -SIGUSR1 kitty`. Checked against the running
-# system, not against intent. Anyone trusting the old text would conclude kitty
-# follows the dev-stack wallpaper; it does not.
-#
-# The boundary that actually holds: kitty = ml4w's desktop path, one writer.
-# The dev stack = the wezterm cascade, one writer. Running this by hand creates
-# a SECOND writer for kitty's file, which ml4w silently overwrites at the next
-# desktop wallpaper change. Wiring it into a cascade requires deleting the ml4w
-# template block first — do that deliberately, not by accident.
+# The boundary that holds: kitty = ML4W's desktop path, one writer.
+# The dev stack = WezTerm cascade, one writer. Running this by hand would create
+# a second writer for kitty's file, which ML4W overwrites at desktop wallpaper changes.
+# It is preserved here only as a reference utility.
 #
 # On any failure the previous good file is left in place — kitty keeps working,
 # just stale.

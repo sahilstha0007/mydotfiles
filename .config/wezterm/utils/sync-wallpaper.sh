@@ -120,11 +120,6 @@ fi
 printf '%s' "$t" > "$synced"
 printf '%s' "$t" > "$cache"
 
-# Regenerate kitty's palette from the same resolved values. kitty is a second
-# terminal, not a second theme: without this it would keep an ml4w desktop
-# palette while wezterm/tmux/nvim followed the dev-stack wallpaper.
-"$HOME/.config/wezterm/utils/kitty-palette.sh"
-
 # Re-derive tmux status colors from the same palette (keeps tmux text in
 # lockstep with wezterm/nvim instead of a stale hand-written file).
 "$HOME/.config/tmux/colors-from-matugen.sh"
@@ -166,9 +161,8 @@ printf '%s' "$t" > "$cache"
 
 # Live cascade: tmux status + @thm_* tokens, then touch wezterm.lua so the
 # config watcher reloads with the fresh palette (backdrops restores the
-# current wallpaper from $cache, so the reload does not reshuffle). kitty was
-# already reloaded by kitty-palette.sh above (SIGUSR1). herdr re-reads its
-# generated config.toml too (silently skipped when not running).
+# current wallpaper from $cache, so the reload does not reshuffle). herdr
+# re-reads its generated config.toml too (silently skipped when not running).
 tmux source-file "$HOME/.config/tmux/tmux.conf" 2>/dev/null || true
 herdr server reload-config >/dev/null 2>&1 || true
 touch "$HOME/.config/wezterm/wezterm.lua"

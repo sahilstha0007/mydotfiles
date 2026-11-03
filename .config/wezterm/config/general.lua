@@ -22,6 +22,19 @@ return {
 
    scrollback_lines = 20000,
 
+   -- Patterns for QuickSelect (Ctrl+Shift+Space): matches compiler errors/warnings,
+   -- git commit hashes, IP addresses, ports, and docker IDs in addition to default URLs.
+   quick_select_patterns = {
+      -- compiler errors and stack traces: path/to/file:line:col or file:line
+      '[.\\w/\\-_]+\\.[a-zA-Z0-9]+:[0-9]+(:[0-9]+)?',
+      -- git commit hashes (7 to 40 hex digits)
+      '\\b[0-9a-f]{7,40}\\b',
+      -- IPv4 addresses and ports
+      '\\b[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}(:[0-9]+)?\\b',
+      -- localhost with port
+      '\\blocalhost:[0-9]+\\b',
+   },
+
    hyperlink_rules = {
       -- Matches: a URL in parens: (URL)
       {

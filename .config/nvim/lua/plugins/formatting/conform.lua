@@ -3,6 +3,16 @@ return {
     'stevearc/conform.nvim',
     event = { 'BufWritePre' },
     cmd = { 'ConformInfo' },
+    keys = {
+      {
+        '<leader>cf',
+        function()
+          require('conform').format { async = true, lsp_format = 'fallback' }
+        end,
+        mode = { 'n', 'v' },
+        desc = 'Format buffer / selection',
+      },
+    },
     opts = function()
       -- Check if bun has native `bun fmt` support (bun >= 1.4.4)
       local has_bun_fmt = nil

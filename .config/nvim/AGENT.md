@@ -178,7 +178,8 @@ nvim sessions (mini.sessions) layer on top, so `nvim <dir>` + tmux restore ≈ f
 9. **`nvim-tree` opens on `nvim <dir>`** via a BufEnter autocmd (plugin is lazy).
 10. **Session auto-save skips the fresh dashboard** (no named buffer + single window check in mini.lua).
 12. **tmux OSC fallback:** inside tmux, OSC palette queries are eaten, so terminal-colors.lua
-    reads the terminal's config file directly (kitty/wezterm), detected via env vars that survive tmux.
+    reads wezterm's cascade file directly; kitty's palette is regenerated from it, and the
+    terminal is detected via env vars that survive tmux.
 
 ---
 

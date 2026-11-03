@@ -15,9 +15,21 @@ set -u
 # hardcoded /home/sahil/.config/wezterm meant the harness could only ever run on
 # the machine it was written on: in CI, and for anyone else, `cp -r "$SRC"` had
 # nothing to copy and every mutant reported against an empty tree.
-SRC=${WEZTERM_CONFIG_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}
+SRC=${WEZTERM_CONFIG_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)}
+SRC=$(readlink -f "$SRC")
 W=${WEZTERM_MUTANT_DIR:-/tmp/wzmut}
 FAKE=${WEZTERM_FAKE_HOME:-/tmp/opcheck_home}
+
+# The live config is a symlink into the dotfiles repo. `cp -r "$SRC" "$W"`
+# copies the LINK when SRC is a symlink, so every sed below rewrote the live
+# tree and the harness ran against the file it was mutating. SRC is resolved
+# with pwd -P; this guard refuses to continue if W is still a link.
+stage () {
+  rm -rf "$W"
+  cp -r "$SRC" "$W"
+  [[ ! -L "$W" && -d "$W" ]] || { echo "FATAL: $W is not a real copy of $SRC" >&2; exit 2; }
+  [[ "$(readlink -f "$W")" == "$W" ]] || { echo "FATAL: $W resolves outside itself" >&2; exit 2; }
+}
 
 # Why this tracks FAILURES and exits non-zero
 # -------------------------------------------
@@ -57,7 +69,7 @@ run () {  # runs the suite against the staged copy
 
 mutate () {  # name, expected_fail_count, file-relative-to-root, sed-expr...
   local name="$1" expect="$2" rel="$3"; shift 3
-  rm -rf "$W"; cp -r "$SRC" "$W"
+  stage
   local target="$W/$rel"
   "$@" "$target"
   if cmp -s "$target" "$SRC/$rel"; then
@@ -85,7 +97,7 @@ mutate () {  # name, expected_fail_count, file-relative-to-root, sed-expr...
 echo "=== wezterm opacity: mutation verification ==="
 rm -rf "$FAKE"; mkdir -p "$FAKE"
 
-rm -rf "$W"; cp -r "$SRC" "$W"
+stage
 ctl="$(run)"
 printf '%-52s %s\n' "CONTROL: unmutated copy" "$ctl"
 case "$ctl" in

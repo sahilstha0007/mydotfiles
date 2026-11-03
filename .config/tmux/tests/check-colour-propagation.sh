@@ -55,7 +55,24 @@ trap cleanup EXIT
 # touching the running session's config. Only two lines differ: the palette
 # source and the tpm `run` line, which is stubbed so the test never forks a
 # plugin manager or touches the network.
-cp -r "$conf_dir" "$work/tmux"
+mkdir -p "$work/tmux"
+cp -r "$conf_dir/." "$work/tmux/"
+# The config dir is a symlink into the dotfiles repo. `cp -r "$conf_dir"`
+# copies the LINK, not its contents, so the sed below rewrote the LIVE
+# ~/.config/tmux/tmux.conf (it replaced the palette source with this test's
+# fixture and the tpm loader with `run 'true'`). Copy the CONTENTS into a real
+# dir and refuse to edit anything that resolves back outside $work.
+[[ ! -L "$work/tmux" && -f "$work/tmux/tmux.conf" ]] || {
+  echo "FATAL: $work/tmux is not a real config copy" >&2
+  exit 2
+}
+case "$(readlink -f "$work/tmux/tmux.conf")" in
+  "$work"/*) ;;
+  *)
+    echo "FATAL: refusing to edit a config outside $work" >&2
+    exit 2
+    ;;
+esac
 sed -i \
   -e "s|source-file -q ~/.config/tmux/colors-matugen.conf|source-file -q $work/fixture.conf|" \
   -e "s|^run '~/.config/tmux/plugins/tpm/tpm'|run 'true'|" \
@@ -95,7 +112,7 @@ capture_live() { # capture_live <outfile> <seconds>
 # asserted on is the one the client actually paints the session name with.
 # Pull every such run out of the capture in order.
 pill_foregrounds() { # pill_foregrounds <capture>
-  perl -0777 -ne 'while (/\x1b\[38;2;(\d+);(\d+);(\d+)m(?:\x1b\[58[^m]*m)*[\s]*probe/g) { print "$1,$2,$3\n" }' "$1"
+  perl -0777 -ne 'while (/\x1b\[38;2;(\d+);(\d+);(\d+)m(?:\x1b\[[\d;:]*[mH])*\s*probe/g) { print "$1,$2,$3\n" }' "$1"
 }
 
 want=255,0,0   # the colour @thm_green is switched TO mid-session

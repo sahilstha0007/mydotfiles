@@ -64,6 +64,7 @@ require('lazy').setup({
     -- as a second spec on the same plugin lazy rejected it ("changed dir").
     { import = 'plugins.ui.transparency' },
     { import = 'plugins.ui.dressing' },
+    { import = 'plugins.ui.img-clip' },
     { import = 'plugins.ui.render-markdown' },
     { import = 'plugins.ui.treesitter-context' },
     { import = 'plugins.util.mini-hipatterns' },

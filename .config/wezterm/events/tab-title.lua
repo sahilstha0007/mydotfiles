@@ -81,7 +81,8 @@ local ICON_PREFIX = {
 
 ---@enum UnseenOutputIcon
 local ICON_UNSEEN = {
-   cirlce = nf.fa_circle, --[[  ]]
+   circle = nf.fa_circle, --[[  ]]
+   cirlce = nf.fa_circle, --[[  fallback alias ]]
 
    numbered_box_1 = nf.md_numeric_1_box_multiple, --[[ 󰼏 ]]
    numbered_box_2 = nf.md_numeric_2_box_multiple, --[[ 󰼐 ]]

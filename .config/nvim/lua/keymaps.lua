@@ -140,6 +140,54 @@ keymap.set(
   { desc = 'Loclist Prev' }
 )
 
+-- Quickfix list editing: dd in normal mode or d in visual mode deletes items
+-- from the quickfix list, turning it into a real triage queue.
+local function delete_qf_item()
+  local qf = vim.fn.getqflist()
+  local line = vim.fn.line '.'
+  if #qf > 0 and line <= #qf then
+    table.remove(qf, line)
+    vim.fn.setqflist(qf, 'r')
+    if line <= #qf then
+      vim.fn.cursor(line, 1)
+    else
+      vim.fn.cursor(#qf, 1)
+    end
+  end
+end
+
+local function delete_qf_range()
+  local qf = vim.fn.getqflist()
+  local s = vim.fn.line "'<"
+  local e = vim.fn.line "'>"
+  if #qf > 0 and s <= #qf then
+    for _ = s, math.min(e, #qf) do
+      table.remove(qf, s)
+    end
+    vim.fn.setqflist(qf, 'r')
+    vim.fn.cursor(math.min(s, #qf), 1)
+  end
+end
+
+vim.api.nvim_create_autocmd('FileType', {
+  pattern = 'qf',
+  desc = 'dd and visual d delete items from quickfix list',
+  callback = function(args)
+    keymap.set(
+      'n',
+      'dd',
+      delete_qf_item,
+      { buffer = args.buf, desc = 'Delete item from quickfix' }
+    )
+    keymap.set(
+      'x',
+      'd',
+      delete_qf_range,
+      { buffer = args.buf, desc = 'Delete range from quickfix' }
+    )
+  end,
+})
+
 -- Buffers
 keymap.set('n', '<S-h>', '<cmd>bprevious<cr>', { desc = 'Prev Buffer' })
 keymap.set('n', '<S-l>', '<cmd>bnext<cr>', { desc = 'Next Buffer' })

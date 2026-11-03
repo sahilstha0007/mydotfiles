@@ -20,10 +20,10 @@ local diagnostic_icons = {
 vim.diagnostic.config {
   signs = {
     text = {
-      [vim.diagnostic.severity.ERROR] = ' ',
-      [vim.diagnostic.severity.WARN] = ' ',
-      [vim.diagnostic.severity.INFO] = '󰋼 ',
-      [vim.diagnostic.severity.HINT] = ' ',
+      [vim.diagnostic.severity.ERROR] = diagnostic_icons[vim.diagnostic.severity.ERROR],
+      [vim.diagnostic.severity.WARN] = diagnostic_icons[vim.diagnostic.severity.WARN],
+      [vim.diagnostic.severity.INFO] = diagnostic_icons[vim.diagnostic.severity.INFO],
+      [vim.diagnostic.severity.HINT] = diagnostic_icons[vim.diagnostic.severity.HINT],
     },
   },
   virtual_text = {

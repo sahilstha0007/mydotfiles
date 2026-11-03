@@ -163,13 +163,13 @@ is running — and re-tints live when the terminal colorscheme changes (kitty
 and wezterm both push palette updates).
 
 Fallback: inside tmux the OSC queries are eaten (tmux doesn't answer them),
-so the palette is also read directly from the ACTIVE terminal's config file
-— kitty's `~/.config/kitty/colors-matugen.conf` or wezterm's
-`~/.config/wezterm/colors/custom.lua` (ml4w writes both on theme switch).
-The terminal is detected from env vars that survive into tmux
-(`WEZTERM_PANE` / `KITTY_WINDOW_ID`), and the file is polled so theme
-switches re-tint live. If no palette source answers, stock catppuccin mocha
-is used.
+so the palette is read from wezterm's `~/.config/wezterm/colors/custom.lua`
+— the single wallpaper cascade. kitty's `colors-matugen.conf` is regenerated
+from those same resolved slots by `utils/kitty-palette.sh`, so both
+terminals report one palette. The terminal is detected from env vars that
+survive into tmux (`WEZTERM_PANE` / `KITTY_WINDOW_ID`), and the file is
+polled so theme switches re-tint live. If no palette source answers, stock
+catppuccin mocha is used.
 
 ### `lua/plugins/ui/transparency.lua`
 Enables background transparency in supported terminals.

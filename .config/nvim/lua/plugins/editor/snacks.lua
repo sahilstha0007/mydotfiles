@@ -186,6 +186,20 @@ return {
       end,
       desc = 'LazyDocker (docker TUI float)',
     },
+    -- Project tasks (project-task): project run/test/lint/format dispatcher,
+    -- mirroring tmux's Prefix+P popup. UPPERCASE P — lowercase <leader>p
+    -- is the Octo GitHub group (octo.lua). Opens in a terminal float.
+    {
+      '<leader>P',
+      function()
+        local root = Snacks.git.get_root() or vim.fn.getcwd()
+        Snacks.terminal.open(
+          '~/.local/bin/project-task',
+          { cwd = root, auto_close = false }
+        )
+      end,
+      desc = 'Project Task (run/test/lint/format)',
+    },
     -- zen mode: distraction-free zoom (toggles back on Esc or <leader>z)
     {
       '<leader>z',
@@ -218,6 +232,27 @@ return {
         Snacks.gitbrowse()
       end,
       desc = 'Open on GitHub (gitbrowse)',
+    },
+    {
+      '<leader>gs',
+      function()
+        Snacks.picker.git_status()
+      end,
+      desc = 'Git Status (picker)',
+    },
+    {
+      '<leader>gl',
+      function()
+        Snacks.picker.git_log()
+      end,
+      desc = 'Git Log (picker)',
+    },
+    {
+      '<leader>gL',
+      function()
+        Snacks.picker.git_log_file()
+      end,
+      desc = 'Git Log Current File (picker)',
     },
     {
       '<leader>s"',
@@ -500,6 +535,43 @@ return {
         Snacks.picker.lsp_workspace_symbols()
       end,
       desc = 'Symbol (Workspace)',
+    },
+    {
+      ']]',
+      function()
+        Snacks.words.jump(vim.v.count1)
+      end,
+      desc = 'Next Reference',
+      mode = { 'n', 't' },
+    },
+    {
+      '[[',
+      function()
+        Snacks.words.jump(-vim.v.count1)
+      end,
+      desc = 'Prev Reference',
+      mode = { 'n', 't' },
+    },
+    {
+      '<leader>sn',
+      function()
+        Snacks.picker.notifications()
+      end,
+      desc = 'Notification History',
+    },
+    {
+      '<leader>un',
+      function()
+        Snacks.notifier.hide()
+      end,
+      desc = 'Dismiss Notifications',
+    },
+    {
+      '<leader>sU',
+      function()
+        Snacks.picker.undo()
+      end,
+      desc = 'Undo History (picker)',
     },
   },
   ---@type snacks.Config

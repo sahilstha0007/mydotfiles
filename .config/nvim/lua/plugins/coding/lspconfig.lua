@@ -92,6 +92,16 @@ return {
 
           local client = vim.lsp.get_client_by_id(event.data.client_id)
 
+          if
+            client
+            and client:supports_method(
+              vim.lsp.protocol.Methods.textDocument_signatureHelp
+            )
+          then
+            map('<C-k>', vim.lsp.buf.signature_help, 'Signature Help', 'i')
+            map('<leader>ck', vim.lsp.buf.signature_help, 'Signature Help')
+          end
+
           -- Highlight references of the word under the cursor. Gated on
           -- CursorHold (debounced by `updatetime`), so it is cheap.
           if
