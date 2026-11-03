@@ -255,6 +255,20 @@ return {
       desc = 'Git Log Current File (picker)',
     },
     {
+      '<leader>gP',
+      function()
+        Snacks.terminal('gh dash', {
+          interactive = true,
+          win = {
+            style = 'terminal',
+            width = 0.9,
+            height = 0.9,
+          },
+        })
+      end,
+      desc = 'GitHub Dash (PRs & Issues)',
+    },
+    {
       '<leader>s"',
       function()
         Snacks.picker.registers()
@@ -685,8 +699,22 @@ return {
       animate = { enabled = true },
       -- dim unfocused windows
       dim = { enabled = true },
-      -- thin indent guides
-      indent = { enabled = true },
+      -- thin indent guides with animated scope highlight
+      indent = {
+        enabled = true,
+        animate = {
+          enabled = true,
+          style = 'out',
+          duration = {
+            step = 20,
+            total = 300,
+          },
+        },
+        scope = {
+          enabled = true,
+          underline = false,
+        },
+      },
       -- big files: auto-disable treesitter/LSP/etc above ~1.5MB —
       -- opening a 100k-line lockfile or minified bundle stops choking
       bigfile = { enabled = true },

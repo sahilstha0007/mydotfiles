@@ -67,6 +67,8 @@ require('lazy').setup({
     { import = 'plugins.ui.img-clip' },
     { import = 'plugins.ui.render-markdown' },
     { import = 'plugins.ui.treesitter-context' },
+    { import = 'plugins.ui.dropbar' },
+    { import = 'plugins.ui.tiny-inline-diagnostic' },
     { import = 'plugins.util.mini-hipatterns' },
   },
   defaults = {},
