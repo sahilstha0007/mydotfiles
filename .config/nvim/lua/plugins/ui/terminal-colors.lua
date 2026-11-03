@@ -15,11 +15,12 @@
 --     catppuccin integration (treesitter, blink, gitsigns, snacks, trouble,
 --     neo-tree, lualine, bufferline, …) follows the terminal automatically.
 --   * If the terminal never answers (no OSC support / non-tty, or nvim runs
---     inside tmux which eats OSC queries), WezTerm reads its colors/custom.lua
---     file and watches it for live re-tints. TERMINAL_STACK_PROFILE selects the
---     source; legacy KITTY_WINDOW_ID / WEZTERM_PANE markers remain supported.
---     Kitty and unknown profiles keep stock Catppuccin mocha rather than
---     guessing a wallpaper source.
+--     inside tmux which eats OSC queries), the stack reads wezterm's
+--     colors/custom.lua and watches colors/matugen.lua for live re-tints.
+--     TERMINAL_STACK_PROFILE selects the source; legacy KITTY_WINDOW_ID /
+--     WEZTERM_PANE markers remain supported. Both kitty and WezTerm share one
+--     wallpaper palette (kitty's colors are regenerated from wezterm's), so
+--     kitty adopts it too. Unknown profiles keep stock Catppuccin.
 
 local M = {}
 
@@ -616,6 +617,24 @@ local function catppuccin_opts()
           FloatTitle = { fg = c.blue, bg = 'NONE' },
           NormalFloat = { bg = 'NONE', fg = c.text },
 
+          -- Treesitter context: transparent header with muted separator line
+          TreesitterContext = { bg = 'NONE' },
+          TreesitterContextLineNumber = {
+            fg = c.blue,
+            bold = true,
+            bg = 'NONE',
+          },
+          TreesitterContextSeparator = { fg = c.surface1, bg = 'NONE' },
+
+          -- Diagnostics: undercurl with live palette colors
+          DiagnosticUnderlineError = { undercurl = true, sp = c.red },
+          DiagnosticUnderlineWarn = { undercurl = true, sp = c.yellow },
+          DiagnosticUnderlineInfo = { undercurl = true, sp = c.blue },
+          DiagnosticUnderlineHint = { undercurl = true, sp = c.teal },
+
+          -- Todo / notes: bright accent
+          Todo = { fg = c.yellow, bold = true },
+
           -- -----------------------------------------------------------------
           -- Snacks picker — the single picker (telescope removed)
           -- -----------------------------------------------------------------
@@ -933,32 +952,88 @@ end
 
 -- Which terminal is nvim running inside? Inside tmux the OSC query path is
 -- dead, so use the explicit terminal profile or legacy emulator markers,
--- which survive the tmux boundary. WezTerm adopts its wallpaper palette;
--- Kitty and unknown profiles stay on stock Catppuccin.
+-- which survive the tmux boundary. Both kitty and WezTerm adopt the same
+-- wallpaper palette; unknown profiles stay on stock Catppuccin.
 local function host_terminal()
   local profile = os.getenv 'TERMINAL_STACK_PROFILE'
+  local wez_pane = os.getenv 'WEZTERM_PANE'
+  local kitty_id = os.getenv 'KITTY_WINDOW_ID'
+
+  -- If running inside tmux, inspect tmux environment and attached clients.
+  -- 1. Check pane environment or query tmux global environment if profile was not inherited.
+  -- 2. Inspect the attached client's terminal type: reflects the terminal the human is looking at right now.
+  if os.getenv 'TMUX' then
+    if not profile then
+      local h_prof =
+        io.popen 'tmux show-environment -g TERMINAL_STACK_PROFILE 2>/dev/null'
+      if h_prof then
+        local p_out = h_prof:read '*a' or ''
+        h_prof:close()
+        local match_p = p_out:match '^TERMINAL_STACK_PROFILE=([%w_-]+)'
+        if match_p then
+          profile = match_p
+        end
+      end
+    end
+
+    if profile ~= nil or wez_pane ~= nil or kitty_id ~= nil then
+      local handle =
+        io.popen 'tmux display-message -p "#{client_termtype}" 2>/dev/null'
+      local client = ''
+      if handle then
+        client = handle:read '*a' or ''
+        handle:close()
+      end
+      client = client:gsub('%s+', '')
+      if client == '' then
+        local h2 =
+          io.popen 'tmux list-clients -F "#{client_termtype}" 2>/dev/null'
+        if h2 then
+          client = h2:read '*a' or ''
+          h2:close()
+          client = client:gsub('%s+', '')
+        end
+      end
+      if client:lower():match 'wezterm' then
+        return 'wezterm'
+      elseif client:lower():match 'kitty' then
+        return 'kitty'
+      end
+    end
+  end
+
   if profile then
     if profile == 'kitty' or profile == 'wezterm' then
       return profile
     end
     return nil
   end
-  if os.getenv 'KITTY_WINDOW_ID' then
-    return 'kitty'
-  end
-  if os.getenv 'WEZTERM_PANE' then
+  if
+    wez_pane
+    or os.getenv 'WEZTERM_EXECUTABLE'
+    or os.getenv 'TERM_PROGRAM' == 'WezTerm'
+  then
     return 'wezterm'
+  end
+  if kitty_id then
+    return 'kitty'
   end
   return nil
 end
 
--- Read the palette owned by the active terminal profile. Kitty stays on stock
--- Catppuccin mocha; WezTerm alone owns the wallpaper cascade. Unknown profiles
--- keep the stock palette rather than guessing from whichever config exists.
+-- Read the wallpaper palette that drives the stack. Both kitty and WezTerm
+-- share it now (kitty's colors are regenerated from wezterm's resolved
+-- palette), so the host only decides whether we know where to read from.
+-- Unknown profiles keep the stock palette rather than guessing.
 local function read_terminal_palette()
   local host = host_terminal()
   if host == 'wezterm' then
     return read_wezterm_palette()
+  end
+  if host == 'kitty' then
+    -- Same cascade first; kitty's own file is the fallback for the window
+    -- before the first sync has written matugen.lua.
+    return read_wezterm_palette() or read_kitty_palette()
   end
   return false
 end
@@ -1103,9 +1178,9 @@ local function setup()
 
   local host = host_terminal()
 
-  -- Only WezTerm adopts and watches the wallpaper palette. Kitty and unknown
-  -- terminals stay on stock Catppuccin mocha without querying a guessed source.
-  if host == 'wezterm' then
+  -- Both WezTerm and Kitty adopt the shared wallpaper palette.
+  -- Unknown profiles stay on stock Catppuccin mocha without querying a guessed source.
+  if host == 'wezterm' or host == 'kitty' then
     -- Read the terminal's config file FIRST (fast, works inside tmux) so the
     -- very first paint already uses the terminal palette — the editor never
     -- flashes stock mocha at boot. ml4w keeps the palette in these files, so
@@ -1133,14 +1208,15 @@ local function setup()
     -- case the palette changed while nvim was unfocused.
     start_palette_watch()
   else
-    -- Kitty and unknown profiles: stock Catppuccin mocha, no adoption.
+    -- Unknown profiles: stock Catppuccin mocha, no adoption.
     apply()
   end
 
   vim.api.nvim_create_autocmd('FocusGained', {
     group = augroup,
     callback = function()
-      if host ~= 'wezterm' then
+      host = host_terminal()
+      if host ~= 'wezterm' and host ~= 'kitty' then
         return
       end
       vim.schedule(function()
@@ -1149,19 +1225,28 @@ local function setup()
         if poll_palette_file() and complete() then
           schedule_apply()
         end
+        if not watch_timer then
+          start_palette_watch()
+        end
       end)
     end,
   })
 end
 
+local function reassert()
+  poll_palette_file()
+  apply()
+  if not watch_timer then
+    start_palette_watch()
+  end
+end
+
 M.setup = setup
--- Re-assert the current palette. Exposed for plugins that define their own
--- highlight groups at setup time and clobber ours (Octo does). Re-running
--- `colorscheme catppuccin` directly would rebuild the cache from the LAST
--- color_overrides we set — which is only correct while nothing else has
--- re-run it since. Going through apply() guarantees catppuccin.setup() sees
--- the palette as it is right now.
-M.reassert = apply
+-- Re-assert the current palette. Exposed for external cascades (sync-wallpaper.sh)
+-- and plugins that define their own highlight groups at setup time (Octo).
+-- Re-reads the palette file from disk, recompiles catppuccin options, and
+-- applies all highlight overrides live.
+M.reassert = reassert
 
 -- Publish M where a caller can actually reach it.
 --

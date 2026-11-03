@@ -1,6 +1,7 @@
 #!/bin/sh
-# Sync the current wezterm wallpaper -> wezterm colors ONLY.
-# Uses an isolated matugen config so ml4w/hyprland themes are never touched.
+# Sync the current wallpaper -> the whole terminal stack: wezterm, kitty,
+# tmux, nvim, the prompt and the TUIs. Uses an isolated matugen config for the
+# wezterm/btop half so ml4w/hyprland's own palette is never touched.
 #
 # `-m smart` lets matugen read the wallpaper's luminance: bright wallpaper ->
 # light scheme (dark text), dark wallpaper -> dark scheme (bright text). The
@@ -119,6 +120,11 @@ fi
 printf '%s' "$t" > "$synced"
 printf '%s' "$t" > "$cache"
 
+# Regenerate kitty's palette from the same resolved values. kitty is a second
+# terminal, not a second theme: without this it would keep an ml4w desktop
+# palette while wezterm/tmux/nvim followed the dev-stack wallpaper.
+"$HOME/.config/wezterm/utils/kitty-palette.sh"
+
 # Re-derive tmux status colors from the same palette (keeps tmux text in
 # lockstep with wezterm/nvim instead of a stale hand-written file).
 "$HOME/.config/tmux/colors-from-matugen.sh"
@@ -160,11 +166,17 @@ printf '%s' "$t" > "$cache"
 
 # Live cascade: tmux status + @thm_* tokens, then touch wezterm.lua so the
 # config watcher reloads with the fresh palette (backdrops restores the
-# current wallpaper from $cache, so the reload does not reshuffle). kitty is
-# not in this cascade — it is pure ml4w and follows its own matugen config.
-# herdr
-# re-reads its generated config.toml too (silently skipped when not running).
+# current wallpaper from $cache, so the reload does not reshuffle). kitty was
+# already reloaded by kitty-palette.sh above (SIGUSR1). herdr re-reads its
+# generated config.toml too (silently skipped when not running).
 tmux source-file "$HOME/.config/tmux/tmux.conf" 2>/dev/null || true
 herdr server reload-config >/dev/null 2>&1 || true
 touch "$HOME/.config/wezterm/wezterm.lua"
+
+# Notify running Neovim instances in background jobs so they re-tint immediately
+# without stalling this script.
+for sock in "${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"/nvim.*.0; do
+   [ -S "$sock" ] || continue
+   (nvim --server "$sock" --remote-send "<Cmd>lua require('utils.terminal-colors').reassert()<CR>" >/dev/null 2>&1 || true) &
+done
 exit 0
