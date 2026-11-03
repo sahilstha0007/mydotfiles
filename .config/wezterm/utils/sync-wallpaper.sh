@@ -104,7 +104,7 @@ matugen_rc=0
 # So success = matugen exited 0, said NOTHING on stdout/stderr, and left a
 # non-empty palette. Anything else fails loudly and is left retryable.
 matugen_log=$(/usr/bin/matugen -c "$HOME/.config/matugen/wezterm.toml" image "$work" \
-   --source-color-index 0 -m smart 2>&1) || matugen_rc=$?
+   --prefer saturation --type scheme-vibrant --contrast 0.1 -m smart 2>&1) || matugen_rc=$?
 
 if [ "$matugen_rc" -ne 0 ] || [ -n "$matugen_log" ] || [ ! -s "$wez_palette" ]; then
    echo "sync-wallpaper: matugen failed (rc=$matugen_rc) for $work" >&2
