@@ -123,10 +123,10 @@ return {
    adjust_window_size_when_changing_font_size = false,
    use_resize_increments = true,
    window_close_confirmation = 'NeverPrompt',
-   -- dim inactive panes so the focused pane pops without feeling washed out or dead
+   -- No dimming on inactive panes/partitions: wallpaper stays uniform and seamless
    inactive_pane_hsb = {
-      saturation = 0.90,
-      brightness = 0.78,
+      saturation = 1.0,
+      brightness = 1.0,
    },
 
    visual_bell = {

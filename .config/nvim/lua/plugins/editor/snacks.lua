@@ -697,8 +697,8 @@ return {
       terminal = TERMINAL_OPTS.terminal,
       -- modern & smooth: subtle animations for UI components
       animate = { enabled = true },
-      -- dim unfocused windows
-      dim = { enabled = true },
+      -- do not dim unfocused windows/partitions
+      dim = { enabled = false },
       -- thin indent guides with animated scope highlight
       indent = {
         enabled = true,
