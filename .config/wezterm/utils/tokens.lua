@@ -28,7 +28,7 @@ M.bg = colors.background
 M.fg = colors.foreground
 -- The shared accent (wezterm tab pill, pane-select, tmux pill, editor): the
 -- wallpaper primary hero accent.
-M.accent = colors.accent or colors.ansi[5]
+M.accent = colors.cursor_bg or colors.ansi[5]
 -- Wallpaper accents from the ANSI slots (vivid on dark themes, dark enough to
 -- read on light themes). Indexes mirror colors.custom's ansi layout.
 M.red = colors.ansi[2]

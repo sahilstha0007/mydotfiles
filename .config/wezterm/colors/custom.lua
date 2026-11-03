@@ -467,7 +467,6 @@ local selection_bg = blend(base.base, cursor, SELECTION_LIFT)
 local colorscheme = {
    foreground = base.text,
    background = base.base,
-   accent = base.accent or base.blue,
    cursor_bg = cursor,
    cursor_border = cursor,
    -- The glyph inside the block: the background colour, so cursor contrast is
