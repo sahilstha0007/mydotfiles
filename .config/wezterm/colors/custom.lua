@@ -214,6 +214,44 @@ local SELECTION_LIFT = 0.42
 -- mid-tint accent block with one strong label colour on it.
 local SELECTION_FG = { dark = '#ffffff', light = '#000000' }
 
+---Hue (0..360) of a '#rrggbb' string; -1 for invalid or monochrome.
+---@param hex string
+---@return number
+local function hue(hex)
+   if type(hex) ~= 'string' or not hex:match('^#%x%x%x%x%x%x$') then
+      return -1
+   end
+   local r = tonumber(hex:sub(2, 3), 16) / 255
+   local g = tonumber(hex:sub(4, 5), 16) / 255
+   local b = tonumber(hex:sub(6, 7), 16) / 255
+   local max, min = math.max(r, g, b), math.min(r, g, b)
+   local d = max - min
+   if d == 0 then
+      return -1
+   end
+   local h
+   if max == r then
+      h = ((g - b) / d) % 6
+   elseif max == g then
+      h = (b - r) / d + 2
+   else
+      h = (r - g) / d + 4
+   end
+   return h * 60
+end
+
+---Circular hue distance in degrees (0..180).
+---@param a number
+---@param b number
+---@return number
+local function hue_dist(a, b)
+   if a < 0 or b < 0 then
+      return 180
+   end
+   local d = math.abs(a - b)
+   return math.min(d, 360 - d)
+end
+
 -- Apply the wallpaper's matugen tokens over the chosen catppuccin base.
 -- Mirrored by ~/.config/tmux/colors-from-matugen.sh — keep in sync.
 local function apply_wallpaper(base, mat, light)
@@ -253,42 +291,81 @@ local function apply_wallpaper(base, mat, light)
    if c.text then
       c.text = blend(c.text, light and '#000000' or '#ffffff', 0.55)
    end
-   c.red       = guard(mat.error, base.red, bg)
-   c.green     = guard(mat.success, base.green, bg)
-   c.yellow    = guard(mat.tertiary, base.yellow, bg)
-   c.blue      = guard(mat.primary, base.blue, bg)
-   c.pink      = guard(mat.secondary, base.pink, bg)
-   c.teal      = guard(mat.primary, base.teal, bg)
-   c.rosewater = guard(mat.primary, base.rosewater, bg)
-   -- A wallpaper is not a designed 16-colour set, and routing its tokens
-   -- straight into the accents assumes it is. Two collisions follow from that:
-   --
-   --   1. matugen routinely emits secondary == tertiary (the live wallpaper:
-   --      #b7cea2 twice), so magenta and yellow got the same sage.
-   --   2. the primary is deliberately routed into blue AND teal AND rosewater
-   --      (blue owning it is the point -- it is the pill/cursor token), so
-   --      blue, cyan and rosewater all landed on #f3bd6e.
-   --
-   -- Brights are derived by lifting a normal slot, so each collision also
-   -- poisons its bright twin (color4==color6, color3==color5, color11==
-   -- color13, color12==color14 -- 6 of 16 slots duplicated). Editors map
-   -- syntax onto these slots, so the visible effect is that functions, types,
-   -- keywords and properties all collapse onto the wallpaper's one hue: the
-   -- code reads as "the wallpaper colour", which is exactly what it is.
-   --
-   -- Keep the first slot to claim a hue and give every later duplicate the
-   -- stock catppuccin accent for its own slot. That is the same fallback
-   -- guard() already uses, and it keeps the accent count at 8 instead of
-   -- letting a monochrome wallpaper flatten the palette.
-   local claimed = {}
-   for _, name in ipairs({ 'red', 'green', 'yellow', 'blue', 'pink', 'teal', 'rosewater' }) do
-      local v = c[name]
-      if v ~= nil then
-         if claimed[v] and claimed[v] ~= name then
-            c[name] = base[name]
-         else
-            claimed[v] = name
+   -- The Hero Accent: signature wallpaper primary for cursor, tabs, borders, and pills
+   c.accent    = guard(mat.primary, base.blue, bg)
+
+   -- Red (ANSI 1): error / deletion / red. Must be in red/coral range (325..35)
+   local err_h = hue(mat.error)
+   if (err_h >= 325 or err_h <= 35) and contrast(mat.error, bg) >= MIN_CONTRAST then
+      c.red = mat.error
+   else
+      c.red = base.red
+   end
+
+   -- Green (ANSI 2): success / addition / commands. Must be in green/lime range (65..170)
+   local succ_h = hue(mat.success)
+   local prim_h = hue(mat.primary)
+   if (succ_h >= 65 and succ_h <= 170) and contrast(mat.success, bg) >= MIN_CONTRAST then
+      c.green = mat.success
+   elseif (prim_h >= 65 and prim_h <= 170) and contrast(mat.primary, bg) >= MIN_CONTRAST then
+      c.green = mat.primary
+   else
+      c.green = base.green
+   end
+
+   -- Yellow (ANSI 3): warning / notice. Must be in yellow/amber range (35..80) and distinct from green
+   local tert_h = hue(mat.tertiary)
+   if (tert_h >= 35 and tert_h <= 80) and hue_dist(tert_h, hue(c.green)) >= 25 and contrast(mat.tertiary, bg) >= MIN_CONTRAST then
+      c.yellow = mat.tertiary
+   elseif (prim_h >= 35 and prim_h <= 80) and hue_dist(prim_h, hue(c.green)) >= 25 and contrast(mat.primary, bg) >= MIN_CONTRAST then
+      c.yellow = mat.primary
+   else
+      c.yellow = base.yellow
+   end
+
+   -- Blue (ANSI 4): information / functions / paths. Must be in blue/cyan range (185..260)
+   if (prim_h >= 185 and prim_h <= 260) and contrast(mat.primary, bg) >= MIN_CONTRAST then
+      c.blue = mat.primary
+   else
+      c.blue = base.blue
+   end
+
+   -- Magenta (ANSI 5): keywords / control flow. Must be distinct from red and blue
+   local sec_h = hue(mat.secondary)
+   if (sec_h >= 265 and sec_h <= 335) and contrast(mat.secondary, bg) >= MIN_CONTRAST then
+      c.pink = mat.secondary
+   else
+      c.pink = base.pink
+   end
+
+   -- Cyan (ANSI 6): operators / interfaces. Must be in cyan/teal range (160..210)
+   if (tert_h >= 160 and tert_h <= 210) and contrast(mat.tertiary, bg) >= MIN_CONTRAST then
+      c.teal = mat.tertiary
+   elseif (sec_h >= 160 and sec_h <= 210) and contrast(mat.secondary, bg) >= MIN_CONTRAST then
+      c.teal = mat.secondary
+   else
+      c.teal = base.teal
+   end
+
+   c.rosewater = base.rosewater
+
+   -- Guarantee hue separation: no two ANSI slots can be closer than 30°
+   local taken = {}
+   for _, name in ipairs({ 'blue', 'green', 'yellow', 'red', 'pink', 'teal' }) do
+      local h = hue(c[name])
+      local collides = false
+      if h >= 0 then
+         for _, other in ipairs(taken) do
+            if hue_dist(h, other) < 30 then
+               collides = true
+               break
+            end
          end
+      end
+      if collides then
+         c[name] = base[name]
+      elseif h >= 0 then
+         table.insert(taken, h)
       end
    end
    c.surface0  = mat.surface0
@@ -380,7 +457,7 @@ end
 -- dark themes get the saturated primary (10.90:1 on the live wallpaper) and
 -- only light themes pay for the lift. Darkening on a light theme and
 -- lightening on a dark one are the same operation: move away from the page.
-local cursor = guard(base.blue, brighten(base.blue), base.base)
+local cursor = guard(base.accent or base.blue, brighten(base.accent or base.blue), base.base)
 
 -- The selection: a soft accent lift, with the label pinned to the extreme so
 -- the pair always clears MIN_CONTRAST. Both numbers are argued in
@@ -390,6 +467,7 @@ local selection_bg = blend(base.base, cursor, SELECTION_LIFT)
 local colorscheme = {
    foreground = base.text,
    background = base.base,
+   accent = base.accent or base.blue,
    cursor_bg = cursor,
    cursor_border = cursor,
    -- The glyph inside the block: the background colour, so cursor contrast is

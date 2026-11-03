@@ -143,9 +143,23 @@ def guard(role, dkey, *fbs):
     return legible(h, *fbs) if h else legible(D[dkey], *fbs)
 
 
-GREEN = guard('success', 'green', D['green'], MOCHA['green'])
+# Semantic hue checks: GREEN must be in green/lime range (65..170)
+succ = tok.get('success')
+succ_h = colorsys.rgb_to_hls(*rgb(succ))[0] * 360 if succ else -1
+if 65 <= succ_h <= 170:
+    GREEN = guard('success', 'green', D['green'], MOCHA['green'])
+else:
+    GREEN = legible(D['green'], MOCHA['green'])
+
+# YELLOW must be in yellow/amber range (35..80)
+tert = tok.get('tertiary')
+tert_h = colorsys.rgb_to_hls(*rgb(tert))[0] * 360 if tert else -1
+if 35 <= tert_h <= 80:
+    YELLOW = guard('tertiary', 'yellow', D['yellow'], MOCHA['yellow'])
+else:
+    YELLOW = legible(D['yellow'], MOCHA['yellow'])
+
 BLUE = guard('primary', 'blue', D['blue'], MOCHA['blue'])
-YELLOW = guard('tertiary', 'yellow', D['yellow'], MOCHA['yellow'])
 MUTED = guard('outline', 'muted', D['muted'], MOCHA['muted'],
               D['text'], MOCHA['text'])
 RED = guard('error', 'red', D['red'], MOCHA['red'])

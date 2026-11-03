@@ -165,11 +165,67 @@ lift_text() { # lift_text <RRGGBB> <1=light,0=dark>
   printf '%02x%02x%02x' "$r" "$g" "$b"
 }
 
+get_hue() {
+  local h="$1"
+  [ -z "$h" ] && { echo -1; return; }
+  local r=$((16#${h:0:2})) g=$((16#${h:2:2})) b=$((16#${h:4:2}))
+  local mx=$r mn=$r
+  [ $g -gt $mx ] && mx=$g; [ $b -gt $mx ] && mx=$b
+  [ $g -lt $mn ] && mn=$g; [ $b -lt $mn ] && mn=$b
+  local d=$((mx - mn))
+  [ $d -eq 0 ] && { echo -1; return; }
+  local h_val=0
+  if [ $mx -eq $r ]; then
+    h_val=$(( (60 * (g - b) / d + 360) % 360 ))
+  elif [ $mx -eq $g ]; then
+    h_val=$(( 60 * (b - r) / d + 120 ))
+  else
+    h_val=$(( 60 * (r - g) / d + 240 ))
+  fi
+  echo "$h_val"
+}
+
+hue_dist() {
+  local a="$1" b="$2"
+  [ $a -lt 0 ] || [ $b -lt 0 ] && { echo 180; return; }
+  local d=$((a - b))
+  [ $d -lt 0 ] && d=$((-d))
+  [ $d -gt 180 ] && d=$((360 - d))
+  echo "$d"
+}
+
 primary=$(guard "$primary" "$D_blue")
-secondary=$(guard "$secondary" "$D_pink")
-tertiary=$(guard "$tertiary" "$D_yellow")
 error=$(guard "$error" "$D_red")
-success=$(guard "$success" "$D_green")
+
+# Green must be in green/lime range (65..170)
+succ_h=$(get_hue "$success")
+prim_h=$(get_hue "$primary")
+if [ "$succ_h" -ge 65 ] && [ "$succ_h" -le 170 ]; then
+  success=$(guard "$success" "$D_green")
+elif [ "$prim_h" -ge 65 ] && [ "$prim_h" -le 170 ]; then
+  success=$(guard "$primary" "$D_green")
+else
+  success="$D_green"
+fi
+
+# Yellow must be in yellow/amber range (35..80) and distinct from green
+tert_h=$(get_hue "$tertiary")
+grn_h=$(get_hue "$success")
+hdist=$(hue_dist "$tert_h" "$grn_h")
+if [ "$tert_h" -ge 35 ] && [ "$tert_h" -le 80 ] && [ "$hdist" -ge 25 ]; then
+  tertiary=$(guard "$tertiary" "$D_yellow")
+else
+  tertiary="$D_yellow"
+fi
+
+# Pink / secondary must be distinct from primary (>= 30°)
+sec_h=$(get_hue "$secondary")
+pdist=$(hue_dist "$sec_h" "$prim_h")
+if [ "$sec_h" -ge 265 ] && [ "$sec_h" -le 335 ] && [ "$pdist" -ge 30 ]; then
+  secondary=$(guard "$secondary" "$D_pink")
+else
+  secondary="$D_pink"
+fi
 # outline is TEXT on the bar (the │ separators), so it keeps the bg reference.
 outline=$(guard "$outline" "$D_overlay_0")
 # The label colour itself, guarded before anything is measured against it (see
@@ -271,7 +327,7 @@ emit() { # emit <name> <value>: single set -g line
   emit yellow "$tertiary"
   emit blue "$primary"
   emit pink "$secondary"
-  emit teal "$primary"
+  emit teal "$D_teal"
   emit overlay_0 "$outline"
   emit overlay0 "$outline"
   emit surface_0 "$surface0"
