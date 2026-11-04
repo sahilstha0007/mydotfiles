@@ -180,9 +180,6 @@ dressing.nvim. Better `vim.ui.select` and `vim.ui.input` rendering.
 ### `lua/plugins/ui/treesitter-context.lua`
 Pins the current function/class at the top of the window while scrolling.
 
-### `lua/plugins/ui/dropbar.lua`
-dropbar.nvim. Clickable IDE breadcrumbs in winbar showing file path, class, and function hierarchy.
-
 ### `lua/plugins/ui/tiny-inline-diagnostic.lua`
 tiny-inline-diagnostic.nvim. Clean, non-intrusive floating multi-line diagnostics rendered directly beside/under code.
 
