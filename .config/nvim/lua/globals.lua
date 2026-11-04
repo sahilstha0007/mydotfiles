@@ -58,7 +58,3 @@ local bun_node_host = vim.env.HOME .. '/.bun/bin/neovim-node-host'
 if vim.fn.executable(bun_node_host) == 1 then
   vim.g.node_host_prog = bun_node_host
 end
-
--- Disable unused Perl and Ruby legacy providers (eliminates checkhealth warnings)
-vim.g.loaded_perl_provider = 0
-vim.g.loaded_ruby_provider = 0

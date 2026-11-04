@@ -12,21 +12,6 @@ return {
   'folke/snacks.nvim',
   priority = 1000,
   lazy = false,
-  init = function()
-    -- When running inside tmux under WezTerm, snacks.nvim's extended-keys check
-    -- queries #{client_termname} (which returns xterm-256color instead of wezterm).
-    -- Setting SNACKS_WEZTERM=1 informs snacks that WezTerm's kitty graphics
-    -- protocol is available via tmux allow-passthrough.
-    if vim.env.TMUX and not vim.env.SNACKS_WEZTERM then
-      local ok, termtype = pcall(
-        vim.fn.system,
-        { 'tmux', 'display-message', '-p', '#{client_termtype}' }
-      )
-      if ok and termtype:lower():find 'wezterm' then
-        vim.env.SNACKS_WEZTERM = '1'
-      end
-    end
-  end,
   keys = {
     {
       '<leader>l',
@@ -756,11 +741,6 @@ return {
       -- <leader>nN a free scratch buffer. Module ships with snacks; wiring it
       -- costs one keymap each and no new dependency.
       scratch = { enabled = true },
-      -- image viewer: supports kitty graphics protocol through wezterm & tmux
-      image = {
-        enabled = true,
-        force = true,
-      },
 
       -- dashboard start screen
       dashboard = {
