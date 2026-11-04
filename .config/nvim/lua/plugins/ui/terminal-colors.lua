@@ -383,8 +383,8 @@ local function derive_accents(chosen, primary_hex, D)
   local ref = primary_hex or D.blue
   local base_hue = hsluv_hue(ref)
   local _, s, l = unpack(hsluv.hex_to_hsluv(ref))
-  s = math.min(s or 85, 85)
-  l = math.min(l or 80, 68)
+  s = math.min(s or 55, 55)
+  l = math.min(l or 78, 78)
   for slot, offset in pairs(OFFSETS) do
     if not chosen[slot] and ref then
       chosen[slot] = hsluv.hsluv_to_hex { (base_hue + offset) % 360, s, l }
@@ -409,7 +409,7 @@ local function build_overrides()
     for slot, hex in pairs(A) do
       local h = hsluv_hue(hex)
       if h >= 0 then
-        A[slot] = hsluv.hsluv_to_hex { h, 85, 68 }
+        A[slot] = hsluv.hsluv_to_hex { h, 55, 78 }
       end
     end
   end

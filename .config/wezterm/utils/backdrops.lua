@@ -405,7 +405,7 @@ function BackDrops:_gen_opts()
          -- display copy when cached (fast decode); original while warming
          source = { File = display_path(self.images[self.current_idx]) },
          horizontal_align = 'Center',
-         hsb = { brightness = 1.0, saturation = 1.0 },
+         hsb = { brightness = 0.85, saturation = 0.95 },
       })
       -- flat frost wash — how much "glass" vs. flat dark you get across the
       -- entire window uniformly with no partition or middle seam.
