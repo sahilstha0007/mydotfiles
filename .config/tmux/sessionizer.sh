@@ -8,9 +8,11 @@ projects="$HOME/Projects"
 if [[ $# -eq 1 ]]; then
     selected="$1"
 else
-    # Discover categorized and standalone projects under ~/Projects.
-    # Standard category directories (Active, Current, Learning, Coursework, etc.)
-    # have their subdirectories listed; standalone projects at ~/Projects/* are also included.
+    # Upgraded interactive Project Hub with active sessions, git preview & scratch support
+    if [[ -x "$HOME/.config/kitty/scripts/project-hub.sh" ]]; then
+        exec "$HOME/.config/kitty/scripts/project-hub.sh"
+    fi
+    # Fallback to local discovery
     list=$(
         {
             known_cats="^(Active|Archive|Coursework|Current|Learning|Personal|Sandbox|Tools|Work|Client)$"
