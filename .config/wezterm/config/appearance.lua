@@ -137,11 +137,14 @@ return {
       target = 'CursorColor',
    },
 
-   -- Blanks the title text. This is the ONLY supported way: wezterm has no
-   -- boolean to switch the title off, it has a title *formatter*. Returning ''
-   -- yields no text. The tab bar (config/tab_bar.lua) already labels each
-   -- window, so a second label in the titlebar is duplication.
-   wezterm.on('format-window-title', function()
-      return ''
+   -- Window title formatter for window managers and taskbars.
+   -- With window_decorations = 'NONE', no in-window title bar is drawn,
+   -- but Wayland compositors (Hyprland), overview menus, and status bars
+   -- read this title to identify the window.
+   wezterm.on('format-window-title', function(tab, pane)
+      if tab and tab.active_pane and tab.active_pane.title and #tab.active_pane.title > 0 then
+         return tab.active_pane.title
+      end
+      return 'wezterm'
    end),
 }

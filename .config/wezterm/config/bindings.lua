@@ -501,18 +501,11 @@ local keys = {
    { key = 'Enter', mods = mod.SUPER,     action = act.TogglePaneZoomState },
    { key = 'w',     mods = mod.SUPER,     action = act.CloseCurrentPane({ confirm = false }) },
 
-   -- app: quit
-   -- QuitApplication is a unit variant -- no parentheses. It exits without a
-   -- confirm dialog because window_close_confirmation is 'NeverPrompt'
-   -- (appearance.lua).
-   --
-   -- Alt+q (mod.SUPER alias on Linux/win) quits the whole WezTerm app.
-   -- Do not bind the literal Windows-key (SUPER) here: Hyprland owns that
-   -- key for killactive and forwards window-close; binding it in WezTerm
-   -- would only collide with the compositor. Universal Super+q closes the
-   -- single focused window (killactive.sh), Shift+Super+q kills all
-   -- instances.
-   { key = 'q',     mods = mod.SUPER,     action = act.QuitApplication },
+   -- app / window close:
+   -- Alt+q (mod.SUPER on Linux) closes the current pane/window (never kills all WezTerm instances).
+   -- Alt+Shift+Q quits the entire application.
+   { key = 'q',     mods = mod.SUPER,     action = act.CloseCurrentPane({ confirm = false }) },
+   { key = 'Q',     mods = mod.SUPER,     action = act.QuitApplication },
 
    -- NOTE: no Ctrl+Alt+hjkl pane navigation here on purpose — wezterm
    -- would eat the key before tmux ever sees it, killing tmux.nvim's
@@ -566,7 +559,7 @@ local keys = {
    {
       key = 'q',
       mods = 'SUPER',
-      action = act.CloseCurrentPane({ confirm = true }),
+      action = act.CloseCurrentPane({ confirm = false }),
    },
    {
       key = 'Q',
