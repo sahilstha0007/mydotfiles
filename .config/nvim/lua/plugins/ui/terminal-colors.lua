@@ -230,6 +230,13 @@ local function pick_accents()
   local taken = {} -- accepted hues
 
   local primary = acc(4, 12) -- wallpaper primary -> blue slot, always
+  if pal.bg and pal.ansi[4] and saturation(pal.ansi[4]) >= ACCENT_MIN_SAT then
+    local c4 = contrast(pal.ansi[4], pal.bg)
+    local c12 = pal.ansi[12] and contrast(pal.ansi[12], pal.bg) or 0
+    if c4 >= MIN_CONTRAST and c4 > c12 then
+      primary = pal.ansi[4]
+    end
+  end
   if primary then
     chosen.blue = primary
     taken[#taken + 1] = hue(primary)

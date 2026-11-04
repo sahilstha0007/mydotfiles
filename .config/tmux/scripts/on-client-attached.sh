@@ -25,4 +25,9 @@ fi
 if [ -n "$detected" ]; then
   tmux set-environment -g TERMINAL_STACK_PROFILE "$detected"
   tmux set-environment TERMINAL_STACK_PROFILE "$detected"
+  if [ "$detected" = "kitty" ]; then
+    tmux source-file -q "$HOME/.config/tmux/colors-kitty.conf"
+  elif [ "$detected" = "wezterm" ]; then
+    tmux source-file -q "$HOME/.config/tmux/colors-matugen.conf"
+  fi
 fi

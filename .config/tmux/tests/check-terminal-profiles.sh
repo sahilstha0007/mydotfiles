@@ -42,17 +42,26 @@ for _ in {1..30}; do
   sleep 0.1
 done
 
-expected_blue=$(grep '^set -g @thm_blue ' "$conf_dir/colors-matugen.conf" | tail -1 | sed -E 's/.*"(#[0-9a-fA-F]{6})".*/\1/')
-[[ -n "$expected_blue" ]] || {
+expected_wezterm_blue=$(grep '^set -g @thm_blue ' "$conf_dir/colors-matugen.conf" | tail -1 | sed -E 's/.*"(#[0-9a-fA-F]{6})".*/\1/')
+expected_kitty_blue=$(grep '^set -g @thm_blue ' "$conf_dir/colors-kitty.conf" | tail -1 | sed -E 's/.*"(#[0-9a-fA-F]{6})".*/\1/')
+[[ -n "$expected_wezterm_blue" ]] || {
   echo "FAIL: could not read @thm_blue from $conf_dir/colors-matugen.conf" >&2
   exit 1
 }
-[[ "$kitty_blue" == "$expected_blue" ]] || {
-  echo "FAIL: Kitty tmux should use the shared wallpaper palette ($expected_blue), got '$kitty_blue'" >&2
+[[ -n "$expected_kitty_blue" ]] || {
+  echo "FAIL: could not read @thm_blue from $conf_dir/colors-kitty.conf" >&2
   exit 1
 }
-[[ "$wezterm_blue" == "$expected_blue" ]] || {
-  echo "FAIL: WezTerm tmux should use the shared wallpaper palette ($expected_blue), got '$wezterm_blue'" >&2
+[[ "$kitty_blue" == "$expected_kitty_blue" ]] || {
+  echo "FAIL: Kitty tmux should use Kitty's palette ($expected_kitty_blue), got '$kitty_blue'" >&2
+  exit 1
+}
+[[ "$wezterm_blue" == "$expected_wezterm_blue" ]] || {
+  echo "FAIL: WezTerm tmux should use WezTerm's wallpaper palette ($expected_wezterm_blue), got '$wezterm_blue'" >&2
+  exit 1
+}
+[[ "$kitty_blue" != "$wezterm_blue" ]] || {
+  echo "FAIL: Kitty and WezTerm should have distinct profile palettes, both got '$kitty_blue'" >&2
   exit 1
 }
 
@@ -81,4 +90,4 @@ wezterm_env=$(TMUX_TMPDIR="$work/wezterm" tmux show-environment -g TERMINAL_STAC
   exit 1
 }
 
-echo "PASS: Kitty and WezTerm share one wallpaper palette; sockets, profiles, and restore paths stay distinct"
+echo "PASS: Kitty and WezTerm use profile-specific palettes; sockets, profiles, and restore paths stay distinct"
