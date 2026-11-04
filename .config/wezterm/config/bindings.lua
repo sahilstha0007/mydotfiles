@@ -138,6 +138,32 @@ local panel_close = wezterm.action_callback(function(window, pane)
    window:perform_action(act.PopKeyTable, pane)
 end)
 
+local function resize_window(window, delta)
+   -- Hyprland (Wayland) integration:
+   -- On Wayland/Hyprland, client-side window:set_inner_size() cannot alter the
+   -- compositor's window container geometry, which desynchronizes the EGL surface
+   -- from the Wayland toplevel and causes severe graphical glitching/tearing.
+   -- Delegate the window resize to Hyprland's compositor dispatcher.
+   if os.getenv('HYPRLAND_INSTANCE_SIGNATURE') then
+      local cmd = string.format('hl.dsp.window.resize({ x = %d, y = %d, relative = true })', delta, delta)
+      local spawn = wezterm.background_child_process or wezterm.run_child_process
+      local ok = pcall(spawn, { 'hyprctl', 'dispatch', cmd })
+      if not ok then
+         pcall(spawn, { 'hyprctl', 'dispatch', 'resizeactive', string.format('%d %d', delta, delta) })
+      end
+      return
+   end
+
+   local dimensions = window:get_dimensions()
+   -- On Windows or fullscreen, set_inner_size can freeze or break UI
+   if platform.is_win or dimensions.is_full_screen then
+      return
+   end
+   local new_width = math.max(300, dimensions.pixel_width + delta)
+   local new_height = math.max(200, dimensions.pixel_height + delta)
+   window:set_inner_size(new_width, new_height)
+end
+
 -- stylua: ignore
 ---@type Key[]
 local keys = {
@@ -269,38 +295,34 @@ local keys = {
    -- window: spawn windows
    { key = 'n',          mods = mod.SUPER,     action = act.SpawnWindow },
 
-   -- window: zoom window
+   -- window: zoom window (shrink / grow 50px)
    {
       key = '-',
       mods = mod.SUPER,
       action = wezterm.action_callback(function(window, _pane)
-         local dimensions = window:get_dimensions()
-         -- on Windows 11 (the only OS I'm able to test this on), `is_full_screen` is always false (it's a bug).
-         -- Calling `set_inner_size` when the window is actually in fullscreen will cause the
-         -- program UI to completely freeze.
-         if platform.is_win or dimensions.is_full_screen then
-            return
-         end
-         local new_width = dimensions.pixel_width - 50
-         local new_height = dimensions.pixel_height - 50
-         window:set_inner_size(new_width, new_height)
-      end)
+         resize_window(window, -50)
+      end),
+   },
+   {
+      key = '_',
+      mods = mod.SUPER,
+      action = wezterm.action_callback(function(window, _pane)
+         resize_window(window, -50)
+      end),
    },
    {
       key = '=',
       mods = mod.SUPER,
       action = wezterm.action_callback(function(window, _pane)
-         local dimensions = window:get_dimensions()
-         -- on Windows 11 (the only OS I'm able to test this on), `is_full_screen` is always false (it's a bug).
-         -- Calling `set_inner_size` when the window is actually in fullscreen will cause the
-         -- program UI to completely freeze.
-         if platform.is_win or dimensions.is_full_screen then
-            return
-         end
-         local new_width = dimensions.pixel_width + 50
-         local new_height = dimensions.pixel_height + 50
-         window:set_inner_size(new_width, new_height)
-      end)
+         resize_window(window, 50)
+      end),
+   },
+   {
+      key = '+',
+      mods = mod.SUPER,
+      action = wezterm.action_callback(function(window, _pane)
+         resize_window(window, 50)
+      end),
    },
    {
       key = 'Enter',
