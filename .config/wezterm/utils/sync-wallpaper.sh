@@ -120,11 +120,6 @@ fi
 printf '%s' "$t" > "$synced"
 printf '%s' "$t" > "$cache"
 
-# Keep the desktop wallpaper (awww) in sync if awww daemon is active
-if command -v awww >/dev/null 2>&1 && awww query >/dev/null 2>&1; then
-   awww img "$t" >/dev/null 2>&1 || true
-fi
-
 # Re-derive tmux status colors from the same palette (keeps tmux text in
 # lockstep with wezterm/nvim instead of a stale hand-written file).
 "$HOME/.config/tmux/colors-from-matugen.sh"
