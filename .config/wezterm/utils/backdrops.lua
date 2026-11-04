@@ -566,16 +566,25 @@ end
 function BackDrops:from_cache_or_random(window)
    local cached = cached_wallpaper()
    local found = false
-   if cached and #self.images > 0 then
-      for idx, img in ipairs(self.images) do
-         if img == cached then
-            self.current_idx = idx
+   if cached then
+      local f = io.open(cached, 'r')
+      if f then
+         f:close()
+         for idx, img in ipairs(self.images) do
+            if img == cached then
+               self.current_idx = idx
+               found = true
+               break
+            end
+         end
+         if not found then
+            table.insert(self.images, cached)
+            self.current_idx = #self.images
             found = true
-            break
          end
       end
    end
-   if not found then
+   if not found and #self.images > 0 then
       -- First boot (no cache) or the cached file vanished: pick one and
       -- persist it now so the NEXT start is stable, never random again.
       self.current_idx = math.random(#self.images)

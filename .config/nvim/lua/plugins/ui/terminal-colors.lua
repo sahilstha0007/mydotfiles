@@ -1026,12 +1026,15 @@ end
 
 -- Read the wallpaper palette that drives the stack:
 -- - WezTerm uses the dev stack's custom wallpaper cascade (~/.config/wezterm/colors/custom.lua).
--- - Kitty (daily driver) stays on stock Catppuccin mocha (default how it would be in kitty).
--- Unknown profiles keep the stock palette rather than guessing.
+-- - Kitty (daily driver) uses ML4W's palette (~/.config/kitty/colors-matugen.conf).
+-- Fallback resolves wezterm then kitty so standalone sessions inherit wallpaper colors.
 local function read_terminal_palette()
   local host = host_terminal()
   if host == 'wezterm' then
     return read_wezterm_palette()
+  end
+  if host == 'kitty' then
+    return read_kitty_palette()
   end
   return false
 end

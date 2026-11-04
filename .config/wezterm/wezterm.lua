@@ -6,7 +6,6 @@ require('utils.backdrops')
    :exclude_files({
       'wallhaven-x1elzo_1920x1080.png',
       'Generated Image September 16, 2025 - 11_32PM.png',
-      'wallhaven-49mqg8.jpg',
    })
    :from_cache_or_random()
 
