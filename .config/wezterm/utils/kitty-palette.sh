@@ -102,6 +102,16 @@ color12 $b4
 color13 $b5
 color14 $b6
 color15 $b7
+
+# --- UI Chrome & Borders (Hero Accent from Wallpaper) ---
+active_tab_foreground   $bg
+active_tab_background   $a4
+inactive_tab_foreground $b0
+inactive_tab_background $a0
+tab_bar_background      $bg
+tab_bar_margin_color    $bg
+active_border_color     $a4
+inactive_border_color   $a0
 EOF
 
 [ -s "$out.tmp" ] || { rm -f "$out.tmp"; exit 0; }
