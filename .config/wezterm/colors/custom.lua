@@ -289,8 +289,10 @@ local function apply_wallpaper(base, mat, light)
    -- the moment anything shifts. Darkening the same distance restores 9.01.
    -- Move away from the background; the direction is the only thing that flips.
    if c.text then
-      c.text = blend(c.text, light and '#000000' or '#ffffff', 0.55)
+      c.text = blend(c.text, light and '#000000' or '#ffffff', 0.18)
    end
+   c.subtext1 = blend(c.text, bg, 0.15)
+   c.subtext0 = blend(c.text, bg, 0.30)
    -- The Hero Accent: signature wallpaper primary for cursor, tabs, borders, and pills
    c.accent    = guard(mat.primary, base.blue, bg)
 
@@ -323,12 +325,10 @@ local function apply_wallpaper(base, mat, light)
       c.yellow = base.yellow
    end
 
-   -- Blue (ANSI 4): information / functions / paths. Must be in blue/cyan range (185..260)
-   if (prim_h >= 185 and prim_h <= 260) and contrast(mat.primary, bg) >= MIN_CONTRAST then
-      c.blue = mat.primary
-   else
-      c.blue = base.blue
-   end
+   -- Blue (ANSI 4): information / functions / paths / HERO ACCENT.
+   -- Adopts the wallpaper primary accent (c.accent) so that functions,
+   -- chrome, line numbers, and tabs reflect the signature wallpaper palette.
+   c.blue = c.accent
 
    -- Magenta (ANSI 5): keywords / control flow. Must be distinct from red and blue
    local sec_h = hue(mat.secondary)

@@ -20,16 +20,26 @@ local M = {}
 
 ---Apply the hierarchy on top of whatever palette is currently loaded.
 function M.apply()
-  -- Catppuccin semantic slots are guaranteed present: terminal-colors maps
-  -- the terminal's ANSI 0-15 onto these exact names, and falls back to stock
-  -- mocha if nothing answers. Reading the live highlight group is more
-  -- robust than re-deriving hexes here.
-  --
-  -- Read the SOURCE group, never one this function writes. LineNr used to be
-  -- the source for overlay0, but LineNr is also a LineNr target below — the
-  -- read returned whatever the previous run left there and echoed it straight
-  -- back, so both were stuck on stock catppuccin surface1 (1.65:1 on the
-  -- wallpaper background) and never followed the palette at all.
+  -- Retrieve the active Catppuccin palette if available. When terminal-colors
+  -- runs, color_overrides ensures cp.overlay0/cp.overlay1/cp.text satisfy WCAG AA
+  -- (>= 4.5:1 contrast against the wallpaper background).
+  local cp
+  local ok_t, theme = pcall(require, 'utils.theme')
+  if ok_t and theme and theme.palette then
+    pcall(function()
+      cp = theme.palette()
+    end)
+  end
+  if not cp then
+    local ok_c, palettes = pcall(require, 'catppuccin.palettes')
+    if ok_c and palettes then
+      pcall(function()
+        cp = palettes.get_palette()
+      end)
+    end
+  end
+
+  -- Fallback highlight slot reader for standalone / minimal test runners
   local function slot(name)
     local hl = vim.api.nvim_get_hl(0, { name = name, link = false })
     return hl.fg and string.format('#%06x', hl.fg) or nil
@@ -37,11 +47,14 @@ function M.apply()
 
   local c = {
     surface2 = slot 'CursorLine',
-    surface1 = slot 'NonText',
-    overlay1 = slot 'Comment',
-    overlay0 = slot 'NonText',
-    comment = slot 'Comment',
-    text = slot 'Normal',
+    surface1 = (cp and cp.surface1) or slot 'NonText',
+    overlay1 = (cp and cp.overlay1) or slot 'Comment',
+    overlay0 = (cp and cp.overlay0) or slot 'NonText',
+    comment = (cp and cp.overlay1) or slot 'Comment',
+    punctuation = (cp and cp.overlay0) or slot 'NonText',
+    operator = (cp and cp.overlay1) or slot 'Comment',
+    linenr = (cp and cp.overlay0) or slot 'NonText',
+    text = (cp and cp.text) or slot 'Normal',
     error = slot 'DiagnosticError',
     warn = slot 'DiagnosticWarn',
   }
@@ -57,18 +70,18 @@ function M.apply()
   set(0, '@comment.warning', { link = 'DiagnosticWarn' })
   set(0, '@comment.todo', { fg = c.warn, bold = true })
 
-  -- Punctuation and operators: recede hard. These are the highest-frequency
-  -- tokens on screen and the lowest-information ones.
-  set(0, '@punctuation', { fg = c.surface1 })
-  set(0, '@punctuation.bracket', { fg = c.surface1 })
-  set(0, '@punctuation.delimiter', { fg = c.surface1 })
-  set(0, '@punctuation.special', { fg = c.surface1 })
-  set(0, '@operator', { fg = c.overlay0 })
-  set(0, '@keyword.operator', { fg = c.overlay0 })
+  -- Punctuation and operators: recede hard while clearing MIN_CONTRAST (>= 4.5:1)
+  -- so brackets and symbols remain crisp and legible.
+  set(0, '@punctuation', { fg = c.punctuation })
+  set(0, '@punctuation.bracket', { fg = c.punctuation })
+  set(0, '@punctuation.delimiter', { fg = c.punctuation })
+  set(0, '@punctuation.special', { fg = c.punctuation })
+  set(0, '@operator', { fg = c.operator })
+  set(0, '@keyword.operator', { fg = c.operator })
 
   -- Gutter: the current line number is the exception — it is a position
   -- cue, not decoration, so it gets full text weight.
-  set(0, 'LineNr', { fg = c.overlay0 })
+  set(0, 'LineNr', { fg = c.linenr })
   set(0, 'SignColumn', { link = 'LineNr' })
   set(0, 'CursorLineNr', { fg = c.text })
 

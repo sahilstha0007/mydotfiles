@@ -150,17 +150,16 @@ guard() { # guard <hex-no-#> <fallback-hex-no-#>
 # value wezterm resolves, so every surface shows plain text at one brightness.
 #
 # Pure-bash integer maths (no awk strtonum — mawk lacks it, and this script
-# deliberately avoids a gawk dependency). floor(v + (t-v)*0.55 + 0.5) is
-# computed as (100v + 55(t-v) + 50) / 100, which is exact for 0..255 inputs.
-# Direction only INCREASES text/background contrast, and the surfaces below are
-# measured against the (now brighter) fg, so nothing falls back differently.
+# deliberately avoids a gawk dependency). floor(v + (t-v)*0.18 + 0.5) is
+# computed as (100v + 18(t-v) + 50) / 100, which is exact for 0..255 inputs.
+# Matches wezterm colors/custom.lua gentle lift ratio (0.18) preserving wallpaper hue.
 lift_text() { # lift_text <RRGGBB> <1=light,0=dark>
   local h="$1" light="$2" t=255
   [ "$light" = 1 ] && t=0
   local r=$((16#${h:0:2})) g=$((16#${h:2:2})) b=$((16#${h:4:2}))
-  r=$(((100 * r + 55 * (t - r) + 50) / 100))
-  g=$(((100 * g + 55 * (t - g) + 50) / 100))
-  b=$(((100 * b + 55 * (t - b) + 50) / 100))
+  r=$(((100 * r + 18 * (t - r) + 50) / 100))
+  g=$(((100 * g + 18 * (t - g) + 50) / 100))
+  b=$(((100 * b + 18 * (t - b) + 50) / 100))
   # Bare RRGGBB: the caller's fghex carries no '#', and the emit step adds it.
   printf '%02x%02x%02x' "$r" "$g" "$b"
 }
