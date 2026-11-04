@@ -1,31 +1,54 @@
 #!/usr/bin/env bash
-# tmux sessionizer — Prefix + f
+# tmux sessionizer — Prefix + f (tmux) / Alt+Ctrl+s (wezterm)
 # fzf over project dirs -> create/switch to a named session rooted there.
 # Works from inside tmux (popup) and from a bare shell (attaches).
 
 projects="$HOME/Projects"
 
-# loose projects at ~/Projects/* plus categorized ones under Current/ and Learning/
-list=$(
-    {
-        find "$projects" -mindepth 1 -maxdepth 1 -type d \
-            ! -name node_modules ! -name .git \
-            ! -path "$projects/Current" ! -path "$projects/Learning"
-        find "$projects/Current" "$projects/Learning" -mindepth 1 -maxdepth 1 -type d 2>/dev/null
-    } | sort -u
-)
+if [[ $# -eq 1 ]]; then
+    selected="$1"
+else
+    # Discover categorized and standalone projects under ~/Projects.
+    # Standard category directories (Active, Current, Learning, Coursework, etc.)
+    # have their subdirectories listed; standalone projects at ~/Projects/* are also included.
+    list=$(
+        {
+            known_cats="^(Active|Archive|Coursework|Current|Learning|Personal|Sandbox|Tools|Work|Client)$"
+            for d in "$projects"/*; do
+                [[ -d "$d" ]] || continue
+                b=$(basename "$d")
+                [[ "$b" =~ ^\..* ]] && continue
+                if [[ "$b" =~ $known_cats ]]; then
+                    find "$d" -mindepth 1 -maxdepth 1 -type d \
+                        ! -name '.*' ! -name 'node_modules' ! -name 'target' ! -name 'build' ! -name 'dist' 2>/dev/null
+                else
+                    echo "$d"
+                fi
+            done
+        } | sort -u
+    )
 
-selected=$(printf '%s\n' "$list" | fzf --prompt='project ❯ ' --preview='ls -A {} | head -20')
+    selected=$(printf '%s\n' "$list" | fzf --prompt='project ❯ ' --preview='ls -A {} | head -20')
+fi
 
 [[ -z $selected ]] && exit 0
 
 # session names can't contain . or :
 name=$(basename "$selected" | tr '.:' '__')
 
+# Reuse existing session even if existing name differs only by casing (e.g. iothub vs iotHUB)
+existing=$(tmux list-sessions -F '#{session_name}' 2>/dev/null | grep -i -m 1 "^${name}$" || true)
+if [[ -n $existing ]]; then
+    name="$existing"
+fi
+
 # Only seed a fresh session with nvim; an existing session is switched to as-is
 # so a re-pick never clobbers work already open in it.
 if ! tmux has-session -t "$name" 2>/dev/null; then
     tmux new-session -ds "$name" -c "$selected"
+    # Stamp project root on the session so all future windows and panes inherit it
+    tmux set-option -t "$name" @project_root "$selected"
+
     # Open nvim in the project's first window. nvim loads this project's own
     # mini.session if one was saved under the project name (MiniSessions.write
     # "<name>"), so jumping back to a project restores its window layout; a
@@ -45,10 +68,15 @@ if ! tmux has-session -t "$name" 2>/dev/null; then
     done
     tmux send-keys -t "$name" \
         "nvim -c \"lua pcall(function() require('mini.sessions').read('$name') end)\"" C-m
+else
+    # Existing session: ensure @project_root is stamped with this project's root path
+    tmux set-option -t "$name" @project_root "$selected"
 fi
+
+cd "$selected" || exit 1
 
 if [[ -n $TMUX ]]; then
     tmux switch-client -t "$name"
 else
-    exec tmux attach -t "$name"
+    exec tmux attach -t "$name" -c "$selected"
 fi
