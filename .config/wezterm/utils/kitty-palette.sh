@@ -29,7 +29,7 @@ set -eu
 # Arg 1 overrides the destination (same convention as herdr-palette.sh) so the
 # generator can be run against a scratch file in tests without touching the live
 # kitty config or signalling the running kitty.
-real_out="$HOME/.config/kitty/colors-matugen.conf"
+real_out="$HOME/.config/kitty/dev-colors-matugen.conf"
 out="${1:-$real_out}"
 custom="$HOME/.config/wezterm/colors/custom.lua"
 palette="$HOME/.config/wezterm/colors/matugen.lua"
