@@ -507,17 +507,8 @@ local keys = {
    },
 
    -- panes --
-   -- panes: split panes
-   {
-      key = [[\]],
-      mods = mod.SUPER,
-      action = act.SplitVertical({ domain = 'CurrentPaneDomain' }),
-   },
-   {
-      key = [[\]],
-      mods = mod.SUPER_REV,
-      action = act.SplitHorizontal({ domain = 'CurrentPaneDomain' }),
-   },
+   -- panes: WezTerm strictly owns tabs only; tmux owns all splits/panes.
+   -- (Native split bindings disabled to prevent multiplexer layering overlap)
 
    -- panes: zoom+close pane
    { key = 'Enter', mods = mod.SUPER,     action = act.TogglePaneZoomState },
