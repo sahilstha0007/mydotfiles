@@ -275,12 +275,12 @@ def draw_right_status(draw_data: DrawData, screen: Screen) -> None:
     default_bg = as_rgb(color_as_int(draw_data.default_bg))
     accent_bg = as_rgb(color_as_int(draw_data.active_bg))
     accent_fg = as_rgb(color_as_int(draw_data.active_fg))
-    pill_bg = as_rgb(0x212e3f)
-    mid_fg = as_rgb(0xcdcecf)
+    pill_bg = as_rgb(0x03195b)
+    mid_fg = as_rgb(0xcbe9fd)
     git_fg = as_rgb(0x81b29a)
-    tmux_fg = as_rgb(0x719cd6)
-    agent_fg = as_rgb(0x9d79d6)
-    container_fg = as_rgb(0x63cdcf)
+    tmux_fg = as_rgb(0x3781fc)
+    agent_fg = as_rgb(0xbaa1e2)
+    container_fg = as_rgb(0x7ad5d6)
     bat_fg = bat_fg_custom if bat_fg_custom is not None else mid_fg
 
     # All candidate pill segments: (content, fg, bg)
@@ -384,11 +384,28 @@ PROCESS_ICONS = {
 DEFAULT_PROCESS_ICON = ""
 
 
-def get_process_icon(active_exe: str) -> str:
-    exe = (active_exe or "").lower()
+def get_tab_icon(tab: TabBarData) -> str:
+    # 1. Try to inspect running process through boss if available
+    try:
+        boss = get_boss()
+        if boss:
+            t = boss.tab_for_id(tab.tab_id)
+            if t and t.current_window:
+                cmd = getattr(t.current_window.child, "cmdline", None)
+                if cmd and len(cmd) > 0:
+                    exe = os.path.basename(cmd[0]).lower()
+                    for name, icon in PROCESS_ICONS.items():
+                        if name in exe:
+                            return icon
+    except Exception:
+        pass
+
+    # 2. Fallback: match from tab title
+    title_lower = (tab.title or "").lower()
     for name, icon in PROCESS_ICONS.items():
-        if name in exe:
+        if name in title_lower:
             return icon
+
     return DEFAULT_PROCESS_ICON
 
 
@@ -414,7 +431,7 @@ def draw_tab(
     # 2. Pill body: draw index + process icon badge + title
     screen.cursor.bg = tab_bg
     screen.cursor.fg = tab_fg
-    icon = get_process_icon(tab.active_exe)
+    icon = get_tab_icon(tab)
     badge = f" {index} {icon} "
     screen.draw(badge)
 
