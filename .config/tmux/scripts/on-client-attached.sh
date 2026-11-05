@@ -25,4 +25,13 @@ fi
 if [ -n "$detected" ]; then
   tmux set-environment -g TERMINAL_STACK_PROFILE "$detected"
   tmux set-environment TERMINAL_STACK_PROFILE "$detected"
+  if [ "$detected" = "kitty" ]; then
+    tmux source-file -q ~/.config/tmux/colors-nightfox.conf
+    tmux set -gF popup-style "bg=#{@thm_surface_0},fg=#{@thm_text}"
+    tmux set -gF pane-active-border-style "fg=#{@thm_blue}"
+  elif [ "$detected" = "wezterm" ]; then
+    tmux source-file -q ~/.config/tmux/colors-matugen.conf
+    tmux set -gF popup-style "bg=default,fg=#{@thm_text}"
+    tmux set -gF pane-active-border-style "fg=#{@thm_blue}"
+  fi
 fi

@@ -705,9 +705,47 @@ local function query()
   pcall(vim.api.nvim_ui_send, table.concat(q))
 end
 
--- Re-run catppuccin setup + colorscheme with the current palette.
--- color_overrides changed => catppuccin recompiles its cache and re-tints.
+local host_terminal
+
+-- Re-run theme setup + colorscheme with the current profile and palette.
+-- Under Kitty: uses Nightfox theme.
+-- Under WezTerm: uses Catppuccin with live wallpaper overrides.
 local function apply()
+  local host = host_terminal()
+  if host == 'kitty' then
+    local ok, err = pcall(function()
+      local ok_nf, nightfox = pcall(require, 'nightfox')
+      if ok_nf and nightfox then
+        nightfox.setup {
+          options = {
+            transparent = true,
+            terminal_colors = true,
+            dim_inactive = false,
+            styles = {
+              comments = 'italic',
+              keywords = 'bold',
+              types = 'italic,bold',
+            },
+          },
+        }
+        vim.cmd.colorscheme 'nightfox'
+        require('plugins.ui.hierarchy').apply()
+      else
+        local opts = catppuccin_opts()
+        require('catppuccin').setup(opts)
+        vim.cmd.colorscheme 'catppuccin'
+        require('plugins.ui.hierarchy').apply()
+      end
+    end)
+    if not ok then
+      vim.notify(
+        'terminal-colors (kitty): ' .. tostring(err),
+        vim.log.levels.ERROR
+      )
+    end
+    return
+  end
+
   local opts = catppuccin_opts()
   local ok, err = pcall(function()
     require('catppuccin').setup(opts)
@@ -957,7 +995,7 @@ end
 -- dead, so use the explicit terminal profile or legacy emulator markers,
 -- which survive the tmux boundary. Both kitty and WezTerm adopt the same
 -- wallpaper palette; unknown profiles stay on stock Catppuccin.
-local function host_terminal()
+host_terminal = function()
   local profile = os.getenv 'TERMINAL_STACK_PROFILE'
   local wez_pane = os.getenv 'WEZTERM_PANE'
   local kitty_id = os.getenv 'KITTY_WINDOW_ID'
@@ -1273,5 +1311,11 @@ return {
     config = function()
       setup()
     end,
+  },
+  {
+    'EdenEast/nightfox.nvim',
+    name = 'nightfox',
+    lazy = false,
+    priority = 1000,
   },
 }
