@@ -5,8 +5,7 @@
 -- Obsidian-markdown notes you edit here. Lazy-loads on markdown so it costs
 -- nothing until you're in a note.
 --
--- Paste key: <leader>p (normal mode). It auto-detects the file type and drops
--- the image into a relative `assets/` (configurable via `opts.default`).
+-- Paste key: <leader>ip (normal mode, avoiding collision with Octo <leader>p* prefix).
 return {
   {
     'HakonHarnes/img-clip.nvim',
@@ -23,7 +22,7 @@ return {
     },
     keys = {
       {
-        '<leader>p',
+        '<leader>ip',
         '<cmd>PasteImage<cr>',
         desc = 'Paste image from clipboard',
         ft = 'markdown',
