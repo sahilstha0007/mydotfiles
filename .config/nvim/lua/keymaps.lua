@@ -309,3 +309,72 @@ vim.api.nvim_create_autocmd('BufWinEnter', {
     end
   end,
 })
+
+-- ============================================================
+-- Line movement with Alt+j / Alt+k (normal, insert, visual)
+-- ============================================================
+vim.keymap.set('n', '<A-j>', '<cmd>m .+1<cr>==', { desc = 'Move line down' })
+vim.keymap.set('n', '<A-k>', '<cmd>m .-2<cr>==', { desc = 'Move line up' })
+vim.keymap.set(
+  'i',
+  '<A-j>',
+  '<esc><cmd>m .+1<cr>==gi',
+  { desc = 'Move line down' }
+)
+vim.keymap.set(
+  'i',
+  '<A-k>',
+  '<esc><cmd>m .-2<cr>==gi',
+  { desc = 'Move line up' }
+)
+vim.keymap.set(
+  'v',
+  '<A-j>',
+  ":m '>+1<cr>gv=gv",
+  { desc = 'Move selection down' }
+)
+vim.keymap.set('v', '<A-k>', ":m '<-2<cr>gv=gv", { desc = 'Move selection up' })
+
+-- ============================================================
+-- UI Toggles (<leader>u*)
+-- ============================================================
+vim.keymap.set('n', '<leader>uw', function()
+  vim.wo.wrap = not vim.wo.wrap
+  vim.notify('Wrap: ' .. (vim.wo.wrap and 'ON' or 'OFF'), vim.log.levels.INFO)
+end, { desc = 'Toggle line wrap' })
+
+vim.keymap.set('n', '<leader>ul', function()
+  local nu = not vim.wo.number
+  vim.wo.number = nu
+  vim.wo.relativenumber = nu
+  vim.notify('Line numbers: ' .. (nu and 'ON' or 'OFF'), vim.log.levels.INFO)
+end, { desc = 'Toggle line numbers' })
+
+vim.keymap.set('n', '<leader>ud', function()
+  local enabled = vim.diagnostic.is_enabled()
+  vim.diagnostic.enable(not enabled)
+  vim.notify(
+    'Diagnostics: ' .. (not enabled and 'ON' or 'OFF'),
+    vim.log.levels.INFO
+  )
+end, { desc = 'Toggle diagnostics' })
+
+vim.keymap.set('n', '<leader>uc', function()
+  local cl = vim.wo.conceallevel == 0 and 2 or 0
+  vim.wo.conceallevel = cl
+  vim.notify('Conceal level: ' .. cl, vim.log.levels.INFO)
+end, { desc = 'Toggle conceal level' })
+
+vim.keymap.set('n', '<leader>uh', function()
+  local enabled = vim.lsp.inlay_hint.is_enabled()
+  vim.lsp.inlay_hint.enable(not enabled)
+  vim.notify(
+    'Inlay hints: ' .. (not enabled and 'ON' or 'OFF'),
+    vim.log.levels.INFO
+  )
+end, { desc = 'Toggle inlay hints' })
+
+vim.keymap.set('n', '<leader>us', function()
+  vim.wo.spell = not vim.wo.spell
+  vim.notify('Spell: ' .. (vim.wo.spell and 'ON' or 'OFF'), vim.log.levels.INFO)
+end, { desc = 'Toggle spell check' })

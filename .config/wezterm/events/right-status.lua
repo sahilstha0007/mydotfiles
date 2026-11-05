@@ -3,6 +3,7 @@ local umath = require('utils.math')
 local Cells = require('utils.cells')
 local OptsValidator = require('utils.opts-validator')
 local tokens = require('utils.tokens')
+local battery = require('config.battery')
 
 local nf = wezterm.nerdfonts
 local attr = Cells.attr
@@ -128,26 +129,7 @@ cells
    :add_segment('clock_icon', ICON_CLOCK .. '  ', colors.separator)
    :add_segment('clock_text', '', colors.date, attr(attr.intensity('Bold')))
 
----@return string, string
-local function battery_info()
-   -- ref: https://wezfurlong.org/wezterm/config/lua/wezterm/battery_info.html
-
-   local charge = ''
-   local icon = ''
-
-   for _, b in ipairs(wezterm.battery_info()) do
-      local idx = umath.clamp(umath.round(b.state_of_charge * 10), 1, 10)
-      charge = string.format('%.0f%%', b.state_of_charge * 100)
-
-      if b.state == 'Charging' then
-         icon = charging_icons[idx]
-      else
-         icon = discharging_icons[idx]
-      end
-   end
-
-   return charge, icon .. ' '
-end
+local battery_info = battery.info
 
 -- Live system load, read straight from /proc with a short cache so the
 -- frequent update-status events never fork a process. CPU is a utilisation

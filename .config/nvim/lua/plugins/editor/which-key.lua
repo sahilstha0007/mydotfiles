@@ -4,7 +4,7 @@ return {
     event = 'VimEnter',
     opts = {
       preset = 'helix',
-      delay = 0,
+      delay = 200,
       icons = {
         mappings = vim.g.have_nerd_font,
         keys = vim.g.have_nerd_font and {} or {

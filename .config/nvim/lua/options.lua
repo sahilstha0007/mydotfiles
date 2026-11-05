@@ -7,10 +7,10 @@ vim.opt.number = true
 -- Relative numbers
 vim.opt.relativenumber = true
 
--- Enable wrap
-vim.wo.wrap = true
-vim.wo.linebreak = true
-vim.wo.breakindent = true
+-- Line wrap: disabled by default for clean code editing (toggle anytime with <leader>uw)
+vim.opt.wrap = false
+vim.opt.linebreak = true
+vim.opt.breakindent = true
 
 -- Enable mouse mode, can be useful for resizing splits for example!
 vim.opt.mouse = 'a'
@@ -117,18 +117,23 @@ vim.api.nvim_create_autocmd('FocusGained', {
 })
 
 -- Auto-save: flush to disk when you leave insert mode or a buffer.
--- `update` only writes when the buffer is actually modified, so it's a no-op on
--- clean buffers and on quickfix/help/picker windows. CursorHold is deliberately
--- NOT in this list: with updatetime=250 it re-fired `update` on every idle tick
--- in every buffer, and InsertLeave already covers "you stopped typing".
+-- Smarter autosave: fires on InsertLeave, BufLeave, and FocusLost (switching panes/apps).
+-- Checks that buffer is a real modifiable file with a non-empty name (never errors on scratch/unnamed).
 -- Toggle off mid-session with :let g:disable_autosave = 1
-vim.api.nvim_create_autocmd({ 'InsertLeave', 'BufLeave' }, {
+vim.api.nvim_create_autocmd({ 'InsertLeave', 'BufLeave', 'FocusLost' }, {
   group = vim.api.nvim_create_augroup('autosave', { clear = true }),
   callback = function()
     if vim.g.disable_autosave then
       return
     end
-    if vim.bo.buftype == '' and vim.bo.modifiable and not vim.bo.readonly then
+    local name = vim.api.nvim_buf_get_name(0)
+    if
+      name ~= ''
+      and vim.bo.buftype == ''
+      and vim.bo.modifiable
+      and not vim.bo.readonly
+      and vim.bo.modified
+    then
       pcall(vim.cmd, 'silent! update')
     end
   end,

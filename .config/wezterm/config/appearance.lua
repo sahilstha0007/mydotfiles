@@ -5,14 +5,10 @@ local wezterm = require('wezterm')
 
 ---@type Config
 return {
-   max_fps = 60, -- matches the 1920x1080@60Hz panel exactly (vsync-bound);
-   -- a higher cap on a 60Hz panel just over-renders frames the panel drops
+   max_fps = 120, -- high-refresh 120Hz cap for fluid scrolling & animations
    front_end = 'WebGpu', ---@type 'WebGpu' | 'OpenGL' | 'Software'
-   -- user preference: use the hardware for smoothness — steady Vega clocks
-   -- mean steadier frame pacing (no power-state hitches) on this iGPU-only
-   -- laptop. Trade: slightly higher power draw. Flip back to 'LowPower'
-   -- on battery if you want the quieter GPU.
-   webgpu_power_preference = 'HighPerformance',
+   -- LowPower power preference: uses efficient integrated GPU, eliminating continuous battery drain
+   webgpu_power_preference = 'LowPower',
    -- Battery fallback: on laptops, flip to LowPower when on battery to reduce
    -- power draw. The Vega iGPU is fast enough at LowPower for a terminal;
    -- the tradeoff is slightly lower clocks, which is invisible at 60fps.
@@ -30,7 +26,7 @@ return {
    underline_thickness = '1.5pt',
 
    -- cursor
-   animation_fps = 60, -- panel-bound; easing does the smoothing, not fps
+   animation_fps = 120, -- high-refresh cursor animation
    -- kitty-style blink, but GLIDED: eased on/off (EaseInOut) instead of a
    -- hard toggle — the fade is what reads as smooth. 650ms half-period.
    default_cursor_style = 'BlinkingBlock',
@@ -69,8 +65,8 @@ return {
    -- translucency comes from this setting.
    window_background_opacity = backdrops.opacity,
 
-   -- scrollbar
-   enable_scroll_bar = true,
+   -- scrollbar (disabled for clean, distraction-free zero-mouse keyboard terminal)
+   enable_scroll_bar = false,
 
    -- tab bar
    enable_tab_bar = true,

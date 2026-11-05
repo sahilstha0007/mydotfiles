@@ -530,6 +530,11 @@ local keys = {
    { key = 'q',     mods = mod.SUPER,     action = act.CloseCurrentPane({ confirm = false }) },
    { key = 'Q',     mods = mod.SUPER,     action = act.QuitApplication },
 
+   -- workspaces: fast fuzzy switch (Alt+s), new (Alt+Shift+S), key table (Leader+w)
+   { key = 'w',     mods = 'LEADER',      action = act.ActivateKeyTable { name = 'workspaces', one_shot = false } },
+   { key = 's',     mods = mod.SUPER,     action = wezterm.action_callback(workspaces.switch_workspace) },
+   { key = 'S',     mods = mod.SUPER_REV, action = wezterm.action_callback(workspaces.new_workspace) },
+
    -- NOTE: no Ctrl+Alt+hjkl pane navigation here on purpose — wezterm
    -- would eat the key before tmux ever sees it, killing tmux.nvim's
    -- C-M-hjkl pane-swap binding (tmux owns windows/panes; wezterm is
@@ -648,6 +653,7 @@ local key_tables = {
       { key = 'Escape', action = 'PopKeyTable' },
       { key = 'q',      action = 'PopKeyTable' },
    },
+   workspaces = workspaces.key_table,
 }
 
 ---@type MouseBinding[]

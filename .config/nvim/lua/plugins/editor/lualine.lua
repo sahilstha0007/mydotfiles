@@ -121,6 +121,26 @@ return {
         'filename',
         cond = conditions.buffer_not_empty,
         color = 'LualineFilename',
+        file_status = true,
+        path = 1,
+        symbols = {
+          modified = ' ●',
+          readonly = ' ',
+          unnamed = ' [No Name]',
+          newfile = ' [New]',
+        },
+      }
+
+      -- Macro recording indicator
+      ins_left {
+        function()
+          local reg = vim.fn.reg_recording()
+          if reg ~= '' then
+            return '󰑋 REC @' .. reg
+          end
+          return ''
+        end,
+        color = { fg = '#ffb4ab', gui = 'bold' },
       }
 
       ins_left {

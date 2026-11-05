@@ -352,6 +352,42 @@ def draw_right_status(draw_data: DrawData, screen: Screen) -> None:
     screen.cursor.reset_display_attrs()
 
 
+# Process icons dictionary mapping process name -> Nerd Font icon
+PROCESS_ICONS = {
+    "nvim": "",
+    "vim": "",
+    "lazygit": "",
+    "yazi": "󰇥",
+    "btop": "󰓅",
+    "htop": "󰓅",
+    "tmux": "",
+    "git": "",
+    "python": "󰘧",
+    "cargo": "󱘗",
+    "rust": "󱘗",
+    "docker": "󰡨",
+    "podman": "󰡨",
+    "node": "",
+    "bun": "",
+    "pnpm": "",
+    "go": "󰟓",
+    "claude": "󰚩",
+    "opencode": "󰚩",
+    "agent": "󰚩",
+    "gemini": "󰚩",
+    "herdr": "󰚩",
+}
+DEFAULT_PROCESS_ICON = ""
+
+
+def get_process_icon(active_exe: str) -> str:
+    exe = (active_exe or "").lower()
+    for name, icon in PROCESS_ICONS.items():
+        if name in exe:
+            return icon
+    return DEFAULT_PROCESS_ICON
+
+
 def draw_tab(
     draw_data: DrawData,
     screen: Screen,
@@ -371,10 +407,15 @@ def draw_tab(
     screen.cursor.fg = tab_bg
     screen.draw("")
 
-    # 2. Pill body with tab title template
+    # 2. Pill body: draw index + process icon badge + title
     screen.cursor.bg = tab_bg
     screen.cursor.fg = tab_fg
-    effective_title_len = max(1, max_title_length - 2) if max_title_length > 2 else max_title_length
+    icon = get_process_icon(tab.active_exe)
+    badge = f" {index}  {icon} "
+    screen.draw(badge)
+
+    badge_width = wcswidth(badge)
+    effective_title_len = max(1, max_title_length - badge_width - 2) if max_title_length > badge_width + 2 else max_title_length
     draw_title(draw_data, screen, tab, index, effective_title_len)
 
     # 3. Right rounded pill cap

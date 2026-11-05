@@ -8,7 +8,7 @@ return {
     'stevearc/oil.nvim',
     dependencies = { 'nvim-tree/nvim-web-devicons' },
     opts = {
-      default_file_explorer = false, -- nvim-tree keeps <leader>e
+      default_file_explorer = true, -- oil as default directory explorer (replaces netrw)
       columns = { 'icon', 'size', 'mtime' },
       keymaps = {
         ['<C-h>'] = false, -- keep tmux.nvim pane-left jump

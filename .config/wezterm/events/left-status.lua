@@ -3,45 +3,30 @@ local Cells = require('utils.cells')
 local tokens = require('utils.tokens')
 
 local attr = Cells.attr
-
 local M = {}
 
--- LEFT STATUS — the wezterm-scoped signal only.
+-- LEFT STATUS — Modal Key-Table Indicator & Workspace Identity
 --
--- 2026-10-12: this used to fork `tmux display-message` once per second to read
--- the tmux pane mode (COPY / V / W / m) and render it as a pill. That was the
--- same fact tmux's OWN status-left already prints two lines below (the
--- `#{?pane_in_copy_mode,…%M…%W…%m}` segment), and the active wezterm key table
--- is already shown as a pill by events/hud.lua on the right. So the left pill
--- duplicated two other indicators AND paid a process fork every second to do
--- it. Removed.
---
--- One owner per signal: tmux reports its own mode; hud.lua reports wezterm's
--- key table. What is left for THIS surface is state that exists only in
--- wezterm and nowhere else: the active WORKSPACE. It is silent on the default
--- workspace (the common case), and names the workspace the moment you switch
--- to a named one — so it earns the left edge without adding idle noise.
+-- Displays:
+--   1. Active Key Table (e.g. WORKSPACES, RESIZE, COPY) with prominent alert styling
+--      so you never type into a modal key table accidentally.
+--   2. Active Workspace (when not 'default').
 
--- Nerd-font half-circle glyphs with ASCII fallbacks, so the module still
--- loads on a build without the nf table.
 local nf = wezterm.nerdfonts
 local GLYPH_SEMI_CIRCLE_LEFT = (nf and nf.ple_left_half_circle_thick) or '<'
 local GLYPH_SEMI_CIRCLE_RIGHT = (nf and nf.ple_right_half_circle_thick) or '>'
+local ICON_KEYBOARD = (nf and nf.md_keyboard) or 'KT'
+local ICON_WORKSPACE = (nf and nf.md_view_dashboard_outline) or 'WS'
 
 ---@type table<string, Cells.SegmentColors>
 local colors = {
-   pill = { bg = tokens.pill, fg = tokens.pill_fg },
-   scircle = { bg = tokens.glass, fg = tokens.pill },
+   kt_pill = { bg = tokens.yellow or '#e0c989', fg = tokens.surface0 or '#192330' },
+   kt_edge = { bg = tokens.glass, fg = tokens.yellow or '#e0c989' },
+   ws_pill = { bg = tokens.pill, fg = tokens.pill_fg },
+   ws_edge = { bg = tokens.glass, fg = tokens.pill },
 }
 
-local cells = Cells:new()
-
-cells
-   :add_segment(1, GLYPH_SEMI_CIRCLE_LEFT, colors.scircle, attr(attr.intensity('Bold')))
-   :add_segment(2, '', colors.pill, attr(attr.intensity('Bold')))
-   :add_segment(3, GLYPH_SEMI_CIRCLE_RIGHT, colors.scircle, attr(attr.intensity('Bold')))
-
----Active workspace name, or nil on the default workspace (the common case).
+---Active workspace name, or nil on the default workspace.
 ---@param window wezterm.Window
 ---@return string?
 local function workspace_label(window)
@@ -54,18 +39,63 @@ local function workspace_label(window)
    return ws
 end
 
+---Active key table name, or nil if none.
+---@param window wezterm.Window
+---@return string?
+local function active_key_table(window)
+   local ok, kt = pcall(function()
+      return window:active_key_table()
+   end)
+   if ok and type(kt) == 'string' and kt ~= '' then
+      return kt
+   end
+   return nil
+end
+
 M.setup = function()
    wezterm.on('update-status', function(window, _pane)
+      local kt = active_key_table(window)
       local ws = workspace_label(window)
-      if not ws then
-         -- Default workspace: nothing to say on the left. An empty status
-         -- costs no columns and beats printing a constant "default".
+
+      if not kt and not ws then
          window:set_left_status('')
          return
       end
 
-      cells:update_segment_text(2, ' ' .. ws .. ' ')
-      window:set_left_status(wezterm.format(cells:render({ 1, 2, 3 })))
+      local items = {}
+
+      if kt then
+         table.insert(items, { Background = { Color = colors.kt_edge.bg } })
+         table.insert(items, { Foreground = { Color = colors.kt_edge.fg } })
+         table.insert(items, { Text = GLYPH_SEMI_CIRCLE_LEFT })
+
+         table.insert(items, { Background = { Color = colors.kt_pill.bg } })
+         table.insert(items, { Foreground = { Color = colors.kt_pill.fg } })
+         table.insert(items, { Attribute = { Intensity = 'Bold' } })
+         table.insert(items, { Text = ' ' .. ICON_KEYBOARD .. ' ' .. kt:upper() .. ' ' })
+
+         table.insert(items, { Background = { Color = colors.kt_edge.bg } })
+         table.insert(items, { Foreground = { Color = colors.kt_edge.fg } })
+         table.insert(items, { Text = GLYPH_SEMI_CIRCLE_RIGHT })
+         table.insert(items, { Text = ' ' })
+      end
+
+      if ws then
+         table.insert(items, { Background = { Color = colors.ws_edge.bg } })
+         table.insert(items, { Foreground = { Color = colors.ws_edge.fg } })
+         table.insert(items, { Text = GLYPH_SEMI_CIRCLE_LEFT })
+
+         table.insert(items, { Background = { Color = colors.ws_pill.bg } })
+         table.insert(items, { Foreground = { Color = colors.ws_pill.fg } })
+         table.insert(items, { Attribute = { Intensity = 'Bold' } })
+         table.insert(items, { Text = ' ' .. ICON_WORKSPACE .. ' ' .. ws .. ' ' })
+
+         table.insert(items, { Background = { Color = colors.ws_edge.bg } })
+         table.insert(items, { Foreground = { Color = colors.ws_edge.fg } })
+         table.insert(items, { Text = GLYPH_SEMI_CIRCLE_RIGHT })
+      end
+
+      window:set_left_status(wezterm.format(items))
    end)
 end
 

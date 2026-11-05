@@ -729,12 +729,10 @@ local function apply()
           },
         }
         vim.cmd.colorscheme 'nightfox'
-        require('plugins.ui.hierarchy').apply()
       else
         local opts = catppuccin_opts()
         require('catppuccin').setup(opts)
         vim.cmd.colorscheme 'catppuccin'
-        require('plugins.ui.hierarchy').apply()
       end
     end)
     if not ok then
@@ -750,12 +748,6 @@ local function apply()
   local ok, err = pcall(function()
     require('catppuccin').setup(opts)
     vim.cmd.colorscheme 'catppuccin'
-    -- Hierarchy rides on the SAME re-tint. It was its own lazy spec once and
-    -- that was the bug: two specs naming one plugin cannot agree on `dir`
-    -- (this file renames it to 'catppuccin', a bare 'catppuccin/nvim' resolves
-    -- to lazy/nvim) and lazy rejects the second with "Plugin changed dir". One
-    -- owner for the palette; the hierarchy is just the last step of it.
-    require('plugins.ui.hierarchy').apply()
   end)
   if not ok then
     vim.notify('terminal-colors: ' .. tostring(err), vim.log.levels.ERROR)
