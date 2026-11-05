@@ -11,10 +11,10 @@
 -- this sets a known palette and asserts the hierarchy moves it. Same contract,
 -- no dependency on how it gets loaded.
 
-vim.opt.runtimepath:prepend(
-  vim.env.NVIM_CONFIG_ROOT
-    or vim.fn.fnamemodify(debug.getinfo(1, 'S').source:sub(2), ':p:h:h')
-)
+local _src = debug.getinfo(1, 'S').source:sub(2)
+local _cand = vim.fn.fnamemodify(_src, ':p:h:h')
+local root = vim.env.NVIM_CONFIG_ROOT or (vim.fn.isdirectory(_cand .. '/lua') == 1 and _cand or (vim.fn.fnamemodify(_cand, ':h') .. '/.config/nvim'))
+vim.opt.runtimepath:prepend(root)
 
 local failed = 0
 local function check(ok, msg)

@@ -41,7 +41,9 @@ vim.opt.runtimepath:prepend(LAZY .. '/snacks.nvim')
 -- Same tree-relative resolution as the rest of the suite. Expanding $HOME here
 -- read the LIVE dressing spec even inside a copy, so the plugin was set up from
 -- a different tree's opts than the assertions below were written against.
-local root = vim.fn.fnamemodify(debug.getinfo(1, 'S').source:sub(2), ':p:h:h')
+local _src = debug.getinfo(1, 'S').source:sub(2)
+local _cand = vim.fn.fnamemodify(_src, ':p:h:h')
+local root = vim.env.NVIM_CONFIG_ROOT or (vim.fn.isdirectory(_cand .. '/lua') == 1 and _cand or (vim.fn.fnamemodify(_cand, ':h') .. '/.config/nvim'))
 local real_spec = dofile(root .. '/lua/plugins/ui/dressing.lua')
 local entry = real_spec[1]
 require('dressing').setup(entry.opts)

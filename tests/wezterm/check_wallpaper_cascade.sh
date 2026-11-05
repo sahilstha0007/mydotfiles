@@ -24,7 +24,7 @@
 set -u
 
 REAL_HOME=${HOME:?HOME must be set}
-SRC_DIR=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+SRC_DIR=$(CDPATH= cd -- "$(dirname -- "$0")/../../.config/wezterm" && pwd)
 SYNC=${1:-$SRC_DIR/utils/sync-wallpaper.sh}
 TMP=$(mktemp -d)
 trap 'chmod -R u+w "$TMP" 2>/dev/null; rm -rf "$TMP"' EXIT

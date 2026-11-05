@@ -7,7 +7,6 @@
 #   - Neovim      (~/.config/nvim)
 #   - Tmux        (~/.config/tmux)
 #   - WezTerm     (~/.config/wezterm)
-#   - Kitty Dev   (~/.config/kitty)
 #   - VS Code     (~/.config/Code/User, Code - OSS, VSCodium)
 #
 # Automatically backs up any existing non-symlink directories into

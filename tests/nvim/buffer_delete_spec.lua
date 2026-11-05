@@ -18,7 +18,9 @@
 --
 -- Run: nvim --headless -u tests/minimal_init.lua -l tests/buffer_delete_spec.lua
 
-local root = vim.fn.fnamemodify(debug.getinfo(1, 'S').source:sub(2), ':p:h:h')
+local _src = debug.getinfo(1, 'S').source:sub(2)
+local _cand = vim.fn.fnamemodify(_src, ':p:h:h')
+local root = vim.env.NVIM_CONFIG_ROOT or (vim.fn.isdirectory(_cand .. '/lua') == 1 and _cand or (vim.fn.fnamemodify(_cand, ':h') .. '/.config/nvim'))
 local KEYMAPS = root .. '/lua/keymaps.lua'
 
 --- The text of one `<leader>KEY` binding, from its keymap.set( up to the line

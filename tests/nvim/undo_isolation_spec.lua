@@ -31,7 +31,9 @@ end
 -- this spec read the LIVE tree even when run against a copy, so it passed on
 -- a clone that had none of the code under test. Same pattern as
 -- tests/minimal_init.lua.
-local root = vim.fn.fnamemodify(debug.getinfo(1, 'S').source:sub(2), ':p:h:h')
+local _src = debug.getinfo(1, 'S').source:sub(2)
+local _cand = vim.fn.fnamemodify(_src, ':p:h:h')
+local root = vim.env.NVIM_CONFIG_ROOT or (vim.fn.isdirectory(_cand .. '/lua') == 1 and _cand or (vim.fn.fnamemodify(_cand, ':h') .. '/.config/nvim'))
 
 -- --- 1. the mechanism, measured -------------------------------------------
 

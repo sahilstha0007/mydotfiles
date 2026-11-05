@@ -13,7 +13,9 @@
 
 -- Derive from this file's own location, matching tests/minimal_init.lua, so a
 -- copied or cloned tree tests itself instead of the live config.
-local ROOT = vim.fn.fnamemodify(debug.getinfo(1, 'S').source:sub(2), ':p:h:h')
+local _src = debug.getinfo(1, 'S').source:sub(2)
+local _cand = vim.fn.fnamemodify(_src, ':p:h:h')
+local ROOT = vim.env.NVIM_CONFIG_ROOT or (vim.fn.isdirectory(_cand .. '/lua') == 1 and _cand or (vim.fn.fnamemodify(_cand, ':h') .. '/.config/nvim'))
 vim.opt.runtimepath:prepend(ROOT)
 
 local passed, failed = 0, 0

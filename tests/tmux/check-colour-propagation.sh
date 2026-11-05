@@ -33,7 +33,7 @@
 
 set -uo pipefail
 
-conf_dir=${TMUX_TEST_CONF_DIR:-$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)}
+conf_dir=${TMUX_TEST_CONF_DIR:-$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../../.config/tmux" && pwd)}
 sock=${TMUX_TEST_SOCK:-colour-propagation-$$}
 # Under $HOME rather than /tmp: a stray TMPDIR=/tmp would otherwise place the
 # scratch dir inside the directory being copied, and `cp -r` would recurse into

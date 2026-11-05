@@ -15,8 +15,9 @@ set -u
 # hardcoded /home/sahil/.config/wezterm meant the harness could only ever run on
 # the machine it was written on: in CI, and for anyone else, `cp -r "$SRC"` had
 # nothing to copy and every mutant reported against an empty tree.
-SRC=${WEZTERM_CONFIG_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)}
+SRC=${WEZTERM_CONFIG_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.config/wezterm" && pwd -P)}
 SRC=$(readlink -f "$SRC")
+TEST_SCRIPT=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)/check_opacity.lua
 W=${WEZTERM_MUTANT_DIR:-/tmp/wzmut}
 FAKE=${WEZTERM_FAKE_HOME:-/tmp/opcheck_home}
 
@@ -58,7 +59,7 @@ run () {  # runs the suite against the staged copy
   # staged copies: the cold-start check reads whatever the previous mutant
   # persisted, and a stale file makes the control fail intermittently. That is
   # not theoretical — it produced a phantom 58/2 on a correct tree.
-  out=$(FAKE_HOME="$FAKE/run-$$-$(date +%s%N)" luajit "$W/tests/check_opacity.lua" "$W" 2>&1)
+  out=$(FAKE_HOME="$FAKE/run-$$-$(date +%s%N)" luajit "$TEST_SCRIPT" "$W" 2>&1)
   local line
   line=$(printf '%s\n' "$out" | grep -E '^RESULT: ' | tail -1)
   if [ -z "$line" ]; then
