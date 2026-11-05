@@ -59,21 +59,25 @@ def get_battery() -> tuple[str, int | None]:
             if os.path.exists(stat_file):
                 with open(stat_file, "r") as f:
                     stat = f.read().strip().lower()
-            if "charging" in stat or "full" in stat:
-                icon = "󰂄" if "charging" in stat else "󰁹"
-                fg = as_rgb(0xe0af68) if "charging" in stat else None
+            if "charging" in stat:
+                icon = "󰂄"
+                fg = as_rgb(0xe0af68)
+            elif "full" in stat or cap >= 98:
+                _cached_bat_str = ""
+                _cached_bat_fg = None
+                return _cached_bat_str, _cached_bat_fg
             elif cap >= 80:
                 icon = "󰁹"
                 fg = None
-            elif cap >= 60:
+            elif cap >= 50:
                 icon = "󰁿"
                 fg = None
-            elif cap >= 30:
+            elif cap >= 20:
                 icon = "󰁼"
                 fg = None
             else:
                 icon = "󰁺"
-                fg = as_rgb(0xdf5b61)
+                fg = as_rgb(0xe0c989)
             _cached_bat_str = f"{icon} {cap}%"
             _cached_bat_fg = fg
             return _cached_bat_str, _cached_bat_fg
@@ -411,12 +415,13 @@ def draw_tab(
     screen.cursor.bg = tab_bg
     screen.cursor.fg = tab_fg
     icon = get_process_icon(tab.active_exe)
-    badge = f" {index}  {icon} "
+    badge = f" {index} {icon} "
     screen.draw(badge)
 
     badge_width = wcswidth(badge)
     effective_title_len = max(1, max_title_length - badge_width - 2) if max_title_length > badge_width + 2 else max_title_length
     draw_title(draw_data, screen, tab, index, effective_title_len)
+    screen.draw(" ")
 
     # 3. Right rounded pill cap
     screen.cursor.bg = default_bg
