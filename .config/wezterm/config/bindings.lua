@@ -522,6 +522,7 @@ local keys = {
    -- panes: zoom+close pane
    { key = 'Enter', mods = mod.SUPER,     action = act.TogglePaneZoomState },
    { key = 'w',     mods = mod.SUPER,     action = act.CloseCurrentPane({ confirm = false }) },
+   { key = 'x',     mods = 'SUPER',       action = act.SendString('\x01x') },
 
    -- app / window close:
    -- Alt+q (mod.SUPER on Linux) closes the current pane/window (never kills all WezTerm instances).
