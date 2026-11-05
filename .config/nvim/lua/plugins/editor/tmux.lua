@@ -10,7 +10,7 @@ return {
       local tmux = require 'tmux'
       tmux.setup {
         resize = {
-          enable_default_keybindings = true,
+          enable_default_keybindings = false,
         },
       }
 
