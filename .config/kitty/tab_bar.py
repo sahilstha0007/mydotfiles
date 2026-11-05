@@ -275,12 +275,12 @@ def draw_right_status(draw_data: DrawData, screen: Screen) -> None:
     default_bg = as_rgb(color_as_int(draw_data.default_bg))
     accent_bg = as_rgb(color_as_int(draw_data.active_bg))
     accent_fg = as_rgb(color_as_int(draw_data.active_fg))
-    pill_bg = as_rgb(0x212e3f)
-    mid_fg = as_rgb(0xcdcecf)
+    pill_bg = as_rgb(0x03195b)
+    mid_fg = as_rgb(0xcbe9fd)
     git_fg = as_rgb(0x81b29a)
-    tmux_fg = as_rgb(0x719cd6)
-    agent_fg = as_rgb(0x9d79d6)
-    container_fg = as_rgb(0x63cdcf)
+    tmux_fg = as_rgb(0x3781fc)
+    agent_fg = as_rgb(0xbaa1e2)
+    container_fg = as_rgb(0x7ad5d6)
     bat_fg = bat_fg_custom if bat_fg_custom is not None else mid_fg
 
     # All candidate pill segments: (content, fg, bg)
