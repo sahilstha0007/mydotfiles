@@ -1,0 +1,14 @@
+christian-kohler.npm-intellisense
+davidanson.vscode-markdownlint
+eamodio.gitlens
+formulahendry.code-runner
+josemurilloc.aura-spirit-dracula
+kilocode.kilo-code
+mathematic.vscode-pdf
+ms-vscode-remote.remote-wsl
+pkief.material-icon-theme
+raunofreiberg.vesper
+redhat.vscode-xml
+redhat.vscode-yaml
+saoudrizwan.claude-dev
+subframe7536.custom-ui-style

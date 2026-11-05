@@ -7,8 +7,14 @@
 /.config/nvim/.git.bak-mydotfiles/
 /.config/wezterm/.git.bak-mydotfiles/
 
-# Kitty is deliberately local-only; this repo is the WezTerm stack.
-/.config/kitty/
+# Python caches
+__pycache__/
+*.pyc
+
+# VSCode runtime caches (settings and keybindings are tracked)
+/.config/Code/User/History/
+/.config/Code/User/workspaceStorage/
+/.config/Code/User/globalStorage/
 
 # AI tooling artifacts.
 .claude/
