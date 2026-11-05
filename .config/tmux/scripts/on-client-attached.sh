@@ -31,7 +31,9 @@ if [ -n "$detected" ]; then
   tmux set-environment TERMINAL_STACK_PROFILE "$detected"
   if [ "$detected" = "kitty" ]; then
     tmux source-file -q ~/.config/tmux/colors-nightfox.conf
-    tmux set -gF popup-style "bg=#{@thm_surface_0},fg=#{@thm_text}"
+    tmux set -gF popup-style "bg=default,fg=#{@thm_text}"
+    tmux set -gF popup-border-style "fg=#{@thm_blue}"
+    tmux set -g popup-border-lines rounded
     tmux set -gF pane-active-border-style "fg=#{@thm_blue}"
     tmux set-environment -g LG_CONFIG_FILE "$HOME/.config/lazygit/config.yml,$HOME/.config/lazygit/theme-nightfox.yml"
     tmux set-environment -g CONFIG_DIR "$HOME/.config/lazydocker/nightfox"
@@ -40,6 +42,8 @@ if [ -n "$detected" ]; then
   elif [ "$detected" = "wezterm" ]; then
     tmux source-file -q ~/.config/tmux/colors-matugen.conf
     tmux set -gF popup-style "bg=default,fg=#{@thm_text}"
+    tmux set -gF popup-border-style "fg=#{@thm_blue}"
+    tmux set -g popup-border-lines rounded
     tmux set -gF pane-active-border-style "fg=#{@thm_blue}"
     tmux set-environment -u -g LG_CONFIG_FILE 2>/dev/null || true
     tmux set-environment -u -g CONFIG_DIR 2>/dev/null || true
