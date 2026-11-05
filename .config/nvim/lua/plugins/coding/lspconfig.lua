@@ -34,9 +34,9 @@ return {
         'tailwindcss',
         'cssls',
         'gopls',
-        -- Python: pyright owns completion / hover / go-to-def / type-checking;
+        -- Python: basedpyright owns completion / hover / go-to-def / type-checking;
         -- ruff owns lint + format (hover disabled in lsp/ruff.lua).
-        'pyright',
+        'basedpyright',
         'ruff',
         'intelephense',
         'astro',
@@ -169,7 +169,7 @@ return {
           'css-lsp',
           -- gopls is provided by mise (go: backend) so it lands on PATH as a
           -- shim; mason can't install it because mise overrides GOBIN.
-          'pyright',
+          'basedpyright',
           'ruff',
           'astro-language-server',
           'dockerfile-language-server',

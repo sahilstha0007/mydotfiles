@@ -1,4 +1,4 @@
--- Ruff (Python linter/formatter LSP). Hover is disabled so pyright owns it.
+-- Ruff (Python linter/formatter LSP). Hover is disabled so basedpyright owns it.
 return {
   cmd_env = { RUFF_TRACE = 'messages' },
   init_options = {
