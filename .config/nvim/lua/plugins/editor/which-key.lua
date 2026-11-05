@@ -123,6 +123,11 @@ return {
           icon = { icon = '󰁯', color = 'azure' },
         },
         {
+          '<leader>P',
+          group = 'Project Tasks',
+          icon = { icon = '󱓞', color = 'purple' },
+        },
+        {
           '<leader>p',
           group = 'GitHub (Octo)',
           icon = { icon = '󰈉', color = 'grey' },

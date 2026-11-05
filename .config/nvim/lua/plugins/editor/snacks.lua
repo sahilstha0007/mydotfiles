@@ -193,12 +193,70 @@ return {
       '<leader>P',
       function()
         local root = Snacks.git.get_root() or vim.fn.getcwd()
-        Snacks.terminal.open(
-          '~/.local/bin/project-task',
-          { cwd = root, auto_close = false }
-        )
+        local bin = vim.fn.expand '~/.local/bin/project-task'
+        Snacks.terminal.open(bin, {
+          cwd = root,
+          auto_close = false,
+          win = {
+            border = 'rounded',
+            width = 0.85,
+            height = 0.85,
+          },
+        })
       end,
-      desc = 'Project Task (run/test/lint/format)',
+      desc = 'Project Tasks (menu)',
+    },
+    {
+      '<leader>Pr',
+      function()
+        local root = Snacks.git.get_root() or vim.fn.getcwd()
+        local bin = vim.fn.expand '~/.local/bin/project-task'
+        Snacks.terminal.open(bin .. ' run', {
+          cwd = root,
+          auto_close = false,
+          win = { border = 'rounded', width = 0.85, height = 0.85 },
+        })
+      end,
+      desc = 'Project Run',
+    },
+    {
+      '<leader>Pt',
+      function()
+        local root = Snacks.git.get_root() or vim.fn.getcwd()
+        local bin = vim.fn.expand '~/.local/bin/project-task'
+        Snacks.terminal.open(bin .. ' test', {
+          cwd = root,
+          auto_close = false,
+          win = { border = 'rounded', width = 0.85, height = 0.85 },
+        })
+      end,
+      desc = 'Project Test',
+    },
+    {
+      '<leader>Pl',
+      function()
+        local root = Snacks.git.get_root() or vim.fn.getcwd()
+        local bin = vim.fn.expand '~/.local/bin/project-task'
+        Snacks.terminal.open(bin .. ' lint', {
+          cwd = root,
+          auto_close = false,
+          win = { border = 'rounded', width = 0.85, height = 0.85 },
+        })
+      end,
+      desc = 'Project Lint',
+    },
+    {
+      '<leader>Pf',
+      function()
+        local root = Snacks.git.get_root() or vim.fn.getcwd()
+        local bin = vim.fn.expand '~/.local/bin/project-task'
+        Snacks.terminal.open(bin .. ' format', {
+          cwd = root,
+          auto_close = false,
+          win = { border = 'rounded', width = 0.85, height = 0.85 },
+        })
+      end,
+      desc = 'Project Format',
     },
     -- zen mode: distraction-free zoom (toggles back on Esc or <leader>z)
     {
