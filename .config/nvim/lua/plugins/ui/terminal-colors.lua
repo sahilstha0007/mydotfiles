@@ -727,6 +727,33 @@ local function apply()
               types = 'italic,bold',
             },
           },
+          groups = {
+            all = {
+              Normal = { bg = 'NONE' },
+              NormalNC = { bg = 'NONE' },
+              NormalFloat = { bg = 'NONE' },
+              FloatBorder = { fg = 'palette.blue', bg = 'NONE' },
+              FloatTitle = { fg = 'palette.blue', bg = 'NONE', bold = true },
+              LazyGitFloat = { bg = 'NONE' },
+              LazyGitBorder = { fg = 'palette.blue', bg = 'NONE' },
+              SnacksNormal = { bg = 'NONE' },
+              SnacksNormalNC = { bg = 'NONE' },
+              SnacksBackdrop = { bg = 'NONE' },
+              SnacksPicker = { bg = 'NONE' },
+              SnacksPickerBorder = { fg = 'palette.blue', bg = 'NONE' },
+              Pmenu = { bg = 'NONE' },
+              PmenuSel = {
+                bg = 'NONE',
+                fg = 'palette.blue',
+                bold = true,
+                underline = true,
+              },
+              BlinkCmpMenu = { bg = 'NONE' },
+              BlinkCmpMenuBorder = { fg = 'palette.blue', bg = 'NONE' },
+              BlinkCmpDoc = { bg = 'NONE' },
+              BlinkCmpDocBorder = { fg = 'palette.blue', bg = 'NONE' },
+            },
+          },
         }
         vim.cmd.colorscheme 'nightfox'
       else
