@@ -22,6 +22,7 @@ backed_up=0
 echo "==> Deploying portable dotfiles from $repo..."
 
 # 1. Standard config directories (~/.config/<name>)
+mkdir -p "$HOME/.config"
 for name in nvim tmux wezterm kitty; do
   src="$repo/.config/$name"
   dst="$HOME/.config/$name"
@@ -31,8 +32,13 @@ for name in nvim tmux wezterm kitty; do
     continue
   fi
 
+  if [ -L "$dst" ] && [ "$(readlink -f "$dst")" = "$(readlink -f "$src")" ]; then
+    echo "  [OK]   $dst is already linked"
+    continue
+  fi
+
   if [ -L "$dst" ]; then
-    # Already a symlink — update cleanly
+    # Already a symlink pointing elsewhere or broken — update cleanly
     rm -f "$dst"
   elif [ -e "$dst" ]; then
     mkdir -p "$backup"
@@ -72,6 +78,11 @@ if [ -d "$code_src" ]; then
       dst_file="$user_dir/$file"
 
       if [ -f "$src_file" ]; then
+        if [ -L "$dst_file" ] && [ "$(readlink -f "$dst_file")" = "$(readlink -f "$src_file")" ]; then
+          echo "  [OK]     $dst_file is already linked"
+          continue
+        fi
+
         if [ -L "$dst_file" ]; then
           rm -f "$dst_file"
         elif [ -e "$dst_file" ]; then

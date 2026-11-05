@@ -27,7 +27,7 @@ end
 
 package.path = root .. '/?.lua;' .. root .. '/?/init.lua;' .. package.path
 
-local HOME_DIR = '/home/sahil'
+local HOME_DIR = os.getenv('HOME') or '/home/sahil'
 _G.wezterm = {
    home_dir = HOME_DIR,
    config_dir = root,
