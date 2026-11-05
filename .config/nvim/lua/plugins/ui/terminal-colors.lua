@@ -733,7 +733,7 @@ local function apply()
               NormalNC = { bg = 'NONE' },
               NormalFloat = { bg = 'NONE' },
               FloatBorder = { fg = 'palette.blue', bg = 'NONE' },
-              FloatTitle = { fg = 'palette.blue', bg = 'NONE', bold = true },
+              FloatTitle = { fg = 'palette.blue', bg = 'NONE', style = 'bold' },
               LazyGitFloat = { bg = 'NONE' },
               LazyGitBorder = { fg = 'palette.blue', bg = 'NONE' },
               SnacksNormal = { bg = 'NONE' },
@@ -745,8 +745,7 @@ local function apply()
               PmenuSel = {
                 bg = 'NONE',
                 fg = 'palette.blue',
-                bold = true,
-                underline = true,
+                style = 'bold,underline',
               },
               BlinkCmpMenu = { bg = 'NONE' },
               BlinkCmpMenuBorder = { fg = 'palette.blue', bg = 'NONE' },
