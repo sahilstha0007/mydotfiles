@@ -7,6 +7,7 @@
 #   - Neovim      (~/.config/nvim)
 #   - Tmux        (~/.config/tmux)
 #   - WezTerm     (~/.config/wezterm)
+#   - Kitty Dev   (~/.config/kitty)
 #   - VS Code     (~/.config/Code/User, Code - OSS, VSCodium)
 #
 # Automatically backs up any existing non-symlink directories into
@@ -22,7 +23,7 @@ echo "==> Deploying portable dotfiles from $repo..."
 
 # 1. Standard config directories (~/.config/<name>)
 mkdir -p "$HOME/.config"
-for name in nvim tmux wezterm; do
+for name in nvim tmux wezterm kitty; do
   src="$repo/.config/$name"
   dst="$HOME/.config/$name"
 
