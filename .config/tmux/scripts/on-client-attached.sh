@@ -29,9 +29,17 @@ if [ -n "$detected" ]; then
     tmux source-file -q ~/.config/tmux/colors-nightfox.conf
     tmux set -gF popup-style "bg=#{@thm_surface_0},fg=#{@thm_text}"
     tmux set -gF pane-active-border-style "fg=#{@thm_blue}"
+    tmux set-environment -g LG_CONFIG_FILE "$HOME/.config/lazygit/config.yml,$HOME/.config/lazygit/theme-nightfox.yml"
+    tmux set-environment -g CONFIG_DIR "$HOME/.config/lazydocker/nightfox"
+    tmux set-environment LG_CONFIG_FILE "$HOME/.config/lazygit/config.yml,$HOME/.config/lazygit/theme-nightfox.yml"
+    tmux set-environment CONFIG_DIR "$HOME/.config/lazydocker/nightfox"
   elif [ "$detected" = "wezterm" ]; then
     tmux source-file -q ~/.config/tmux/colors-matugen.conf
     tmux set -gF popup-style "bg=default,fg=#{@thm_text}"
     tmux set -gF pane-active-border-style "fg=#{@thm_blue}"
+    tmux set-environment -u -g LG_CONFIG_FILE 2>/dev/null || true
+    tmux set-environment -u -g CONFIG_DIR 2>/dev/null || true
+    tmux set-environment -u LG_CONFIG_FILE 2>/dev/null || true
+    tmux set-environment -u CONFIG_DIR 2>/dev/null || true
   fi
 fi

@@ -7,11 +7,35 @@ return {
   {
     'aserowy/tmux.nvim',
     config = function()
-      return require('tmux').setup {
+      local tmux = require 'tmux'
+      tmux.setup {
         resize = {
           enable_default_keybindings = true,
         },
       }
+
+      -- When running inside Kitty without tmux, allow Ctrl+h/j/k/l to jump across Kitty splits
+      if
+        not vim.env.TMUX
+        and (
+          vim.env.KITTY_WINDOW_ID
+          or vim.env.TERMINAL_STACK_PROFILE == 'kitty'
+        )
+      then
+        local dir_map = { h = 'left', j = 'bottom', k = 'top', l = 'right' }
+        for key, dir in pairs(dir_map) do
+          vim.keymap.set({ 'n', 't' }, '<C-' .. key .. '>', function()
+            local cur_win = vim.api.nvim_get_current_win()
+            vim.cmd.wincmd(key)
+            if vim.api.nvim_get_current_win() == cur_win then
+              pcall(
+                vim.fn.system,
+                { 'kitty', '@', 'focus-window', '-m', 'neighbor:' .. dir }
+              )
+            end
+          end, { desc = 'Navigate split (Kitty & Neovim)' })
+        end
+      end
     end,
   },
 }
