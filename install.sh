@@ -23,7 +23,7 @@ echo "==> Deploying portable dotfiles from $repo..."
 
 # 1. Standard config directories (~/.config/<name>)
 mkdir -p "$HOME/.config"
-for name in nvim tmux wezterm kitty; do
+for name in nvim tmux kitty; do
   src="$repo/.config/$name"
   dst="$HOME/.config/$name"
 
