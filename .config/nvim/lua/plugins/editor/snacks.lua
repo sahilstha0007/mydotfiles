@@ -755,6 +755,24 @@ return {
               action = ":lua Snacks.dashboard.pick('files')",
             }, -- fa-search
             {
+              icon = ic(0xF024B),
+              key = 'p',
+              desc = 'Projects Hub',
+              action = ':lua Snacks.picker.projects()',
+            }, -- md-folder
+            {
+              icon = ic(0xF01D8),
+              key = 'd',
+              desc = 'Dotfiles',
+              action = ":lua Snacks.dashboard.pick('files', { cwd = vim.fn.expand('~/mydotfiles') })",
+            }, -- md-tune
+            {
+              icon = ic(0xF0384),
+              key = 'a',
+              desc = 'Atlas Vault',
+              action = ":lua Snacks.dashboard.pick('files', { cwd = vim.fn.expand('~/Documents/Notes/Atlas') })",
+            }, -- md-notebook
+            {
               icon = ic(0xF15B),
               key = 'n',
               desc = 'New File',
