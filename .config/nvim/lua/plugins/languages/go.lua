@@ -7,6 +7,14 @@ return {
     'fredrikaverpil/neotest-golang',
   },
   {
+    'leoluz/nvim-dap-go',
+    ft = 'go',
+    dependencies = { 'mfussenegger/nvim-dap' },
+    config = function()
+      require('dap-go').setup()
+    end,
+  },
+  {
     -- Go DAP: launch config for the delve adapter (installed via mason-nvim-dap
     -- in plugins/dap/core.lua). `Space d c` on a Go file now just works.
     'mfussenegger/nvim-dap',

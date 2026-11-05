@@ -7,7 +7,7 @@ STYLUA := $(shell command -v stylua 2>/dev/null || echo $(HOME)/.local/share/nvi
 # Same treatment: a `luarocks --local install` drops it in ~/.luarocks/bin,
 # which is not on PATH for a non-interactive make. PATH wins when it is set.
 LUACHECK := $(shell command -v luacheck 2>/dev/null || echo $(HOME)/.luarocks/bin/luacheck)
-LUA_SOURCES := init.lua lua tests scripts
+LUA_SOURCES := init.lua lua scripts
 
 # Route to the real harness. scripts/test.sh runs each spec with `nvim -l` and
 # watches three failure channels at once (FAIL: lines, non-zero exit, and nvim
@@ -73,7 +73,7 @@ lint:
 # re-copies the tree per mutant, so it is a deliberate, occasional gate, not
 # something to run on every edit. Costs ~0.5s if you do.
 mutate:
-	@bash tests/mutate-terminal-colors.sh
+	@bash ../../tests/nvim/mutate-terminal-colors.sh
 
 # Everything that can be green today: the suite, plus whatever linters exist,
 # plus the style gate. fmt-check is safe to include now that the colour spec no

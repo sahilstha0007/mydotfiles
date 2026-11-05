@@ -10,6 +10,9 @@ return {
 
       lint.linters_by_ft = lint.linters_by_ft or {}
       lint.linters_by_ft['php'] = { 'phpstan' }
+      lint.linters_by_ft['python'] = { 'ruff' }
+      lint.linters_by_ft['go'] = { 'golangcilint' }
+      lint.linters_by_ft['lua'] = { 'luacheck' }
 
       -- No JS linters configured - using ESLint LSP instead
 

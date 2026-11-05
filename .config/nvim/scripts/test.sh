@@ -15,13 +15,15 @@
 # script called it "ok". So: FAIL lines AND a non-zero exit AND the E-codes
 # nvim uses for an aborted chunk. All three, or the suite lies to you.
 set -uo pipefail
+repo_root="$(cd "$(dirname "$0")/../../.." && pwd)"
+tests_dir="$repo_root/tests/nvim"
 cd "$(dirname "$0")/.." || exit 1
 
 fail=0
-for spec in tests/*_spec.lua; do
+for spec in "$tests_dir"/*_spec.lua; do
   [ -e "$spec" ] || continue
   log=$(mktemp)
-  timeout 120 nvim --headless -u tests/minimal_init.lua -l "$spec" >"$log" 2>&1
+  timeout 120 nvim --headless -u "$tests_dir/minimal_init.lua" -l "$spec" >"$log" 2>&1
   rc=$?
   if [ "$rc" -ne 0 ] || grep -q '^FAIL:' "$log" || grep -qE '^E[0-9]{3,4}:' "$log"; then
     fail=1
