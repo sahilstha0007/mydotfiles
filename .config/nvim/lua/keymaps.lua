@@ -335,6 +335,20 @@ vim.keymap.set(
 )
 vim.keymap.set('v', '<A-k>', ":m '<-2<cr>gv=gv", { desc = 'Move selection up' })
 
+-- Navigate visual lines when text is wrapped, unless preceded by a count
+keymap.set(
+  { 'n', 'x' },
+  'j',
+  "v:count == 0 ? 'gj' : 'j'",
+  { expr = true, silent = true, desc = 'Down (visual line when wrapping)' }
+)
+keymap.set(
+  { 'n', 'x' },
+  'k',
+  "v:count == 0 ? 'gk' : 'k'",
+  { expr = true, silent = true, desc = 'Up (visual line when wrapping)' }
+)
+
 -- ============================================================
 -- UI Toggles (<leader>u*)
 -- ============================================================

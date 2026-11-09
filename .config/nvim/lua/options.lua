@@ -7,8 +7,8 @@ vim.opt.number = true
 -- Relative numbers
 vim.opt.relativenumber = true
 
--- Line wrap: disabled by default for clean code editing (toggle anytime with <leader>uw)
-vim.opt.wrap = false
+-- Line wrap & word wrap: enabled by default for natural reading/editing (toggle anytime with <leader>uw)
+vim.opt.wrap = true
 vim.opt.linebreak = true
 vim.opt.breakindent = true
 
