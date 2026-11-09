@@ -350,6 +350,32 @@ keymap.set(
   "v:count == 0 ? 'gk' : 'k'",
   { expr = true, silent = true, desc = 'Up (visual line when wrapping)' }
 )
+keymap.set({ 'n', 'x' }, '<Down>', "v:count == 0 ? 'gj' : 'j'", {
+  expr = true,
+  silent = true,
+  desc = 'Down arrow (visual line when wrapping)',
+})
+keymap.set(
+  { 'n', 'x' },
+  '<Up>',
+  "v:count == 0 ? 'gk' : 'k'",
+  { expr = true, silent = true, desc = 'Up arrow (visual line when wrapping)' }
+)
+keymap.set('i', '<Down>', function()
+  return vim.fn.pumvisible() == 1 and '<Down>' or '<C-o>gj'
+end, {
+  expr = true,
+  silent = true,
+  desc = 'Down arrow (visual line when wrapping)',
+})
+keymap.set(
+  'i',
+  '<Up>',
+  function()
+    return vim.fn.pumvisible() == 1 and '<Up>' or '<C-o>gk'
+  end,
+  { expr = true, silent = true, desc = 'Up arrow (visual line when wrapping)' }
+)
 
 -- ============================================================
 -- UI Toggles (<leader>u*)

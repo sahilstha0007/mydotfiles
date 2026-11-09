@@ -15,7 +15,7 @@
 # script called it "ok". So: FAIL lines AND a non-zero exit AND the E-codes
 # nvim uses for an aborted chunk. All three, or the suite lies to you.
 set -uo pipefail
-repo_root="$(cd "$(dirname "$0")/../../.." && pwd)"
+repo_root="$(cd "$(dirname "$(readlink -f "$0")")/../../.." && pwd)"
 tests_dir="$repo_root/tests/nvim"
 cd "$(dirname "$0")/.." || exit 1
 
