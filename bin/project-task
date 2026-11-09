@@ -1,0 +1,220 @@
+#!/usr/bin/env python3
+"""Project-aware run / test / lint / format runner.
+
+Usage:
+    project-task [run|test|lint|format] [directory]
+
+With no action it shows an fzf menu. With no directory it uses the nearest
+project manifest above the current directory, falling back to an fzf picker
+over the projects found underneath it.
+"""
+from __future__ import annotations
+
+import json
+import os
+import shutil
+import subprocess
+import sys
+from pathlib import Path
+
+ACTIONS = ("run", "test", "lint", "format")
+MARKERS = ("Cargo.toml", "package.json", "pyproject.toml", "requirements.txt", "go.mod", "composer.json", "artisan")
+SKIP = {".git", ".next", ".venv", "venv", "node_modules", "vendor", "target", "dist", "build", ".angular", ".cache", ".idea", ".vscode"}
+
+
+def fail(message: str) -> None:
+    print(f"project-task: {message}", file=sys.stderr)
+    raise SystemExit(2)
+
+
+def has_manifest(path: Path) -> bool:
+    return any((path / name).is_file() for name in MARKERS)
+
+
+def nearest_project(path: Path) -> Path | None:
+    for candidate in (path, *path.parents):
+        if has_manifest(candidate):
+            return candidate
+    return None
+
+
+def pick(items: list[str], prompt: str) -> str:
+    fzf = shutil.which("fzf")
+    if not fzf:
+        fail("fzf is required when choosing between actions/projects.")
+    result = subprocess.run([fzf, "--prompt", prompt, "--height", "40%", "--reverse"], input="\n".join(items) + "\n", text=True, capture_output=True)
+    if result.returncode:
+        raise SystemExit(result.returncode)
+    return result.stdout.strip()
+
+
+def discover(root: Path) -> list[Path]:
+    found: list[Path] = []
+    for current, dirs, _ in os.walk(root):
+        path = Path(current)
+        depth = len(path.relative_to(root).parts)
+        dirs[:] = [d for d in dirs if d not in SKIP and not d.startswith(".")]
+        if depth >= 7:
+            dirs[:] = []
+        if has_manifest(path):
+            found.append(path)
+            dirs[:] = []
+    return sorted(set(found))
+
+
+def select_project(root: Path, explicit: str | None, action: str) -> Path:
+    if explicit:
+        path = Path(explicit).expanduser().resolve()
+        if not path.is_dir():
+            fail(f"not a directory: {path}")
+        return nearest_project(path) or path
+    project = nearest_project(root)
+    if project:
+        return project
+    projects = discover(root)
+    if not projects:
+        fail(f"no supported project manifest found under {root}")
+    if len(projects) == 1:
+        return projects[0]
+    chosen = pick([str(p.relative_to(root) or Path(".")) for p in projects], f"{action} project ❯ ")
+    return (root / chosen).resolve()
+
+
+def execute(project: Path, args: list[str]) -> None:
+    print(f"[{project}] $ {' '.join(args)}", flush=True)
+    try:
+        result = subprocess.run(args, cwd=project, check=False)
+    except FileNotFoundError:
+        fail(f"command not found: {args[0]}")
+    raise SystemExit(result.returncode)
+
+
+def manifest(path: Path, filename: str) -> dict:
+    try:
+        return json.loads((path / filename).read_text())
+    except (OSError, ValueError) as error:
+        fail(f"cannot read {filename}: {error}")
+
+
+def run_script(project: Path, manifest_name: str, names: tuple[str, ...], manager: list[str], safe: bool = False) -> bool:
+    available = manifest(project, manifest_name).get("scripts", {})
+    for name in names:
+        body = available.get(name)
+        if body is None:
+            continue
+        text = " ".join(body) if isinstance(body, list) else str(body)
+        if safe and any(flag in text for flag in ("--fix", "--write", "pint")) and "--test" not in text:
+            continue
+        if name == "test" and "no test specified" in text.lower():
+            continue
+        execute(project, [*manager, name])
+    return False
+
+
+def js(project: Path, action: str) -> None:
+    data = manifest(project, "package.json")
+    available = data.get("scripts", {})
+    manager_name = data.get("packageManager", "").split("@", 1)[0]
+    if manager_name not in {"npm", "pnpm", "yarn", "bun"}:
+        manager_name = next(
+            (
+                m
+                for m, locks in (
+                    ("pnpm", ("pnpm-lock.yaml",)),
+                    ("bun", ("bun.lock", "bun.lockb")),
+                    ("yarn", ("yarn.lock",)),
+                    ("npm", ("package-lock.json", "npm-shrinkwrap.json")),
+                )
+                if any((project / lock).exists() for lock in locks)
+            ),
+            "npm",
+        )
+    if not shutil.which(manager_name):
+        fail(f"{manager_name} is not installed or on PATH")
+    preferred = {
+        "run": ("dev", "start:dev", "start", "serve"),
+        "test": ("test", "test:unit"),
+        "lint": ("lint:check", "lint", "typecheck"),
+        "format": ("format", "format:write", "format:fix"),
+    }[action]
+    for name in preferred:
+        body = available.get(name)
+        if not body:
+            continue
+        if action == "test" and "no test specified" in body.lower():
+            continue
+        if action == "lint" and any(flag in body for flag in ("--fix", "--write")):
+            continue
+        execute(project, ["yarn", name] if manager_name == "yarn" else [manager_name, "run", name])
+    fail(f"package.json has no safe {action} script")
+
+
+def python_task(project: Path, action: str) -> None:
+    interpreter = next((str(p) for p in (project / ".venv/bin/python", project / "venv/bin/python") if p.is_file()), sys.executable)
+    if action == "run":
+        for file, args in (("manage.py", ["runserver"]), ("main.py", []), ("app.py", [])):
+            if (project / file).is_file():
+                execute(project, [interpreter, file, *args])
+        fail("no manage.py, main.py or app.py entry point found")
+    if action == "test":
+        if subprocess.run([interpreter, "-c", "import pytest"], cwd=project, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
+            execute(project, [interpreter, "-m", "pytest"])
+        execute(project, [interpreter, "-m", "unittest", "discover"])
+    tool_names = ("ruff", "flake8", "pylint") if action == "lint" else ("ruff", "black")
+    search_path = f"{project / '.venv/bin'}:{os.environ.get('PATH', '')}"
+    for name in tool_names:
+        tool = shutil.which(name, path=search_path)
+        if not tool:
+            continue
+        if name == "ruff":
+            execute(project, [tool, *( ["check", "."] if action == "lint" else ["format", "."])])
+        execute(project, [tool, "."])
+    fail(f"no {action} tool found in PATH or the project virtualenv")
+
+
+def run(project: Path, action: str) -> None:
+    laravel = (project / "artisan").is_file()
+    if laravel and action in {"run", "test"}:
+        execute(project, ["php", "artisan", "serve" if action == "run" else "test"])
+    if (project / "Cargo.toml").is_file():
+        execute(project, {"run": ["cargo", "run"], "test": ["cargo", "test"], "lint": ["cargo", "clippy", "--all-targets"], "format": ["cargo", "fmt"]}[action])
+    if (project / "go.mod").is_file():
+        if action == "format":
+            files = [str(p) for p in project.rglob("*.go") if not any(part in SKIP or part.startswith(".") for part in p.relative_to(project).parts)]
+            if not files:
+                fail("no Go source files to format")
+            execute(project, ["gofmt", "-w", *files])
+        execute(project, {"run": ["go", "run", "."], "test": ["go", "test", "./..."], "lint": ["go", "vet", "./..."]}[action])
+    if laravel:
+        if action == "lint" and (project / "vendor/bin/pint").is_file():
+            execute(project, ["php", "vendor/bin/pint", "--test"])
+        if action == "format" and (project / "vendor/bin/pint").is_file():
+            execute(project, ["php", "vendor/bin/pint"])
+    if (project / "package.json").is_file():
+        js(project, action)
+    if (project / "composer.json").is_file():
+        names = {"run": ("dev", "start", "serve"), "test": ("test",), "lint": ("lint:check", "lint"), "format": ("format",)}[action]
+        if run_script(project, "composer.json", names, ["composer", "run-script"], safe=action == "lint"):
+            return
+        fail(f"composer.json has no safe {action} script")
+    if (project / "pyproject.toml").is_file() or (project / "requirements.txt").is_file():
+        python_task(project, action)
+    fail(f"no {action} command found for {project}")
+
+
+def main() -> None:
+    args = sys.argv[1:]
+    if args and args[0] in ACTIONS:
+        action = args.pop(0)
+    elif not args:
+        action = pick(list(ACTIONS), "project action ❯ ")
+    else:
+        fail("usage: project-task [run|test|lint|format] [project-directory]")
+    if action not in ACTIONS:
+        fail("choose run, test, lint or format")
+    project = select_project(Path.cwd().resolve(), args[0] if args else None, action)
+    run(project, action)
+
+
+if __name__ == "__main__":
+    main()

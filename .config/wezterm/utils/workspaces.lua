@@ -20,8 +20,6 @@ local wezterm = require('wezterm')
 local act = wezterm.action
 local M = {}
 
-local WORKSPACE_KEY_TABLE = 'workspaces'
-
 ---List all workspace names (wezterm natively tracks them).
 ---@return string[]
 local function list_workspaces()
@@ -45,12 +43,12 @@ local function new_workspace(window, pane)
             { Attribute = { Intensity = 'Bold' } },
             { Text = 'New workspace name:' },
          },
-         action = wezterm.action_callback(function(_win, _p, line)
+         action = wezterm.action_callback(function(win, _p, line)
             if not line or line == '' then
                return
             end
             -- SwitchToWorkspace creates it if it doesn't exist.
-            _win:perform_action(switch_to(line), pane)
+            win:perform_action(switch_to(line), pane)
          end),
       },
       pane
@@ -66,13 +64,13 @@ local function rename_workspace(window, pane)
             { Attribute = { Intensity = 'Bold' } },
             { Text = 'Rename workspace "' .. current .. '" to:' },
          },
-         action = wezterm.action_callback(function(_win, _p, line)
+         action = wezterm.action_callback(function(win, _p, line)
             if not line or line == '' then
                return
             end
             -- wezterm has no rename workspace API; create new + switch,
             -- leaving the old (empty) one behind. Harmless.
-            _win:perform_action(switch_to(line), pane)
+            win:perform_action(switch_to(line), pane)
          end),
       },
       pane
@@ -92,12 +90,12 @@ local function delete_workspace(window, pane)
             { Attribute = { Intensity = 'Bold' } },
             { Text = 'Delete workspace "' .. current .. '"? Type YES to confirm:' },
          },
-         action = wezterm.action_callback(function(_win, _p, line)
+         action = wezterm.action_callback(function(win, _p, line)
             if line == 'YES' then
                -- wezterm has no delete-workspace API either. Switch to
                -- default first so we don't strand the user, then the old
                -- workspace simply has no windows and is GC'd on next reload.
-               _win:perform_action(switch_to('default'), pane)
+               win:perform_action(switch_to('default'), pane)
             end
          end),
       },
@@ -122,11 +120,11 @@ local function switch_workspace_picker(window, pane)
          choices = choices,
          fuzzy = true,
          fuzzy_description = 'Workspace: ',
-         action = wezterm.action_callback(function(_win, _p, idx)
+         action = wezterm.action_callback(function(win, _p, idx)
             if not idx then
                return
             end
-            _win:perform_action(switch_to(choices[idx].id), pane)
+            win:perform_action(switch_to(choices[idx].id), pane)
          end),
       },
       pane

@@ -1,8 +1,6 @@
 local wezterm = require('wezterm')
-local Cells = require('utils.cells')
 local tokens = require('utils.tokens')
 
-local attr = Cells.attr
 local M = {}
 
 -- LEFT STATUS — Modal Key-Table Indicator & Workspace Identity

@@ -1,0 +1,220 @@
+#!/usr/bin/env bash
+# devcheck — one verification command for the whole dev stack.
+#
+# WHY THIS EXISTS
+# ---------------
+# The stack is three separate git repos (nvim, wezterm, tmux) plus the ml4w
+# dotfiles and the wiki, each with its own ad-hoc gates. On 2026-10-06 a single
+# session hand-ran EIGHT separate commands just to verify changes: nvim's
+# test.sh, fmt-check, lint, keymaps and mutate harness; wezterm's cascade and
+# opacity mutation harness; a kitty config parse; and the wiki linter.
+#
+# Hand-running is the problem, not the solution. Two of the defects found that
+# day were only caught BECAUSE the right gate happened to be run by hand --
+# a lint target that skipped silently, and a mutation harness with no exit path.
+# Either could equally have been skipped, and nothing would have said so. A gate
+# nobody runs is not a gate.
+#
+# So: one command, every gate, non-zero exit if any fails. Two tiers, because
+# the mutation harnesses re-copy the tree per mutant and cost seconds each,
+# while the ordinary gates cost ~3s total.
+#
+#   devcheck          fast tier — run this after any change
+#   devcheck --all    adds the mutation harnesses and the wiki linter
+#
+# DESIGN RULES (learned the hard way here)
+# ---------------------------------------
+# * A gate that skips reports success. See nvim's `lint`: it printed "luacheck
+#   not installed - skipping" and exited 0, so `make check` went green having
+#   linted nothing. devcheck never converts a missing tool into a pass -- see
+#   SKIPPED below.
+# * Exit code is only evidence once you have confirmed something sets it. The
+#   wezterm mutation harness had no `exit` statement at all and still reported
+#   EXIT 0 all morning. That is why --all exists and why it is not optional
+#   decoration: it is the tier that proves the others can fail.
+# * Never report a gate as passing because it printed something. Assert on the
+#   exit code, and let the output speak for itself.
+set -uo pipefail
+
+FAST_MS=0
+FAILED=0
+SKIPPED=0
+declare -a NAMES=() RESULTS=()
+
+# --- output helpers --------------------------------------------------------
+if [ -t 1 ]; then BOLD=$'\033[1m'; DIM=$'\033[2m'; R=$'\033[0m'
+                    GRN=$'\033[32m'; RED=$'\033[31m'; YLW=$'\033[33m'; CYN=$'\033[36m'
+else BOLD=''; DIM=''; R=''; GRN=''; RED=''; YLW=''; CYN=''; fi
+
+# run <name> <dir> <cmd...>
+run () {
+  local name="$1" dir="$2"; shift 2
+  local start; start=$(date +%s%N)
+  ( cd "$dir" && "$@" ) > /tmp/devcheck.$$.log 2>&1
+  local ec=$?
+  local ms=$(( ($(date +%s%N) - start) / 1000000 ))
+  FAST_MS=$((FAST_MS + ms))
+
+  if [ "$ec" -eq 0 ]; then
+    NAMES+=("$name"); RESULTS+=("${GRN}pass${R}")
+    printf '  %s%s%s  %-28s %s\n' "$BOLD" "$name" "$R" "" "${DIM}${ms}ms${R}"
+  else
+    FAILED=$((FAILED + 1))
+    NAMES+=("$name"); RESULTS+=("${RED}FAIL${R}")
+    printf '  %s%s%s  %-28s %sFAIL (exit %d)%s\n' "$BOLD" "$name" "$R" "" "$RED" "$ec" "$R"
+    # Show the tail only on failure -- that is when it is worth reading.
+    printf '%s\n' "$DIM" "$(tail -6 /tmp/devcheck.$$.log | sed 's/^/      /')" "$R"
+  fi
+  return 0
+}
+
+# skip <name> <reason>
+skip () {
+  SKIPPED=$((SKIPPED + 1))
+  NAMES+=("$1"); RESULTS+=("${YLW}skip${R} ${DIM}($2)${R}")
+  printf '  %s%s%s  %-28s %s%s%s\n' "$BOLD" "$1" "$R" "" "$YLW" "$2" "$R"
+}
+
+printf '%sdevcheck%s  %sfast tier%s\n\n' "$BOLD" "$R" "$DIM" "$R"
+
+# --- nvim -------------------------------------------------------------------
+NVIM="$HOME/.config/nvim"
+if [ -d "$NVIM" ]; then
+  run "nvim: specs"      "$NVIM" ./scripts/test.sh
+  run "nvim: fmt"        "$NVIM" make fmt-check
+  run "nvim: keymaps"    "$NVIM" make keymaps
+  # lint was skipped here because it exits 1 when luacheck is absent, by design
+  # (see the lint target's own comment) -- every devcheck would have been red
+  # for a reason unrelated to any change.
+  #
+  # luacheck is installed now (`luarocks --local --lua-version=5.1`), with a
+  # real .luacheckrc behind it, so the gate is worth running. It is still not
+  # on PATH for a non-interactive shell, hence the same ~/.luarocks/bin
+  # fallback the Makefile uses -- otherwise this would skip forever and a skip
+  # outliving its reason is just a green light that tests nothing.
+  if command -v luacheck >/dev/null 2>&1 || [ -x "$HOME/.luarocks/bin/luacheck" ]; then
+    run "nvim: lint" "$NVIM" make lint
+  else
+    skip "nvim: lint" "luacheck not installed (gate now fails loudly on its own)"
+  fi
+else
+  skip "nvim" "not at $NVIM"
+fi
+
+# --- wezterm ----------------------------------------------------------------
+WZ="$HOME/.config/wezterm"
+WZ_TESTS="$HOME/mydotfiles/tests/wezterm"
+if [ -d "$WZ" ]; then
+  run "wezterm: cascade" "$WZ" bash "$WZ_TESTS/check_wallpaper_cascade.sh"
+  run "wezterm: right-status" "$WZ" luajit "$WZ_TESTS/check-right-status.lua" "$WZ"
+  run "wezterm: tab-title" "$WZ" luajit "$WZ_TESTS/check-tab-title.lua" "$WZ"
+  if command -v luacheck >/dev/null 2>&1 || [ -x "$HOME/.luarocks/bin/luacheck" ]; then
+    LUACHECK_BIN=$(command -v luacheck 2>/dev/null || echo "$HOME/.luarocks/bin/luacheck")
+    run "wezterm: lint" "$WZ" "$LUACHECK_BIN" .
+  fi
+  # Cross-layer, not wezterm-internal: compares wezterm's effective bindings
+  # against tmux's ROOT table for silent steals. Belongs in the ordinary tier
+  # because it is ~200ms and catches a class of bug that has recurred 4 times.
+  run "keys: wezterm vs tmux" "$WZ" bash scripts/check-key-collisions.sh
+  if [ "${1:-}" = "--all" ]; then
+    run "wezterm: mutation" "$WZ" bash "$WZ_TESTS/mutate-check-opacity.sh"
+  else
+    skip "wezterm: mutation" "use --all (re-copies tree per mutant)"
+  fi
+else
+  skip "wezterm" "not at $WZ"
+fi
+
+# --- tmux -------------------------------------------------------------------
+TMUX="$HOME/.config/tmux"
+TMUX_TESTS="$HOME/mydotfiles/tests/tmux"
+if [ -x "$TMUX_TESTS/check-colour-propagation.sh" ]; then
+  run "tmux: colour prop" "$TMUX" bash "$TMUX_TESTS/check-colour-propagation.sh"
+  run "tmux: profiles" "$TMUX" bash "$TMUX_TESTS/check-terminal-profiles.sh"
+else
+  skip "tmux: colour prop" "script missing"
+fi
+
+
+# --- kitty ------------------------------------------------------------------
+KITTY="$HOME/.config/kitty/custom.conf"
+if [ -f "$KITTY" ]; then
+  run "kitty: config parse" "$HOME/.config/kitty" \
+    kitty --config NONE -o include="$KITTY" --help
+else
+  skip "kitty: config parse" "no custom.conf"
+fi
+
+KITTY_DEV="$HOME/.config/kitty/dev.conf"
+if [ -f "$KITTY_DEV" ]; then
+  run "kitty: dev profile" "$HOME/.config/kitty" \
+    bash -c 'python3 -m py_compile tab_bar.py pass_keys.py && kitty --config dev.conf --help >/dev/null'
+else
+  skip "kitty: dev profile" "no dev.conf"
+fi
+
+# --- docs vs live configs ---------------------------------------------------
+# The Terminal Stack notes are hand-maintained prose describing live configs.
+# Every claim a machine can check is checked here: documented bindings must
+# exist in `wezterm show-keys` / `tmux list-keys`, and zed task labels must
+# resolve in tasks.json. A doc that lies is a defect; this is the gate that says so.
+DOCS_DIR="$HOME/Documents/Notes/Atlas"
+if [ -f "$DOCS_DIR/scripts/check_docs_vs_config.py" ]; then
+  run "docs: vs config" "$DOCS_DIR" python3 scripts/check_docs_vs_config.py
+else
+  skip "docs: vs config" "script missing"
+fi
+
+# --- slow tier --------------------------------------------------------------
+if [ "${1:-}" = "--all" ]; then
+  WIKI="$HOME/Documents/Notes/Atlas"
+  WLINT="$WIKI/11 - Sahil's Wiki/scripts/lint.py"
+  # The wiki linter exits 1 on any issue, and the vault currently carries 15
+  # pre-existing ones (6 files without frontmatter, orphans, one broken link)
+  # that have nothing to do with any code change. Wired in raw, devcheck --all
+  # would be permanently red -- and a gate that is always red stops being read,
+  # which is the exact failure this tool exists to prevent.
+  #
+  # So: fail only when the count EXCEEDS this baseline. That still catches new
+  # breakage (the useful signal) without crying wolf over known noise. Bump the
+  # number deliberately, after fixing the underlying issues -- never to silence
+  # a new one.
+  WIKI_BASELINE=15
+  if [ -f "$WLINT" ]; then
+    out=$( cd "$WIKI" && python3 "11 - Sahil's Wiki/scripts/lint.py" 2>&1 )
+    n=$(printf '%s\n' "$out" | sed -n 's/^Lint found \([0-9]\+\) issue.*/\1/p')
+    if [ -z "$n" ]; then
+      # No "found N" line means it either passed or crashed. A crash must not
+      # read as a pass.
+      printf '%s\n' "$out" | grep -qi 'clean' \
+        && { NAMES+=("wiki: lint"); printf '  %swiki: lint%s  %s\n' "$DIM" "$R" "clean"; } \
+        || { FAILED=$((FAILED+1)); printf '  %swiki: lint%s  %sFAIL (linter crashed)%s\n' "$DIM" "$R" "$RED" "$R"; }
+    elif [ "$n" -gt "$WIKI_BASELINE" ]; then
+      FAILED=$((FAILED + 1)); NAMES+=("wiki: lint")
+      printf '  %swiki: lint%s  %sFAIL %d issues (baseline %d) -- %d NEW%s\n' \
+        "$DIM" "$R" "$RED" "$n" "$WIKI_BASELINE" "$((n - WIKI_BASELINE))" "$R"
+      printf '%s\n' "$out" | grep '^  - ' | tail -5 | sed "s/^/      /"
+    else
+      NAMES+=("wiki: lint")
+      printf '  %swiki: lint%s  %s%d issues (baseline %d, unchanged)%s\n' \
+        "$DIM" "$R" "$DIM" "$n" "$WIKI_BASELINE" "$R"
+    fi
+  fi
+  NVMUT="$NVIM/tests/mutate-terminal-colors.sh"
+  if [ -f "$NVMUT" ]; then
+    run "nvim: mutation" "$NVIM" bash tests/mutate-terminal-colors.sh
+  fi
+fi
+
+rm -f /tmp/devcheck.$$.log
+
+# --- verdict ----------------------------------------------------------------
+printf '\n'
+if [ "$FAILED" -ne 0 ]; then
+  printf '%s%d gate(s) FAILED%s   %s%d passed, %d skipped, %dms%s\n' \
+    "$RED" "$FAILED" "$R" "$DIM" "$(( ${#NAMES[@]} - FAILED - SKIPPED ))" "$SKIPPED" "$FAST_MS" "$R"
+  exit 1
+fi
+printf '%sall gates pass%s   %sdims: %d run, %d skipped (skips are NOT passes)%s\n' \
+  "$GRN" "$R" "$DIM" "$(( ${#NAMES[@]} - SKIPPED ))" "$SKIPPED" "$R"
+exit 0

@@ -1,5 +1,4 @@
 local wezterm = require('wezterm')
-local umath = require('utils.math')
 local Cells = require('utils.cells')
 local OptsValidator = require('utils.opts-validator')
 local tokens = require('utils.tokens')
@@ -36,33 +35,6 @@ local ICON_UPTIME = nf.md_timer_outline
 local ICON_CPU = nf.md_cpu_64_bit or nf.fa_microchip or 'CPU'
 local ICON_MEM = nf.md_memory or nf.fa_memory or 'RAM'
 local ICON_CLOCK = nf.md_clock_outline or nf.fa_clock_o or 'T'
-
----@type string[]
-local discharging_icons = {
-   nf.md_battery_10,
-   nf.md_battery_20,
-   nf.md_battery_30,
-   nf.md_battery_40,
-   nf.md_battery_50,
-   nf.md_battery_60,
-   nf.md_battery_70,
-   nf.md_battery_80,
-   nf.md_battery_90,
-   nf.md_battery,
-}
----@type string[]
-local charging_icons = {
-   nf.md_battery_charging_10,
-   nf.md_battery_charging_20,
-   nf.md_battery_charging_30,
-   nf.md_battery_charging_40,
-   nf.md_battery_charging_50,
-   nf.md_battery_charging_60,
-   nf.md_battery_charging_70,
-   nf.md_battery_charging_80,
-   nf.md_battery_charging_90,
-   nf.md_battery_charging,
-}
 
 ---@type table<string, Cells.SegmentColors>
 -- Palette-derived (2026-10-10): the segments follow the wallpaper through the

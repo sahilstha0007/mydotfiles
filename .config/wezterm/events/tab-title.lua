@@ -12,7 +12,6 @@ local ustr = require('utils.str')
 -- load: dark branch values match the old mocha chrome exactly, light branch
 -- uses latte-tone equivalents so pills/text stay legible on light themes.
 local tokens = require('utils.tokens')
-local ACTIVE = tokens.accent
 
 local nf = wezterm.nerdfonts
 local attr = Cells.attr

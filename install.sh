@@ -98,10 +98,11 @@ if [ -d "$code_src" ]; then
   done
 fi
 
-# 3. Shell Runtime Configurations (~/.zshrc_custom, ~/.bashrc_custom, ~/.omni-aliases.zsh, ~/.zshenv)
+# 3. Shell Runtime Configurations (~/.zshrc, ~/.zshrc_custom, ~/.bashrc_custom, ~/.omni-aliases.zsh, ~/.zshenv)
 shell_src="$repo/shell"
 if [ -d "$shell_src" ]; then
   declare -A shell_map=(
+    ["zshrc"]="$HOME/.zshrc"
     ["zshrc_custom"]="$HOME/.zshrc_custom"
     ["bashrc_custom"]="$HOME/.bashrc_custom"
     ["omni-aliases.zsh"]="$HOME/.omni-aliases.zsh"
@@ -133,10 +134,40 @@ if [ -d "$shell_src" ]; then
   done
 fi
 
-# 4. Ensure executable permissions on all shell scripts
+# 4. CLI Binaries & Dispatchers (~/.local/bin)
+bin_src="$repo/bin"
+if [ -d "$bin_src" ]; then
+  mkdir -p "$HOME/.local/bin"
+  for src_file in "$bin_src"/*; do
+    [ -f "$src_file" ] || continue
+    name="$(basename "$src_file")"
+    dst_file="$HOME/.local/bin/$name"
+
+    if [ -L "$dst_file" ] && [ "$(readlink -f "$dst_file")" = "$(readlink -f "$src_file")" ]; then
+      echo "  [OK]     $dst_file is already linked"
+      continue
+    fi
+
+    if [ -L "$dst_file" ]; then
+      rm -f "$dst_file"
+    elif [ -e "$dst_file" ]; then
+      mkdir -p "$backup/bin"
+      mv "$dst_file" "$backup/bin/$name"
+      echo "  [BACKUP] $dst_file -> $backup/bin/$name"
+      backed_up=1
+    fi
+
+    chmod +x "$src_file"
+    ln -s "$src_file" "$dst_file"
+    echo "  [LINK]   $dst_file -> $src_file"
+  done
+fi
+
+# 5. Ensure executable permissions on all shell scripts
 echo "==> Setting executable permissions on scripts..."
 find "$repo/.config" -type f -name "*.sh" -exec chmod +x {} + 2>/dev/null || true
 find "$repo/.config" -type f -name "*.py" -exec chmod +x {} + 2>/dev/null || true
+find "$repo/bin" -type f -exec chmod +x {} + 2>/dev/null || true
 
 # 4. Tmux Plugin Manager (TPM) reminder
 if [ ! -d "$HOME/.tmux/plugins/tpm" ] && [ ! -d "$repo/.config/tmux/plugins/tpm" ]; then

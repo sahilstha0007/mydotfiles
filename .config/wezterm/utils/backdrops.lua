@@ -92,15 +92,6 @@ local function display_path(img)
    return img
 end
 
--- '#rrggbb' -> 'rgba(r, g, b, a)' so translucent chrome can follow the theme
--- (dark glass on dark wallpapers, light glass on light ones).
-local function rgba(hex, a)
-   local r = tonumber(hex:sub(2, 3), 16) or 0
-   local g = tonumber(hex:sub(4, 5), 16) or 0
-   local b = tonumber(hex:sub(6, 7), 16) or 0
-   return string.format('rgba(%d, %d, %d, %s)', r, g, b, tostring(a))
-end
-
 -- Last wallpaper sync-wallpaper.sh applied (written before each palette
 -- regeneration). Lets a config reload restore the current backdrop instead
 -- of reshuffling to a random one — required for live palette reloads.

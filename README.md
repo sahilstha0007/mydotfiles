@@ -13,7 +13,8 @@ A portable, self-contained developer stack configuration for **any Linux distrib
 | **Kitty Dev** | `.config/kitty/` | High-performance dev profile (`dev.conf`), modern floating rounded pills HUD (`tab_bar.py`), Nightfox theme, 100% zero-mouse QuickSelect suite (`Ctrl+Shift+P > ...`). |
 | **WezTerm** | `.config/wezterm/` | GPU-accelerated visual workstation, dynamic wallpaper cascade, custom Lua tab pills & HUD, WSL/domain tabs. |
 | **VS Code** | `.config/Code/User/` | Keyboard-harmonized `settings.json`, `keybindings.json`, and tracked extension list (`extensions.txt`). |
-| **Shell & Runtime** | `shell/` | Portable environment (`.zshrc_custom`, `.bashrc_custom`, `.zshenv`), dual-profile Oh-My-Posh prompts, dynamic PATH & FZF bindings. |
+| **CLI Binaries & Gates** | `bin/` | Single-command verification gate (`devcheck`), multi-language task runner (`project-task`), and dev profile launcher (`kitty-dev`). |
+| **Shell & Runtime** | `shell/` | Standalone high-performance shell (`.zshrc` ~56ms startup, `.zshenv`), dual-profile Oh-My-Posh prompts, dynamic PATH & FZF bindings. |
 
 ---
 

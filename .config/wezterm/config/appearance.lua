@@ -137,7 +137,7 @@ return {
    -- With window_decorations = 'NONE', no in-window title bar is drawn,
    -- but Wayland compositors (Hyprland), overview menus, and status bars
    -- read this title to identify the window.
-   wezterm.on('format-window-title', function(tab, pane)
+   wezterm.on('format-window-title', function(tab)
       if tab and tab.active_pane and tab.active_pane.title and #tab.active_pane.title > 0 then
          return tab.active_pane.title
       end
