@@ -43,8 +43,16 @@ vim.diagnostic.config {
   },
   underline = true,
   severity_sort = true,
-  float = { border = 'rounded', source = 'if_many' },
+  float = { border = 'rounded', source = 'if_many', wrap = true },
 }
+
+-- Hover and signature help floating windows: wrap lines cleanly
+vim.lsp.handlers['textDocument/hover'] =
+  vim.lsp.with(vim.lsp.handlers.hover, { border = 'rounded', wrap = true })
+vim.lsp.handlers['textDocument/signatureHelp'] = vim.lsp.with(
+  vim.lsp.handlers.signature_help,
+  { border = 'rounded', wrap = true }
+)
 
 -- Prepend bun bin and mise shims to PATH
 vim.env.PATH = vim.env.HOME

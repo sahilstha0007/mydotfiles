@@ -9,8 +9,18 @@ return {
     options = {
       show_source = true,
       use_icons_from_diagnostic = true,
-      multilines = true,
-      softwrap = 30,
+      softwrap = 40,
+      multilines = {
+        enabled = true,
+        always_show = true,
+      },
+      overflow = {
+        mode = 'wrap',
+      },
+      break_line = {
+        enabled = true,
+        after = 40,
+      },
     },
   },
   config = function(_, opts)

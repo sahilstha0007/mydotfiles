@@ -294,6 +294,8 @@ vim.api.nvim_create_autocmd('BufWinEnter', {
       return
     end
     if popup_buftypes[bt] then
+      vim.wo.wrap = true
+      vim.wo.linebreak = true
       vim.keymap.set(
         'n',
         'q',
