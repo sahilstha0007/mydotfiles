@@ -98,7 +98,42 @@ if [ -d "$code_src" ]; then
   done
 fi
 
-# 3. Ensure executable permissions on all shell scripts
+# 3. Shell Runtime Configurations (~/.zshrc_custom, ~/.bashrc_custom, ~/.omni-aliases.zsh, ~/.zshenv)
+shell_src="$repo/shell"
+if [ -d "$shell_src" ]; then
+  declare -A shell_map=(
+    ["zshrc_custom"]="$HOME/.zshrc_custom"
+    ["bashrc_custom"]="$HOME/.bashrc_custom"
+    ["omni-aliases.zsh"]="$HOME/.omni-aliases.zsh"
+    ["zshenv"]="$HOME/.zshenv"
+  )
+
+  for file in "${!shell_map[@]}"; do
+    src_file="$shell_src/$file"
+    dst_file="${shell_map[$file]}"
+
+    if [ -f "$src_file" ]; then
+      if [ -L "$dst_file" ] && [ "$(readlink -f "$dst_file")" = "$(readlink -f "$src_file")" ]; then
+        echo "  [OK]     $dst_file is already linked"
+        continue
+      fi
+
+      if [ -L "$dst_file" ]; then
+        rm -f "$dst_file"
+      elif [ -e "$dst_file" ]; then
+        mkdir -p "$backup/shell"
+        mv "$dst_file" "$backup/shell/$file"
+        echo "  [BACKUP] $dst_file -> $backup/shell/$file"
+        backed_up=1
+      fi
+
+      ln -s "$src_file" "$dst_file"
+      echo "  [LINK]   $dst_file -> $src_file"
+    fi
+  done
+fi
+
+# 4. Ensure executable permissions on all shell scripts
 echo "==> Setting executable permissions on scripts..."
 find "$repo/.config" -type f -name "*.sh" -exec chmod +x {} + 2>/dev/null || true
 find "$repo/.config" -type f -name "*.py" -exec chmod +x {} + 2>/dev/null || true

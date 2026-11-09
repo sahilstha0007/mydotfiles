@@ -1,0 +1,26 @@
+
+# Added by jcode installer (prepend once; nested shells must not duplicate PATH)
+case ":$PATH:" in
+    *:$HOME/.local/bin:*) ;;
+    *) export PATH="$HOME/.local/bin:$PATH" ;;
+esac
+
+# OmniRoute aliases - kept in $HOME because ml4w owns ~/.config/zshrc
+[ -f ~/.omni-aliases.zsh ] && source ~/.omni-aliases.zsh
+case ":$PATH:" in
+    *:"$HOME/.bun/bin":*) ;;
+    *) export PATH="$HOME/.bun/bin:$PATH" ;;
+esac
+
+# -----------------------------------------------------
+# TMUX — one shared socket dir so kitty & wezterm share
+# the same tmux server (and therefore the same sessions).
+# ~/.zshenv is sourced by every zsh, so both terminals
+# agree on where tmux sockets live.
+# -----------------------------------------------------
+export TMUX_TMPDIR="${TMUX_TMPDIR:-$HOME/.cache/tmux}"
+mkdir -p "$TMUX_TMPDIR" 2>/dev/null
+chmod 700 "$TMUX_TMPDIR" 2>/dev/null
+
+# Truecolor advertisement for tools that sniff COLORTERM instead of TERM.
+export COLORTERM=truecolor

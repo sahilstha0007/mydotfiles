@@ -1,0 +1,20 @@
+# =============================================================================
+# ~/.bashrc_custom — sourced by ML4W's .bashrc (line 36)
+# Secrets live in ~/.config/secrets/*.env (mode 0600). Never inline them here.
+# =============================================================================
+
+# Tabitoken / Anthropic-compatible endpoint
+[ -f "$HOME/.config/secrets/anthropic.env" ] && . "$HOME/.config/secrets/anthropic.env"
+
+# --- pager + ls --------------------------------------------------------------
+# git pipes into less by default. Without these, `git log` in a non-tty (or
+# inside a script) either pages pointlessly or dumps raw escape codes.
+export LESS='-R -F -X'      # -R keep colour, -F quit if one screen, -X don't clear
+export PAGER='less'
+export SYSTEMD_PAGER='less'
+
+# long listings by default; `la` for hidden
+alias ls='ls -h --color=auto'
+alias la='ls -Ahi --color=auto'
+alias l='ls -CFh --color=auto'
+alias ..='cd ..'
