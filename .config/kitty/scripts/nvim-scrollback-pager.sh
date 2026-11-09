@@ -19,7 +19,7 @@ cat > "$TMP_PAGER_FILE"
 # - 'q' and 'Esc' immediately quit
 # - line numbers and relative numbers enabled
 exec nvim \
-  -c "set buftype=nofile noswapfile nomodified readonly cursorline number relativenumber" \
+  -c "set buftype=nofile noswapfile nomodified readonly cursorline number relativenumber wrap linebreak breakindent" \
   -c "nnoremap <silent> q :qa!<CR>" \
   -c "nnoremap <silent> <ESC> :qa!<CR>" \
   -c "normal! G" \

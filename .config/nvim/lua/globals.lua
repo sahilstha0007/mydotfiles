@@ -46,13 +46,35 @@ vim.diagnostic.config {
   float = { border = 'rounded', source = 'if_many', wrap = true },
 }
 
+-- Disable unused providers to accelerate startup and eliminate health warnings
+vim.g.loaded_perl_provider = 0
+vim.g.loaded_ruby_provider = 0
+
 -- Hover and signature help floating windows: wrap lines cleanly
-vim.lsp.handlers['textDocument/hover'] =
-  vim.lsp.with(vim.lsp.handlers.hover, { border = 'rounded', wrap = true })
-vim.lsp.handlers['textDocument/signatureHelp'] = vim.lsp.with(
-  vim.lsp.handlers.signature_help,
-  { border = 'rounded', wrap = true }
+local orig_hover = vim.lsp.handlers.hover
+vim.lsp.handlers['textDocument/hover'] = function(err, result, ctx, config)
+  return orig_hover(
+    err,
+    result,
+    ctx,
+    vim.tbl_extend('force', { border = 'rounded', wrap = true }, config or {})
+  )
+end
+
+local orig_sig = vim.lsp.handlers.signature_help
+vim.lsp.handlers['textDocument/signatureHelp'] = function(
+  err,
+  result,
+  ctx,
+  config
 )
+  return orig_sig(
+    err,
+    result,
+    ctx,
+    vim.tbl_extend('force', { border = 'rounded', wrap = true }, config or {})
+  )
+end
 
 -- Prepend bun bin and mise shims to PATH
 vim.env.PATH = vim.env.HOME

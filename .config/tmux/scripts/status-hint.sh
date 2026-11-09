@@ -31,7 +31,7 @@ hints=(
   'resize pane → Alt+h j k l'
   'select text → C-a [ v y'
   'paste → C-a ]'
-  'split → C-a \ - " %'
+  'split → C-a | -'
   'zoom pane → C-a z'
   'lazygit → C-a g'
   'lazydocker → C-a d'
