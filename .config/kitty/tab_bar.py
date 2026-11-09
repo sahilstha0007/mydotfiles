@@ -284,15 +284,16 @@ def draw_right_status(draw_data: DrawData, screen: Screen) -> None:
     bat_fg = bat_fg_custom if bat_fg_custom is not None else mid_fg
 
     # All candidate pill segments: (content, fg, bg)
+    # Enforce strict "one-owner-per-signal" contract: when running inside tmux,
+    # tmux owns the session badge & git info; kitty owns breadcrumb, battery, agents & clock.
     all_segments = []
-    if tmux_sess:
-        all_segments.append((tmux_sess, tmux_fg, pill_bg))
+    if not tmux_sess:
+        if git_info:
+            all_segments.append((git_info, git_fg, pill_bg))
     if agents:
         all_segments.append((agents, agent_fg, pill_bg))
     if containers:
         all_segments.append((containers, container_fg, pill_bg))
-    if git_info:
-        all_segments.append((git_info, git_fg, pill_bg))
     if breadcrumb:
         all_segments.append((breadcrumb, mid_fg, pill_bg))
     if battery:

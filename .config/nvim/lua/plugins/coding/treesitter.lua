@@ -41,7 +41,6 @@ return {
         'astro', -- you have astro.lua
         'regex',
         'toml',
-        'norg',
       }
 
       require('nvim-treesitter').install(ensure_installed)
