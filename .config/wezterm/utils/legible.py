@@ -67,23 +67,46 @@ def polar(bg):
     return 1.0 if rel_lum(bg) < 0.18 else 0.0
 
 
-def legible(c, bg, *fallbacks, steps=16):
-    """`c` if it clears MIN_CONTRAST on `bg`; else the same hue with lightness
-    walked toward the background's opposite end until it does; else whichever
-    of `fallbacks` reads best.
+def _normalize_bgs(bg):
+    if isinstance(bg, (list, tuple)):
+        return list(bg)
+    if isinstance(bg, str) and ',' in bg:
+        return [x.strip() for x in bg.split(',') if x.strip()]
+    return [bg]
 
-    Use this when the wallpaper token must stay on-palette. For roles that are
-    already a fixed readable slot, plain substitution is enough and cheaper.
+
+def _blend_rgb(a, b, t):
+    ar, ag, ab = (int(a[i:i + 2], 16) for i in (1, 3, 5))
+    br, bg_, bb = (int(b[i:i + 2], 16) for i in (1, 3, 5))
+    return '#%02x%02x%02x' % (
+        int(ar + (br - ar) * t + 0.5),
+        int(ag + (bg_ - ag) * t + 0.5),
+        int(ab + (bb - ab) * t + 0.5),
+    )
+
+
+def translucent_bgs(bg, opacity=0.85):
+    """Return [bg, 0.85-over-black, 0.85-over-white] for glass-opacity checks."""
+    return [bg, _blend_rgb('#000000', bg, opacity), _blend_rgb('#ffffff', bg, opacity)]
+
+
+def legible(c, bg, *fallbacks, steps=64, min_contrast=MIN_CONTRAST):
+    """`c` if it clears `min_contrast` on every bg in `bg`; else the same hue
+    with lightness walked toward the primary background's opposite end until
+    it clears all of `bg`; else whichever of `fallbacks` reads best.
     """
-    if contrast(c, bg) >= MIN_CONTRAST:
+    bgs = _normalize_bgs(bg)
+    if all(contrast(c, b) >= min_contrast for b in bgs):
         return c
     h, l, s = colorsys.rgb_to_hls(*rgb(c))
-    p = polar(bg)
+    p = polar(bgs[0])
     for step in range(1, steps + 1):
         cand = hx(colorsys.hls_to_rgb(h, l + (p - l) * step / steps, s))
-        if contrast(cand, bg) >= MIN_CONTRAST:
+        if all(contrast(cand, b) >= min_contrast for b in bgs):
             return cand
-    return max(fallbacks, key=lambda x: contrast(x, bg)) if fallbacks else c
+    if fallbacks:
+        return max(fallbacks, key=lambda x: min(contrast(x, b) for b in bgs))
+    return hx(colorsys.hls_to_rgb(h, p, s))
 
 
 def read_palette(path):
@@ -113,13 +136,27 @@ def base_for(bg):
 if __name__ == '__main__':
     import sys
 
-    # CLI: legible.py <hex> <bg> [fallback...] -> repaired hex on stdout.
-    # The shell layers (herdr, omp, opencode) call this so their gate is this
-    # module's gate and not a fourth awk copy of it.
-    if len(sys.argv) > 2 and sys.argv[1].startswith('#'):
-        c, bg = sys.argv[1], sys.argv[2]
-        fbs = sys.argv[3:] or (list(LATTE.values()) + list(MOCHA.values()))
-        print(legible(c, bg, *fbs))
+    # Batch mode: read "key min_contrast fg_hex refs_csv [fallback...]" per line.
+    if len(sys.argv) == 2 and sys.argv[1] == '--batch':
+        for line in sys.stdin:
+            parts = line.strip().split()
+            if not parts:
+                continue
+            key, min_c, fg_hex, refs = parts[0], float(parts[1]), parts[2], parts[3]
+            fbs = parts[4:]
+            print(f"{key} {legible(fg_hex, refs, *fbs, min_contrast=min_c)}")
+        sys.exit(0)
+
+    # CLI: legible.py [--min R] <hex> <bg[,bg2...]> [fallback...] -> repaired hex on stdout.
+    args = sys.argv[1:]
+    min_c = MIN_CONTRAST
+    if len(args) >= 2 and args[0] == '--min':
+        min_c = float(args[1])
+        args = args[2:]
+    if len(args) > 1 and args[0].startswith('#'):
+        c, bg = args[0], args[1]
+        fbs = args[2:] or (list(LATTE.values()) + list(MOCHA.values()))
+        print(legible(c, bg, *fbs, min_contrast=min_c))
         sys.exit(0)
 
     # ponytail: self-check, because this module is the readability gate for six

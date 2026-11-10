@@ -258,13 +258,94 @@ fg=$fghex
 # catppuccin surface.
 #
 # Same guard(), same MIN_CONTRAST, same D_* fallbacks — only the reference
-# colour differs. surface_2 is the exception: it is also the INACTIVE PANE
-# BORDER, i.e. text-on-background rather than a fill, so it is measured both
-# ways and has to clear the background gate as well.
+# colour differs. surface_2 is the INACTIVE PANE BORDER (>= 3.0:1), not a fill.
 surface0=$(guard "$surface0" "$D_surface_0" "$fghex")
 surface1=$(guard "$surface1" "$D_surface_1" "$fghex")
-surface2=$(guard "$surface2" "$D_surface_2" "$fghex")
-surface2=$(guard "$surface2" "$D_surface_2")
+
+# Repair every readable/border token via the shared WCAG module (legible.py)
+# across flat bg, 0.85 translucent extremes, and status fill surface_0.
+LEGIBLE_PY="$HOME/.config/wezterm/utils/legible.py"
+if [ ! -f "$LEGIBLE_PY" ]; then
+  LEGIBLE_PY="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../wezterm/utils" && pwd -P)/legible.py"
+fi
+
+if [ -f "$LEGIBLE_PY" ] && command -v python3 >/dev/null 2>&1; then
+  read -r bg_refs fill_refs <<EOF
+$(python3 -c "
+import sys
+sys.path.insert(0, '$(dirname -- "$LEGIBLE_PY")')
+import legible
+bgs = legible.translucent_bgs('#$bg')
+print(','.join(bgs), ','.join(bgs + ['#$surface0']))
+")
+EOF
+  repaired=$(python3 "$LEGIBLE_PY" --batch <<EOF
+fg $MIN_CONTRAST #$fg $fill_refs #$D_text
+primary $MIN_CONTRAST #$primary $fill_refs #$D_blue
+error $MIN_CONTRAST #$error $fill_refs #$D_red
+success $MIN_CONTRAST #$success $fill_refs #$D_green
+outline $MIN_CONTRAST #$outline $fill_refs #$D_overlay_0
+tertiary $MIN_CONTRAST #$tertiary $bg_refs #$D_yellow
+secondary $MIN_CONTRAST #$secondary $bg_refs #$D_pink
+surface2 3.0 #$surface2 $bg_refs #$D_text
+D_rosewater $MIN_CONTRAST #$D_rosewater $bg_refs
+D_flamingo $MIN_CONTRAST #$D_flamingo $bg_refs
+D_pink $MIN_CONTRAST #$D_pink $bg_refs
+D_mauve $MIN_CONTRAST #$D_mauve $bg_refs
+D_red $MIN_CONTRAST #$D_red $fill_refs
+D_maroon $MIN_CONTRAST #$D_maroon $bg_refs
+D_peach $MIN_CONTRAST #$D_peach $bg_refs
+D_yellow $MIN_CONTRAST #$D_yellow $bg_refs
+D_green $MIN_CONTRAST #$D_green $fill_refs
+D_teal $MIN_CONTRAST #$D_teal $bg_refs
+D_sky $MIN_CONTRAST #$D_sky $bg_refs
+D_sapphire $MIN_CONTRAST #$D_sapphire $bg_refs
+D_blue $MIN_CONTRAST #$D_blue $fill_refs
+D_lavender $MIN_CONTRAST #$D_lavender $bg_refs
+D_text $MIN_CONTRAST #$D_text $fill_refs
+D_subtext_1 $MIN_CONTRAST #$D_subtext_1 $bg_refs
+D_subtext_0 $MIN_CONTRAST #$D_subtext_0 $bg_refs
+D_overlay_2 $MIN_CONTRAST #$D_overlay_2 $bg_refs
+D_overlay_1 $MIN_CONTRAST #$D_overlay_1 $bg_refs
+D_overlay_0 $MIN_CONTRAST #$D_overlay_0 $fill_refs
+D_surface_2 3.0 #$D_surface_2 $bg_refs
+EOF
+  )
+  while IFS=' ' read -r _k _v; do
+    _hex="${_v#\#}"
+    case "$_k" in
+      fg) fg="$_hex" ;;
+      primary) primary="$_hex" ;;
+      error) error="$_hex" ;;
+      success) success="$_hex" ;;
+      outline) outline="$_hex" ;;
+      tertiary) tertiary="$_hex" ;;
+      secondary) secondary="$_hex" ;;
+      surface2) surface2="$_hex" ;;
+      D_rosewater) D_rosewater="$_hex" ;;
+      D_flamingo) D_flamingo="$_hex" ;;
+      D_pink) D_pink="$_hex" ;;
+      D_mauve) D_mauve="$_hex" ;;
+      D_red) D_red="$_hex" ;;
+      D_maroon) D_maroon="$_hex" ;;
+      D_peach) D_peach="$_hex" ;;
+      D_yellow) D_yellow="$_hex" ;;
+      D_green) D_green="$_hex" ;;
+      D_teal) D_teal="$_hex" ;;
+      D_sky) D_sky="$_hex" ;;
+      D_sapphire) D_sapphire="$_hex" ;;
+      D_blue) D_blue="$_hex" ;;
+      D_lavender) D_lavender="$_hex" ;;
+      D_text) D_text="$_hex" ;;
+      D_subtext_1) D_subtext_1="$_hex" ;;
+      D_subtext_0) D_subtext_0="$_hex" ;;
+      D_overlay_2) D_overlay_2="$_hex" ;;
+      D_overlay_1) D_overlay_1="$_hex" ;;
+      D_overlay_0) D_overlay_0="$_hex" ;;
+      D_surface_2) D_surface_2="$_hex" ;;
+    esac
+  done <<<"$repaired"
+fi
 
 emit() { # emit <name> <value>: single set -g line
   printf 'set -g @thm_%s "#%s"\n' "$1" "$2"
