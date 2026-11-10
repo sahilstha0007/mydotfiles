@@ -136,6 +136,8 @@ EXPECTED_GATES=(
   "tmux: colour prop"
   "tmux: profiles"
   "tmux: scripts syntax"
+  "tmux: keymap dump"
+  "cli: args & help"
   "kitty: config parse"
   "kitty: full profile"
   "kitty: collisions"
@@ -149,6 +151,7 @@ EXPECTED_GATES=(
   "contrast: wcag"
   "signals: ownership"
   "docs: dead refs"
+  "docs: keybindings parity"
   "docs: vs config"
 )
 if [ "$RUN_ALL" -eq 1 ]; then
@@ -233,7 +236,7 @@ else
   for g in \
     "wezterm: cascade" "wezterm: right-status" "wezterm: tab-title" \
     "wezterm: border" "wezterm: theme-source" "wezterm: platform" \
-    "wezterm: lint" "wezterm: fmt" "keys: wezterm vs tmux"; do
+    "wezterm: hyprland" "wezterm: lint" "wezterm: fmt" "keys: wezterm vs tmux"; do
     fail "$g" "luajit or $WZ missing"
   done
 fi
@@ -265,6 +268,19 @@ if [ -f "$TMUX_DIR/scripts/on-client-attached.sh" ] && [ -f "$TMUX_DIR/scripts/s
     "$TMUX_DIR/session-switcher.sh"
 else
   fail "tmux: scripts syntax" "tmux scripts missing"
+fi
+
+if [ -f "$TMUX_TESTS/check-keymap-dump.sh" ] && require_cmd wezterm && require_cmd python3; then
+  run "tmux: keymap dump" "$REPO_ROOT" bash "$TMUX_TESTS/check-keymap-dump.sh"
+else
+  fail "tmux: keymap dump" "missing check-keymap-dump.sh, wezterm, or python3"
+fi
+
+CLI_ARGS_CHECK="$REPO_ROOT/tests/cli/check-cli-args.sh"
+if [ -f "$CLI_ARGS_CHECK" ] && require_cmd python3; then
+  run "cli: args & help" "$REPO_ROOT" bash "$CLI_ARGS_CHECK"
+else
+  fail "cli: args & help" "missing $CLI_ARGS_CHECK or python3"
 fi
 
 # --- kitty ------------------------------------------------------------------
@@ -347,7 +363,7 @@ fi
 # --- bin & repo lint/fmt gates ----------------------------------------------
 if require_cmd python3; then
   run "bin: python syntax" "$REPO_ROOT" \
-    python3 -m py_compile "$REPO_ROOT/bin/project-task" "$REPO_ROOT/bin/terminal-cheatsheet"
+    python3 -m py_compile "$REPO_ROOT/bin/project-task" "$REPO_ROOT/bin/terminal-cheatsheet" "$REPO_ROOT/bin/sync-keybindings"
 else
   fail "bin: python syntax" "python3 not installed"
 fi
@@ -415,6 +431,13 @@ if [ -f "$DEAD_REFS_CHECK" ] && require_cmd python3; then
   run "docs: dead refs" "$REPO_ROOT" python3 "$DEAD_REFS_CHECK"
 else
   fail "docs: dead refs" "missing $DEAD_REFS_CHECK or python3"
+fi
+
+KBD_SYNC="$REPO_ROOT/bin/sync-keybindings"
+if [ -f "$KBD_SYNC" ] && require_cmd python3 && require_cmd wezterm && require_cmd tmux; then
+  run "docs: keybindings parity" "$REPO_ROOT" python3 "$KBD_SYNC" --check
+else
+  fail "docs: keybindings parity" "missing $KBD_SYNC, python3, wezterm, or tmux"
 fi
 
 # --- docs vs live configs ---------------------------------------------------
