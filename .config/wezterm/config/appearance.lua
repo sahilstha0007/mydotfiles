@@ -47,7 +47,7 @@ return {
    pane_select_bg_color = colors.ansi[5],
 
    -- background: pass in `true` if you want wezterm to start with focus mode on (no bg images)
-   background = backdrops:initial_options({ no_img = false, }),
+   background = backdrops:initial_options({ no_img = false }),
    -- Baseline window alpha. Read from the BackDrops singleton, which loads
    -- ~/.cache/wezterm-opacity at init (falling back to 1.0 when there is no
    -- cache yet). It has to come from there, not a literal: this is the ONLY

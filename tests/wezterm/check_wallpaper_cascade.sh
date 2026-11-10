@@ -34,7 +34,13 @@ pass=0
 fail=0
 ok()  { printf '  ok    %s\n' "$1"; pass=$((pass + 1)); }
 no()  { printf '  FAIL  %s\n' "$1"; fail=$((fail + 1)); }
+# Invoked indirectly by expect "$@":
+# shellcheck disable=SC2329
 has() { case "$2" in *"$1"*) return 0;; *) return 1;; esac; }
+expect() {
+  _ok_msg="$1" _fail_msg="$2"; shift 2
+  if "$@"; then ok "$_ok_msg"; else no "$_fail_msg"; fi
+}
 
 # --- fixture HOME -------------------------------------------------------------
 HOME="$TMP"; export HOME
@@ -105,28 +111,27 @@ fi
 # --- 1. a real wallpaper change re-themes -------------------------------------
 printf '\n1. first wallpaper: palette written, cascade runs, wezterm reloads\n'
 run "$IMG_A"
-[ "$rc" -eq 0 ]                   && ok "exit 0"              || no "exit $rc"
-[ -s "$PAL" ]                     && ok "palette written"     || no "no palette on disk"
-grep -q 'background = "#' "$PAL" 2>/dev/null && ok "palette is real" || no "palette malformed"
-[ "$reloaded" = yes ]             && ok "wezterm.lua touched -> reload" || no "wezterm.lua NOT touched"
-has colors-from-matugen "$ran"    && ok "tmux generator ran"  || no "tmux generator skipped"
-has omp-palette "$ran"            && ok "oh-my-posh ran"     || no "oh-my-posh skipped"
-has zsh-highlight-sync "$ran"     && ok "zsh-highlight ran"  || no "zsh-highlight skipped"
-has herdr-palette "$ran"          && ok "herdr ran"          || no "herdr skipped"
-has opencode-palette "$ran"       && ok "opencode ran"       || no "opencode skipped"
-has obsidian-palette "$ran"       && ok "obsidian ran"       || no "obsidian skipped"
-has "source-file" "$ran"          && ok "tmux source-file"   || no "no tmux source-file"
-[ "$(cat "$CACHE/wezterm-wallpaper.synced" 2>/dev/null)" = "$IMG_A" ] \
-   && ok "recorded as synced"     || no "synced not written"
+expect "exit 0"                      "exit $rc"                     [ "$rc" -eq 0 ]
+expect "palette written"             "no palette on disk"           [ -s "$PAL" ]
+expect "palette is real"             "palette malformed"            grep -q 'background = "#' "$PAL" 2>/dev/null
+expect "wezterm.lua touched -> reload" "wezterm.lua NOT touched"    [ "$reloaded" = yes ]
+expect "tmux generator ran"          "tmux generator skipped"       has colors-from-matugen "$ran"
+expect "oh-my-posh ran"              "oh-my-posh skipped"           has omp-palette "$ran"
+expect "zsh-highlight ran"           "zsh-highlight skipped"        has zsh-highlight-sync "$ran"
+expect "herdr ran"                   "herdr skipped"                has herdr-palette "$ran"
+expect "opencode ran"                "opencode skipped"             has opencode-palette "$ran"
+expect "obsidian ran"                "obsidian skipped"             has obsidian-palette "$ran"
+expect "tmux source-file"            "no tmux source-file"          has "source-file" "$ran"
+expect "recorded as synced"          "synced not written"           [ "$(cat "$CACHE/wezterm-wallpaper.synced" 2>/dev/null)" = "$IMG_A" ]
 
 # --- 2. same wallpaper again: cheap no-op -------------------------------------
 printf '\n2. same wallpaper again: no matugen, no reload, instant\n'
 before=$(h "$PAL")
 run "$IMG_A"
-[ "$rc" -eq 0 ]        && ok "exit 0"            || no "exit $rc"
-[ "$reloaded" = no ]   && ok "no needless reload" || no "reloaded anyway"
-[ -z "$ran" ]          && ok "no work done"       || no "cascade ran again: $ran"
-[ "$(h "$PAL")" = "$before" ] && ok "palette untouched" || no "palette churned"
+expect "exit 0"             "exit $rc"                  [ "$rc" -eq 0 ]
+expect "no needless reload" "reloaded anyway"           [ "$reloaded" = no ]
+expect "no work done"       "cascade ran again: $ran"   [ -z "$ran" ]
+expect "palette untouched"  "palette churned"           [ "$(h "$PAL")" = "$before" ]
 
 # --- 3. failure must be loud AND retryable ------------------------------------
 printf '\n3a. matugen exits non-zero: loud, and not recorded as synced\n'
@@ -135,12 +140,10 @@ sed "s#input_path = .*#input_path = '$TMP/nope.lua'#" "$TMP/good.toml" \
    > "$H/matugen/wezterm.toml"
 rm -f "$CACHE/wezterm-wallpaper.synced"
 run "$IMG_A"
-[ "$rc" -ne 0 ]  && ok "non-zero exit (not silent success)" \
-                 || no "failed silently (rc 0)"
-grep -q . "$TMP/stderr" && ok "explained on stderr" || no "no diagnostic emitted"
-[ "$(cat "$CACHE/wezterm-wallpaper.synced" 2>/dev/null)" != "$IMG_A" ] \
-   && ok "NOT marked synced (retry possible)" \
-   || no "marked synced despite failure -> permanently stuck"
+expect "non-zero exit (not silent success)" "failed silently (rc 0)" [ "$rc" -ne 0 ]
+expect "explained on stderr"                "no diagnostic emitted"  grep -q . "$TMP/stderr"
+expect "NOT marked synced (retry possible)" "marked synced despite failure -> permanently stuck" \
+   [ "$(cat "$CACHE/wezterm-wallpaper.synced" 2>/dev/null)" != "$IMG_A" ]
 
 printf '\n3b. matugen exits 0 but writes NOTHING (read-only palette file)\n'
 cp "$TMP/good.toml" "$H/matugen/wezterm.toml"
@@ -153,33 +156,32 @@ chmod a-w "$PAL"      # the FILE, not the dir: matugen exits 0 and skips the wri
 rm -f "$CACHE/wezterm-wallpaper.synced"
 run "$IMG_A"
 chmod u+w "$PAL"
-[ "$rc" -ne 0 ]  && ok "caught the rc-0 silent failure" \
-                 || no "silent success: nothing written but rc 0"
-grep -q . "$TMP/stderr" && ok "explained on stderr" || no "no diagnostic emitted"
-[ "$(h "$PAL")" = "$before" ] && ok "stale palette left alone" \
-                             || no "palette changed unexpectedly"
-grep -q POISONED "$PAL" 2>/dev/null && ok "poison still in place (nothing written)" \
-                                 || no "poison overwritten"
-[ "$(cat "$CACHE/wezterm-wallpaper.synced" 2>/dev/null)" != "$IMG_A" ] \
-   && ok "NOT marked synced (retry possible)" \
-   || no "marked synced despite writing nothing -> permanently stuck"
+expect "caught the rc-0 silent failure"    "silent success: nothing written but rc 0" [ "$rc" -ne 0 ]
+expect "explained on stderr"               "no diagnostic emitted"                    grep -q . "$TMP/stderr"
+expect "stale palette left alone"          "palette changed unexpectedly"             [ "$(h "$PAL")" = "$before" ]
+expect "poison still in place (nothing written)" "poison overwritten"                 grep -q POISONED "$PAL" 2>/dev/null
+expect "NOT marked synced (retry possible)" "marked synced despite writing nothing -> permanently stuck" \
+   [ "$(cat "$CACHE/wezterm-wallpaper.synced" 2>/dev/null)" != "$IMG_A" ]
 
 printf '\n3c. same image retried after the fault is fixed: it re-themes\n'
 run "$IMG_A"
-[ -s "$PAL" ]         && ok "retry wrote the palette"    || no "retry never regenerated"
-grep -q POISONED "$PAL" 2>/dev/null && no "poison survived" || ok "poison overwritten"
-[ "$reloaded" = yes ] && ok "retry reloaded wezterm"      || no "retry did not reload"
-[ "$(cat "$CACHE/wezterm-wallpaper.synced" 2>/dev/null)" = "$IMG_A" ] \
-   && ok "retry recorded as synced" || no "retry did not record"
+expect "retry wrote the palette" "retry never regenerated" [ -s "$PAL" ]
+if grep -q POISONED "$PAL" 2>/dev/null; then
+   no "poison survived"
+else
+   ok "poison overwritten"
+fi
+expect "retry reloaded wezterm"   "retry did not reload" [ "$reloaded" = yes ]
+expect "retry recorded as synced" "retry did not record" \
+   [ "$(cat "$CACHE/wezterm-wallpaper.synced" 2>/dev/null)" = "$IMG_A" ]
 
 # --- 4. an ABSENT palette must not read as "already synced" -------------------
 printf '\n4. palette deleted but .synced names this image: must still rebuild\n'
 run "$IMG_A"                       # establish a good palette + .synced
 rm -f "$PAL"                       # palette destroyed; .synced still names IMG_A
 run "$IMG_A"
-[ -s "$PAL" ]         && ok "palette rebuilt from absent" \
-                       || no "BUG: .synced matched, matugen never re-ran, theme dead"
-[ "$reloaded" = yes ] && ok "reload NOT skipped"           || no "reload skipped"
+expect "palette rebuilt from absent" "BUG: .synced matched, matugen never re-ran, theme dead" [ -s "$PAL" ]
+expect "reload NOT skipped"          "reload skipped" [ "$reloaded" = yes ]
 
 printf '\n4b. .synced present, palette absent, gui-startup must re-sync too\n'
 # events/gui-startup.lua gates on image ~= synced only; a missing palette left
@@ -195,11 +197,11 @@ printf '\n5. two different wallpapers -> two different palettes\n'
 if [ -f "$IMG_B" ]; then
    run "$IMG_A"; a=$(h "$PAL")
    run "$IMG_B"; b=$(h "$PAL")
-   [ -s "$PAL" ]   && ok "palette exists after 2nd run" || no "2nd run wrote no palette"
-   [ "$a" != "$b" ] && ok "palette differs per wallpaper" || no "one palette for both"
-   [ "$reloaded" = yes ] && ok "second wallpaper reloaded" || no "second wallpaper did not reload"
-   [ "$(cat "$CACHE/wezterm-wallpaper.synced" 2>/dev/null)" = "$IMG_B" ] \
-      && ok "synced tracks newest" || no "synced wrong"
+   expect "palette exists after 2nd run"   "2nd run wrote no palette"       [ -s "$PAL" ]
+   expect "palette differs per wallpaper"  "one palette for both"           [ "$a" != "$b" ]
+   expect "second wallpaper reloaded"      "second wallpaper did not reload" [ "$reloaded" = yes ]
+   expect "synced tracks newest"           "synced wrong" \
+      [ "$(cat "$CACHE/wezterm-wallpaper.synced" 2>/dev/null)" = "$IMG_B" ]
 else
    printf '  skip  needs a 2nd image (set WEZCASCADE_IMAGE_B)\n'
 fi

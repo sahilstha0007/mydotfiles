@@ -119,6 +119,7 @@ local real_getenv = os.getenv
 ---Load colors/custom.lua with HOME reporting `value`.
 ---@return table? colourscheme, or nil plus the load error
 local function scheme_with_home(value)
+   -- luacheck: ignore 122 -- temporarily stub os.getenv to simulate arbitrary HOME values
    os.getenv = function(name)
       if name == 'HOME' then
          return value
@@ -128,6 +129,7 @@ local function scheme_with_home(value)
    -- dofile, not require: package.loaded would hand back the first scenario's
    -- module and every later scenario would assert against stale state.
    local ok, res = pcall(dofile, root .. '/colors/custom.lua')
+   -- luacheck: ignore 122 -- restore real os.getenv immediately after load
    os.getenv = real_getenv
    if not ok then
       return nil, res
@@ -144,6 +146,7 @@ end
 -- 1. Self-check: the stub has to actually be able to lie, or every scenario
 --    below passes for the wrong reason.
 do
+   -- luacheck: ignore 122 -- self-test stubbing os.getenv
    os.getenv = function(name)
       if name == 'HOME' then
          return nil
@@ -151,6 +154,7 @@ do
       return real_getenv(name)
    end
    local probe = os.getenv('HOME')
+   -- luacheck: ignore 122 -- restore real os.getenv
    os.getenv = real_getenv
    check('the stub can present HOME as nil', probe == nil, 'got ' .. tostring(probe))
 end
@@ -197,8 +201,10 @@ do
          and cs.tab_bar.inactive_tab.bg_color == DECOY.surface0,
       tostring(err)
          or tostring(
-            cs and cs.tab_bar and cs.tab_bar.inactive_tab and cs.tab_bar.inactive_tab.bg_color
-         ) .. ' vs palette surface0 ' .. DECOY.surface0
+               cs and cs.tab_bar and cs.tab_bar.inactive_tab and cs.tab_bar.inactive_tab.bg_color
+            )
+            .. ' vs palette surface0 '
+            .. DECOY.surface0
    )
 end
 
@@ -414,8 +420,9 @@ do
       surface2 = '#acb0be',
       outline = '#9ca0b0',
    }
-   local light_dir = ('/tmp/wezterm-theme-light-%d-%d'):format(os.time(), math.random(1e6))
-   assert(os.execute('mkdir -p ' .. light_dir .. '/colors'))
+   local light_dir = mktemp_dir('wezterm-theme-light')
+   temp_dirs[#temp_dirs + 1] = light_dir
+   assert(os.execute('mkdir -p ' .. string.format('%q', light_dir .. '/colors')))
    local p = assert(io.open(light_dir .. '/colors/matugen.lua', 'w'))
    p:write('return {\n')
    for k, v in pairs(LIGHT) do
@@ -424,11 +431,11 @@ do
    p:write('}\n')
    p:close()
 
-   local real_config_dir = wezterm.config_dir
-   wezterm.config_dir = light_dir
+   local real_config_dir = _G.wezterm.config_dir
+   _G.wezterm.config_dir = light_dir
    local cs, err = scheme_with_home(nil)
-   wezterm.config_dir = real_config_dir
-   os.execute('rm -rf ' .. light_dir)
+   _G.wezterm.config_dir = real_config_dir
+   os.execute('rm -rf ' .. string.format('%q', light_dir))
 
    check(
       'the light palette resolves to a light background',

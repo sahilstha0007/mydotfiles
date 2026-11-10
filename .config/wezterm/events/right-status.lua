@@ -51,14 +51,14 @@ local ICON_CLOCK = nf.md_clock_outline or nf.fa_clock_o or 'T'
 -- ponytail: hue collision on low-diversity wallpapers; add a per-segment
 -- lightness ladder in tokens.lua if the bar ever reads ambiguously.
 local colors = {
-   date      = { fg = tokens.accent, bg = tokens.glass },
+   date = { fg = tokens.accent, bg = tokens.glass },
    -- host and uptime remain in M.colors because tests/wezterm/check-right-status.lua checks them.
-   host      = { fg = tokens.pink,   bg = tokens.glass },
-   uptime    = { fg = tokens.muted,  bg = tokens.glass },
-   cpu       = { fg = tokens.cyan,   bg = tokens.glass },
-   mem       = { fg = tokens.green,  bg = tokens.glass },
-   battery   = { fg = tokens.yellow, bg = tokens.glass },
-   separator = { fg = tokens.muted,  bg = tokens.glass },
+   host = { fg = tokens.pink, bg = tokens.glass },
+   uptime = { fg = tokens.muted, bg = tokens.glass },
+   cpu = { fg = tokens.cyan, bg = tokens.glass },
+   mem = { fg = tokens.green, bg = tokens.glass },
+   battery = { fg = tokens.yellow, bg = tokens.glass },
+   separator = { fg = tokens.muted, bg = tokens.glass },
 }
 
 -- Exposed for tests/check-right-status.lua, which asserts the derived values

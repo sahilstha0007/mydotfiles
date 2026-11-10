@@ -26,7 +26,8 @@ require('events.tab-title').setup({
 require('events.new-tab-button').setup()
 require('events.gui-startup').setup()
 
-local config = Config:init()
+local config = Config
+   :init()
    :append(require('config.appearance'))
    -- Border removed 2026-09-27. config/border.lua is a tombstone now, not a
    -- module: it carries window_decorations = 'TITLE' and is deliberately NOT
@@ -41,11 +42,14 @@ local config = Config:init()
    -- ~/.config/ml4w/hypr/custom.lua sets border_size = 0 for this class, so
    -- nothing draws a perimeter around the window. what was left was
    -- wezterm's own titlebar and nothing else.
-   :append(require('config.bindings'))
+   :append(
+      require('config.bindings')
+   )
    :append(require('config.domains'))
    :append(require('config.fonts'))
    :append(require('config.general'))
-   :append(require('config.launch')).options
+   :append(require('config.launch'))
+   .options
 
 -- Last statement. Every module above resolved and the table is built, so the
 -- config loaded. Anything that fails after this point has already broken the

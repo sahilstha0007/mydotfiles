@@ -147,7 +147,10 @@ local function resize_window(window, delta)
    if os.getenv('HYPRLAND_INSTANCE_SIGNATURE') then
       local spawn = wezterm.background_child_process or wezterm.run_child_process
       if spawn then
-         pcall(spawn, { 'hyprctl', 'dispatch', 'resizeactive', string.format('%d %d', delta, delta) })
+         pcall(
+            spawn,
+            { 'hyprctl', 'dispatch', 'resizeactive', string.format('%d %d', delta, delta) }
+         )
       end
       return
    end

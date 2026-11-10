@@ -30,7 +30,11 @@ end
 -- the implementation passes even when the implementation is wrong.
 local _src = debug.getinfo(1, 'S').source:sub(2)
 local _cand = vim.fn.fnamemodify(_src, ':p:h:h')
-local root = vim.env.NVIM_CONFIG_ROOT or (vim.fn.isdirectory(_cand .. '/lua') == 1 and _cand or (vim.fn.fnamemodify(_cand, ':h') .. '/.config/nvim'))
+local root = vim.env.NVIM_CONFIG_ROOT
+  or (
+    vim.fn.isdirectory(_cand .. '/lua') == 1 and _cand
+    or (vim.fn.fnamemodify(_cand, ':h') .. '/.config/nvim')
+  )
 local snacks_cfg = root .. '/lua/plugins/editor/snacks.lua'
 local src = table.concat(vim.fn.readfile(snacks_cfg), '\n')
 assert(

@@ -196,7 +196,10 @@ local colors = {
 
 ---@param pct number
 local function _pct_to_frame(pct)
-   local frame = math.max(1, math.min(#ICON_PROGRESS_PCT_FRAMES, math.ceil(pct * #ICON_PROGRESS_PCT_FRAMES / 100)))
+   local frame = math.max(
+      1,
+      math.min(#ICON_PROGRESS_PCT_FRAMES, math.ceil(pct * #ICON_PROGRESS_PCT_FRAMES / 100))
+   )
    return ICON_PROGRESS_PCT_FRAMES[frame]
 end
 

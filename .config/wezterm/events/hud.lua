@@ -156,7 +156,8 @@ local function disk_free_badge(threshold_gb)
 
    local gb = available_kb / 1024 / 1024
    if gb < threshold_gb then
-      local value = gb >= 1 and string.format('%dGB', math.floor(gb)) or string.format('%dMB', math.floor(gb * 1024))
+      local value = gb >= 1 and string.format('%dGB', math.floor(gb))
+         or string.format('%dMB', math.floor(gb * 1024))
       disk_cache.value = value
       disk_cache.age = now
       return value

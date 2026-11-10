@@ -23,7 +23,11 @@
 
 local _src = debug.getinfo(1, 'S').source:sub(2)
 local _cand = vim.fn.fnamemodify(_src, ':p:h:h')
-local root = vim.env.NVIM_CONFIG_ROOT or (vim.fn.isdirectory(_cand .. '/lua') == 1 and _cand or (vim.fn.fnamemodify(_cand, ':h') .. '/.config/nvim'))
+local root = vim.env.NVIM_CONFIG_ROOT
+  or (
+    vim.fn.isdirectory(_cand .. '/lua') == 1 and _cand
+    or (vim.fn.fnamemodify(_cand, ':h') .. '/.config/nvim')
+  )
 local GIT_SOURCES = { root .. '/lua/plugins/editor/gitsigns.lua' }
 
 -- buffer-local maps come back with <leader> already expanded to whatever

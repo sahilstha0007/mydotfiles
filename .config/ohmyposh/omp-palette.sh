@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env bash
 # Regenerate the oh-my-posh prompt (~/.config/ohmyposh/zen.toml) from
 # zen.template.toml using the live wallpaper palette (matugen.lua — the same
 # source wezterm/tmux/nvim already derive from), so the prompt is never stale

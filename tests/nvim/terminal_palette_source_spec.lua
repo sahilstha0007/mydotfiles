@@ -44,7 +44,8 @@ local SRC = ROOT .. '/lua/plugins/ui/terminal-colors.lua'
 local HOME = vim.env.HOME or ''
 local WEZ_CUSTOM = HOME .. '/.config/wezterm/colors/custom.lua'
 local KITTY_NIGHTFOX = HOME .. '/.config/kitty/themes/nightfox.conf'
-local KITTY_CONF = (vim.uv or vim.loop).fs_stat(KITTY_NIGHTFOX) and KITTY_NIGHTFOX
+local KITTY_CONF = (vim.uv or vim.loop).fs_stat(KITTY_NIGHTFOX)
+    and KITTY_NIGHTFOX
   or (HOME .. '/.config/kitty/colors-matugen.conf')
 
 local passed, failed = 0, 0

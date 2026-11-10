@@ -10,7 +10,7 @@ client_termtype=$(tmux display-message -p "#{client_termtype}" 2>/dev/null || tr
 
 detected=""
 case "$client_name:$client_termtype" in
-  *kitty*|*xterm-kitty*) detected="kitty" ;;
+  *kitty*) detected="kitty" ;;
   *wezterm*|*WezTerm*)   detected="wezterm" ;;
 esac
 

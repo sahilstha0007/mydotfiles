@@ -94,7 +94,7 @@ for k in $wez_keys; do
   done
 done
 
-collisions=$(printf '%s\n' $collisions | sort -u | tr '\n' ' ' | sed 's/  */ /g')
+collisions=$(printf '%s\n' "$collisions" | tr ' ' '\n' | grep -v '^$' | sort -u | tr '\n' ' ' | sed 's/  */ /g')
 
 if [ -n "$(printf '%s' "$collisions" | tr -d ' ')" ]; then
   echo "FAIL: wezterm steals ${collisions%% } — bound in tmux's root table" >&2

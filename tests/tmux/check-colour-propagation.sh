@@ -42,13 +42,11 @@ sock=${TMUX_TEST_SOCK:-colour-propagation-$$}
 scratch_root=${TMUX_TEST_TMPDIR:-$HOME/.cache/tmux-tests}
 mkdir -p "$scratch_root"
 work=$(mktemp -d "$scratch_root/probe.XXXXXX")
-fail=0
 
-cleanup() {
-  tmux -L "$sock" kill-server 2>/dev/null
+trap '
+  [ -n "${sock:-}" ] && tmux -L "$sock" kill-server 2>/dev/null || true
   rm -rf "$work"
-}
-trap cleanup EXIT
+' EXIT
 
 # ---- build an isolated copy of the real config, pointed at a fixture ------
 # Copying (rather than editing the live file in place) keeps this test from
@@ -168,7 +166,9 @@ seen=$(pill_foregrounds "$work/before.raw" | sort -u)
 if ! grep -qx "$want" <<<"$seen"; then
   echo "FAIL: session name never painted $want after the palette changed."
   echo "      foreground colours the client actually received for it:"
-  sed 's/^/        /' <<<"$seen"
+  while IFS= read -r _line; do
+    printf '        %s\n' "$_line"
+  done <<<"$seen"
   echo "      A token the palette source never re-evaluated, or a status bar"
   echo "      that never repainted."
   exit 1

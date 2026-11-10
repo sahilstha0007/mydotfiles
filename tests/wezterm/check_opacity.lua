@@ -52,19 +52,32 @@ end
 -- that merges would pass a broken config that drops keys.
 _G.wezterm = {
    home_dir = home,
-   config_dir = root,
    target_triple = 'x86_64-unknown-linux-gnu',
    os = 'Linux',
    log_error = function() end,
    log_info = function() end,
    log_error_at = function() end,
    on = function() end,
-   action_callback = function(fn) return fn end,
-   background_child_process = function() error('no bg spawn in sandbox') end,
-   run_child_process = function() return 0 end,
-   glob = function() return { '/pics/a.jpg', '/pics/b.jpg', '/pics/c.jpg' } end,
-   nerdfonts = setmetatable({}, { __index = function() return '' end }),
-   to_notification = function(_, a, b, c) return { title = a, body = b, timeout = c } end,
+   action_callback = function(fn)
+      return fn
+   end,
+   background_child_process = function()
+      error('no bg spawn in sandbox')
+   end,
+   run_child_process = function()
+      return 0
+   end,
+   glob = function()
+      return { '/pics/a.jpg', '/pics/b.jpg', '/pics/c.jpg' }
+   end,
+   nerdfonts = setmetatable({}, {
+      __index = function()
+         return ''
+      end,
+   }),
+   to_notification = function(_, a, b, c)
+      return { title = a, body = b, timeout = c }
+   end,
    config_dir = root,
    version = '20260716-102532-2ef4bef4',
    action = setmetatable({}, {
@@ -72,15 +85,21 @@ _G.wezterm = {
          return function() end
       end,
    }),
-   format = function(t) return t end,
+   format = function(t)
+      return t
+   end,
    open_with = function() end,
    toast_notification = function() end,
    -- config/appearance.lua pulls in utils/gpu-adapter.lua, which enumerates
    -- real GPUs at load time. There are none in a headless sandbox, so stub
    -- the minimum surface it reads.
    gui = {
-      enumerate_gpus = function() return {} end,
-      get_guids = function() return {} end,
+      enumerate_gpus = function()
+         return {}
+      end,
+      get_guids = function()
+         return {}
+      end,
    },
 }
 package.loaded['wezterm'] = _G.wezterm
@@ -88,12 +107,16 @@ package.loaded['wezterm.config'] = { enable_tab_bar = true }
 
 local function new_window()
    local w = { _ov = nil, _eff = { enable_tab_bar = true } }
-   function w:get_config_overrides() return self._ov end
-   function w:effective_config() return self._eff end
+   function w:get_config_overrides()
+      return self._ov
+   end
+   function w:effective_config()
+      return self._eff
+   end
    function w:set_config_overrides(t)
       self._ov = t -- real semantics: replace
    end
-   function w:toast_notification() end
+   w.toast_notification = function() end
    return w
 end
 
@@ -143,9 +166,9 @@ do
       -- One press = one step. Capture the delta the binding passes.
       local seen = {}
       local real_adj = bd.adjust_opacity
-      bd.adjust_opacity = function(self, _w, delta)
+      bd.adjust_opacity = function(self, win, delta)
          table.insert(seen, delta)
-         return real_adj(self, _w, delta)
+         return real_adj(self, win, delta)
       end
 
       clear_cache()
@@ -160,8 +183,11 @@ do
       for _, d in ipairs(seen) do
          table.insert(deltas, tostring(d))
       end
-      check('exactly one adjust per press (2 presses, 2 calls)', #seen == 2,
-         'got ' .. #seen .. ' calls, deltas: ' .. table.concat(deltas, ','))
+      check(
+         'exactly one adjust per press (2 presses, 2 calls)',
+         #seen == 2,
+         'got ' .. #seen .. ' calls, deltas: ' .. table.concat(deltas, ',')
+      )
       check('SUPER+y passes a POSITIVE delta (toward solid)', seen[1] == 1, tostring(seen[1]))
       check('SUPER+Shift+y passes a NEGATIVE delta (toward fade)', seen[2] == -1, tostring(seen[2]))
       bd.adjust_opacity = real_adj
@@ -178,18 +204,24 @@ do
    bd.opacity = 0.50
    bd:adjust_opacity(w, 1)
    check('opaque direction raises the value', bd.opacity == 0.55, tostring(bd.opacity))
-   check('override carries the new opacity',
+   check(
+      'override carries the new opacity',
       w._ov and w._ov.window_background_opacity == 0.55,
-      tostring(w._ov and w._ov.window_background_opacity))
-   check('override is a NUMBER, not a string',
+      tostring(w._ov and w._ov.window_background_opacity)
+   )
+   check(
+      'override is a NUMBER, not a string',
       type(w._ov and w._ov.window_background_opacity) == 'number',
-      type(w._ov and w._ov.window_background_opacity))
+      type(w._ov and w._ov.window_background_opacity)
+   )
 
    bd:adjust_opacity(w, -1)
    check('fade direction lowers the value', bd.opacity == 0.50, tostring(bd.opacity))
-   check('override follows the second press',
+   check(
+      'override follows the second press',
       w._ov and w._ov.window_background_opacity == 0.50,
-      tostring(w._ov and w._ov.window_background_opacity))
+      tostring(w._ov and w._ov.window_background_opacity)
+   )
 end
 
 -- ===========================================================================
@@ -203,8 +235,11 @@ do
    bd.opacity = 1.0
    local at_ceiling = bd:adjust_opacity(w, 1)
    check('cannot exceed 1.0 (wezterm rejects >1)', bd.opacity == 1.0, tostring(bd.opacity))
-   check('returns the clamped value so the toast shows the real number', at_ceiling == 1.0,
-      tostring(at_ceiling))
+   check(
+      'returns the clamped value so the toast shows the real number',
+      at_ceiling == 1.0,
+      tostring(at_ceiling)
+   )
 
    -- Hammer the ceiling: key repeat must not drift past it. The in-memory
    -- value is the assertion that matters here — a press that lands ON the
@@ -217,9 +252,11 @@ do
    end
    check('40 extra presses at the ceiling stay at 1.0', bd.opacity == 1.0, tostring(bd.opacity))
    local ov = w._ov and w._ov.window_background_opacity
-   check('window override is still a legal opacity after the hammer',
+   check(
+      'window override is still a legal opacity after the hammer',
       ov == nil or (ov >= 0.30 and ov <= 1.0),
-      tostring(ov))
+      tostring(ov)
+   )
 
    -- The no-op must not have written anything: count the writes.
    local writes = 0
@@ -233,8 +270,11 @@ do
    for _ = 1, 5 do
       bd:adjust_opacity(w2, 1)
    end
-   check('5 clamped presses write ZERO overrides (no redundant repaint)',
-      writes == 0, 'wrote ' .. writes .. ' times')
+   check(
+      '5 clamped presses write ZERO overrides (no redundant repaint)',
+      writes == 0,
+      'wrote ' .. writes .. ' times'
+   )
 
    bd.opacity = 0.30
    local at_floor = bd:adjust_opacity(w, -1)
@@ -266,10 +306,17 @@ do
    local mismatches = {}
    for i, want in ipairs(expected) do
       if seen[i] ~= want then
-         table.insert(mismatches, string.format('#%d got %s want %s', i, tostring(seen[i]), tostring(want)))
+         table.insert(
+            mismatches,
+            string.format('#%d got %s want %s', i, tostring(seen[i]), tostring(want))
+         )
       end
    end
-   check('every step lands exactly on the 0.05 grid', #mismatches == 0, table.concat(mismatches, '; '))
+   check(
+      'every step lands exactly on the 0.05 grid',
+      #mismatches == 0,
+      table.concat(mismatches, '; ')
+   )
 end
 
 -- ===========================================================================
@@ -283,28 +330,42 @@ do
    bd.opacity = 0.50
    bd:adjust_opacity(w, -1)
    local chosen = bd.opacity
-   check('value is written to the cache file', io.open(cachefile(), 'r') ~= nil,
-      'no cache file at ' .. cachefile())
+   check(
+      'value is written to the cache file',
+      io.open(cachefile(), 'r') ~= nil,
+      'no cache file at ' .. cachefile()
+   )
 
    -- read it back through the REAL load path, in a fresh module instance:
    -- a fresh require is the closest thing to a wezterm restart we can get.
    local saved = io.open(cachefile(), 'r')
    local on_disk = saved:read('*l')
    saved:close()
-   check('cache holds the chosen value', tonumber(on_disk) == chosen,
-      string.format('on disk %q, in memory %s', tostring(on_disk), tostring(chosen)))
+   check(
+      'cache holds the chosen value',
+      tonumber(on_disk) == chosen,
+      string.format('on disk %q, in memory %s', tostring(on_disk), tostring(chosen))
+   )
 
    package.loaded['utils.backdrops'] = nil
    local restarted = require('utils.backdrops')
-   check('a fresh instance restores the persisted value', restarted.opacity == chosen,
-      string.format('restarted at %s, expected %s', tostring(restarted.opacity), tostring(chosen)))
+   check(
+      'a fresh instance restores the persisted value',
+      restarted.opacity == chosen,
+      string.format('restarted at %s, expected %s', tostring(restarted.opacity), tostring(chosen))
+   )
 
    -- and the config seeds from the SAME cache, so the very first paint matches
    local cs = require('config.appearance')
-   check('config.appearance seeds opacity from the cache, not a hardcoded 1.0',
+   check(
+      'config.appearance seeds opacity from the cache, not a hardcoded 1.0',
       cs.window_background_opacity == chosen,
-      string.format('config seeds %s, cache holds %s',
-         tostring(cs.window_background_opacity), tostring(chosen)))
+      string.format(
+         'config seeds %s, cache holds %s',
+         tostring(cs.window_background_opacity),
+         tostring(chosen)
+      )
+   )
    package.loaded['utils.backdrops'] = bd
 end
 
@@ -321,11 +382,12 @@ do
       f:close()
       package.loaded['utils.backdrops'] = nil
       local fresh = require('utils.backdrops')
-      local ok = type(fresh.opacity) == 'number'
-         and fresh.opacity >= 0.30
-         and fresh.opacity <= 1.0
-      check(string.format('corrupt cache %q falls back to a usable value', bad),
-         ok, tostring(fresh.opacity))
+      local ok = type(fresh.opacity) == 'number' and fresh.opacity >= 0.30 and fresh.opacity <= 1.0
+      check(
+         string.format('corrupt cache %q falls back to a usable value', bad),
+         ok,
+         tostring(fresh.opacity)
+      )
       package.loaded['utils.backdrops'] = nil
    end
    clear_cache()
@@ -347,13 +409,27 @@ do
    -- solid. This is the exact failure the merge_overrides seam exists for.
    local bd = require('utils.backdrops')
    local paths = {
-      cycle_forward = function(b, win) b:cycle_forward(win) end,
-      cycle_back    = function(b, win) b:cycle_back(win) end,
-      random        = function(b, win) b:random(win) end,
-      preview_step  = function(b, win) b:preview_step(win, 1) end,
-      set_img       = function(b, win) b:set_img(win, 2) end,
-      adjust_wash   = function(b, win) b:adjust_wash(win, 1) end,
-      toggle_focus  = function(b, win) b:toggle_focus(win) end,
+      cycle_forward = function(b, win)
+         b:cycle_forward(win)
+      end,
+      cycle_back = function(b, win)
+         b:cycle_back(win)
+      end,
+      random = function(b, win)
+         b:random(win)
+      end,
+      preview_step = function(b, win)
+         b:preview_step(win, 1)
+      end,
+      set_img = function(b, win)
+         b:set_img(win, 2)
+      end,
+      adjust_wash = function(b, win)
+         b:adjust_wash(win, 1)
+      end,
+      toggle_focus = function(b, win)
+         b:toggle_focus(win)
+      end,
    }
    for name, fn in pairs(paths) do
       local w = new_window()
@@ -363,9 +439,11 @@ do
       bd.current_idx = 1
       local ok, err = pcall(fn, bd, w)
       check(name .. ' runs without error', ok, err)
-      check(name .. ' preserves the opacity',
+      check(
+         name .. ' preserves the opacity',
          w._ov and w._ov.window_background_opacity == 0.65,
-         'got ' .. tostring(w._ov and w._ov.window_background_opacity))
+         'got ' .. tostring(w._ov and w._ov.window_background_opacity)
+      )
    end
    bd.no_img = false
    clear_cache()
@@ -403,9 +481,11 @@ do
       bd:adjust_opacity(w, -1)
    end
    local drifted_wash, drifted_opacity = bd.wash, bd.opacity
-   check('the knobs are at the floor after 40 down-steps',
+   check(
+      'the knobs are at the floor after 40 down-steps',
       drifted_wash == 0.40 and drifted_opacity == 0.30,
-      string.format('wash %s opacity %s', tostring(drifted_wash), tostring(drifted_opacity)))
+      string.format('wash %s opacity %s', tostring(drifted_wash), tostring(drifted_opacity))
+   )
 
    local ok, err = pcall(function()
       bd:reset(w)
@@ -426,11 +506,19 @@ do
    end
    check('wash is back in range', bd.wash >= 0.40 and bd.wash <= 1.0, tostring(bd.wash))
    check('opacity is back in range', bd.opacity >= 0.30 and bd.opacity <= 1.0, tostring(bd.opacity))
-   check('both knobs stay 2dp rounded', two_dp(bd.wash) and two_dp(bd.opacity),
-      string.format('wash %s opacity %s', tostring(bd.wash), tostring(bd.opacity)))
-   check('window override carries the reset opacity',
+   check(
+      'both knobs stay 2dp rounded',
+      two_dp(bd.wash) and two_dp(bd.opacity),
+      string.format('wash %s opacity %s', tostring(bd.wash), tostring(bd.opacity))
+   )
+   check(
+      'window override carries the reset opacity',
       w._ov and w._ov.window_background_opacity == bd.opacity,
-      'override ' .. tostring(w._ov and w._ov.window_background_opacity) .. ' vs ' .. tostring(bd.opacity))
+      'override '
+         .. tostring(w._ov and w._ov.window_background_opacity)
+         .. ' vs '
+         .. tostring(bd.opacity)
+   )
 
    -- reset() must PERSIST, not just move the in-memory fields. `window = nil`
    -- here on purpose: a repaint is what writes the override above, so with a
@@ -445,23 +533,34 @@ do
    bd:reset(nil)
    local of = io.open(cachefile(), 'r')
    local persisted = of and of:read('*a') or nil
-   if of then of:close() end
-   check('reset persists the opacity to the cache',
+   if of then
+      of:close()
+   end
+   check(
+      'reset persists the opacity to the cache',
       tonumber(persisted) == bd.opacity,
-      'cache ' .. tostring(persisted) .. ', in memory ' .. tostring(bd.opacity))
+      'cache ' .. tostring(persisted) .. ', in memory ' .. tostring(bd.opacity)
+   )
    local wf = io.open(home .. '/.cache/wezterm-wash', 'r')
    local wp = wf and wf:read('*a') or nil
-   if wf then wf:close() end
-   check('reset persists the wash to the cache',
+   if wf then
+      wf:close()
+   end
+   check(
+      'reset persists the wash to the cache',
       tonumber(wp) == bd.wash,
-      'cache ' .. tostring(wp) .. ', in memory ' .. tostring(bd.wash))
+      'cache ' .. tostring(wp) .. ', in memory ' .. tostring(bd.wash)
+   )
 
    -- Idempotent: a second reset must not walk off the value it just reached.
    -- Without the `== break` guards the loop would spin to the bound instead.
    local wash1, op1 = bd.wash, bd.opacity
    bd:reset(w)
-   check('reset is idempotent', bd.wash == wash1 and bd.opacity == op1,
-      string.format('second reset moved %s -> %s', tostring(wash1), tostring(bd.wash)))
+   check(
+      'reset is idempotent',
+      bd.wash == wash1 and bd.opacity == op1,
+      string.format('second reset moved %s -> %s', tostring(wash1), tostring(bd.wash))
+   )
 
    -- The value it lands on must be the session's starting values, or "reset"
    -- means something different before and after a restart. This is EXACT
@@ -472,22 +571,33 @@ do
    -- 0.80. Nothing about the value being "close" is good enough here — the
    -- point of reset is to restore a specific state.
    local now_wash, now_opacity = bd:defaults()
-   check('reset lands exactly on the session defaults',
+   check(
+      'reset lands exactly on the session defaults',
       bd.wash == now_wash and bd.opacity == now_opacity,
-      string.format('landed %s/%s, defaults are %s/%s',
-         tostring(bd.wash), tostring(bd.opacity), tostring(now_wash), tostring(now_opacity)))
+      string.format(
+         'landed %s/%s, defaults are %s/%s',
+         tostring(bd.wash),
+         tostring(bd.opacity),
+         tostring(now_wash),
+         tostring(now_opacity)
+      )
+   )
 
    -- THE landing invariant, and the reason snap() exists: a ±step walk only
    -- ever reaches values congruent to its start mod step, so it can step
    -- straight PAST an off-grid target. Assert the target and the landing value
    -- are numerically identical — which is stronger than the old same-grid
    -- check, and is exactly what snap() guarantees.
-   check('reset lands on the target itself, not merely on its grid',
+   check(
+      'reset lands on the target itself, not merely on its grid',
       bd.wash == now_wash and bd.opacity == now_opacity,
-      string.format('target %s, landed %s', tostring(now_wash), tostring(bd.wash)))
-   check('defaults() is a pure read (calling it twice gives the same answer)',
+      string.format('target %s, landed %s', tostring(now_wash), tostring(bd.wash))
+   )
+   check(
+      'defaults() is a pure read (calling it twice gives the same answer)',
       select(1, bd:defaults()) == now_wash and select(2, bd:defaults()) == now_opacity,
-      string.format('%s/%s', tostring(select(1, bd:defaults())), tostring(select(2, bd:defaults()))))
+      string.format('%s/%s', tostring(select(1, bd:defaults())), tostring(select(2, bd:defaults())))
+   )
 
    -- Against a cache-free instance: a fresh require is the closest thing to a
    -- wezterm restart. Its start is WASH_DEFAULT 0.85, which is OFF the 0.04
@@ -503,11 +613,17 @@ do
       cold:adjust_opacity(cw, -1)
    end
    cold:reset(cw)
-   check('a cold start round-trips back to its own off-grid default',
+   check(
+      'a cold start round-trips back to its own off-grid default',
       cold.wash == select(1, cold:defaults()) and cold.opacity == select(2, cold:defaults()),
-      string.format('after 30 down-steps and a reset: %s/%s, default %s/%s',
-         tostring(cold.wash), tostring(cold.opacity),
-         tostring(select(1, cold:defaults())), tostring(select(2, cold:defaults()))))
+      string.format(
+         'after 30 down-steps and a reset: %s/%s, default %s/%s',
+         tostring(cold.wash),
+         tostring(cold.opacity),
+         tostring(select(1, cold:defaults())),
+         tostring(select(2, cold:defaults()))
+      )
+   )
 
    -- THE anti-tautology check, and the one the mutation harness exists for.
    --
@@ -524,12 +640,20 @@ do
    -- purpose: an independent copy is the only thing that can disagree. If you
    -- change a default in utils/backdrops.lua, change it here too — the failure
    -- is the point, and it is a one-line fix in a file you are already editing.
-   check('a cold start begins on the documented defaults, not on a corrupted capture',
-      cold.wash == 0.85 and cold.opacity == 0.90
-         and select(1, cold:defaults()) == 0.85 and select(2, cold:defaults()) == 0.90,
-      string.format('cold starts at %s/%s, defaults() reports %s/%s, spec pins 0.85/0.90',
-         tostring(cold.wash), tostring(cold.opacity),
-         tostring(select(1, cold:defaults())), tostring(select(2, cold:defaults()))))
+   check(
+      'a cold start begins on the documented defaults, not on a corrupted capture',
+      cold.wash == 0.85
+         and cold.opacity == 0.90
+         and select(1, cold:defaults()) == 0.85
+         and select(2, cold:defaults()) == 0.90,
+      string.format(
+         'cold starts at %s/%s, defaults() reports %s/%s, spec pins 0.85/0.90',
+         tostring(cold.wash),
+         tostring(cold.opacity),
+         tostring(select(1, cold:defaults())),
+         tostring(select(2, cold:defaults()))
+      )
+   )
 
    -- And the same pin for a WARM start, driven only through the public API: a
    -- cache file the spec writes itself must become the value reset() returns
@@ -546,10 +670,15 @@ do
    local warm = require('utils.backdrops')
    local ww = new_window()
    warm:reset(ww)
-   check('a warm start from an off-grid cached value resets to that exact value',
+   check(
+      'a warm start from an off-grid cached value resets to that exact value',
       warm.wash == 0.68 and warm.opacity == 0.75,
-      string.format('reset to %s/%s, cache had 0.68/0.75',
-         tostring(warm.wash), tostring(warm.opacity)))
+      string.format(
+         'reset to %s/%s, cache had 0.68/0.75',
+         tostring(warm.wash),
+         tostring(warm.opacity)
+      )
+   )
 
    -- snap()'s clamp and 2dp rounding, on an input the config never produces on
    -- its own. Every value snap() sees in normal use is already 2dp and in
@@ -560,13 +689,16 @@ do
    -- from being deleted as "unreachable".
    package.loaded['utils.backdrops'] = nil
    local raw = require('utils.backdrops')
-   raw.start_wash = 1.2345      -- too many decimals
-   raw.start_opacity = 4.0      -- beyond OPACITY_MAX
+   raw.start_wash = 1.2345 -- too many decimals
+   raw.start_opacity = 4.0 -- beyond OPACITY_MAX
    local rw = new_window()
    raw:reset(rw)
    check('reset clamps an out-of-range session start', raw.opacity == 1.0, tostring(raw.opacity))
-   check('reset rounds a session start to 2dp', raw.wash == 1.0 and two_dp(raw.wash),
-      tostring(raw.wash))
+   check(
+      'reset rounds a session start to 2dp',
+      raw.wash == 1.0 and two_dp(raw.wash),
+      tostring(raw.wash)
+   )
    package.loaded['utils.backdrops'] = bd
    clear_cache()
 end

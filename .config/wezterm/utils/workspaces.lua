@@ -29,20 +29,20 @@ end
 ---Switch to a workspace by name.
 ---@param name string
 local function switch_to(name)
-   return act.SwitchToWorkspace {
+   return act.SwitchToWorkspace({
       name = name,
       spawn = nil, -- nil = reuse existing workspace, don't spawn new
-   }
+   })
 end
 
 ---Prompt for a new workspace name, then switch to it.
 local function new_workspace(window, pane)
    window:perform_action(
-      act.PromptInputLine {
-         description = wezterm.format {
+      act.PromptInputLine({
+         description = wezterm.format({
             { Attribute = { Intensity = 'Bold' } },
             { Text = 'New workspace name:' },
-         },
+         }),
          action = wezterm.action_callback(function(win, _p, line)
             if not line or line == '' then
                return
@@ -50,7 +50,7 @@ local function new_workspace(window, pane)
             -- SwitchToWorkspace creates it if it doesn't exist.
             win:perform_action(switch_to(line), pane)
          end),
-      },
+      }),
       pane
    )
 end
@@ -59,11 +59,11 @@ end
 local function rename_workspace(window, pane)
    local current = window:active_workspace()
    window:perform_action(
-      act.PromptInputLine {
-         description = wezterm.format {
+      act.PromptInputLine({
+         description = wezterm.format({
             { Attribute = { Intensity = 'Bold' } },
             { Text = 'Rename workspace "' .. current .. '" to:' },
-         },
+         }),
          action = wezterm.action_callback(function(win, _p, line)
             if not line or line == '' or line == current then
                return
@@ -73,7 +73,7 @@ local function rename_workspace(window, pane)
                win:perform_action(switch_to(line), pane)
             end
          end),
-      },
+      }),
       pane
    )
 end
@@ -86,11 +86,11 @@ local function delete_workspace(window, pane)
       return
    end
    window:perform_action(
-      act.PromptInputLine {
-         description = wezterm.format {
+      act.PromptInputLine({
+         description = wezterm.format({
             { Attribute = { Intensity = 'Bold' } },
             { Text = 'Delete workspace "' .. current .. '"? Type YES to confirm:' },
-         },
+         }),
          action = wezterm.action_callback(function(win, _p, line)
             if line == 'YES' then
                -- wezterm has no delete-workspace API either. Switch to
@@ -99,7 +99,7 @@ local function delete_workspace(window, pane)
                win:perform_action(switch_to('default'), pane)
             end
          end),
-      },
+      }),
       pane
    )
 end
@@ -113,10 +113,12 @@ local function switch_workspace_picker(window, pane)
          label = name == 'default' and name .. ' (default)' or name,
       })
    end
-   table.sort(choices, function(a, b) return a.label < b.label end)
+   table.sort(choices, function(a, b)
+      return a.label < b.label
+   end)
 
    window:perform_action(
-      act.InputSelector {
+      act.InputSelector({
          title = 'Switch Workspace',
          choices = choices,
          fuzzy = true,
@@ -127,7 +129,7 @@ local function switch_workspace_picker(window, pane)
             end
             win:perform_action(switch_to(id), pane)
          end),
-      },
+      }),
       pane
    )
 end

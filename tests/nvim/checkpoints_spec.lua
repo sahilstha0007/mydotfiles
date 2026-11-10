@@ -15,7 +15,11 @@
 -- copied or cloned tree tests itself instead of the live config.
 local _src = debug.getinfo(1, 'S').source:sub(2)
 local _cand = vim.fn.fnamemodify(_src, ':p:h:h')
-local ROOT = vim.env.NVIM_CONFIG_ROOT or (vim.fn.isdirectory(_cand .. '/lua') == 1 and _cand or (vim.fn.fnamemodify(_cand, ':h') .. '/.config/nvim'))
+local ROOT = vim.env.NVIM_CONFIG_ROOT
+  or (
+    vim.fn.isdirectory(_cand .. '/lua') == 1 and _cand
+    or (vim.fn.fnamemodify(_cand, ':h') .. '/.config/nvim')
+  )
 vim.opt.runtimepath:prepend(ROOT)
 
 local passed, failed = 0, 0

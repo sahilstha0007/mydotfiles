@@ -49,21 +49,36 @@ _G.wezterm = {
    log_warn = function() end,
    log_info = function() end,
    on = function() end,
-   nerdfonts = setmetatable({}, { __index = function() return '' end }),
-   action_callback = function(fn) return fn end,
-   format = function(t) return t end,
-   action = setmetatable({}, { __index = function() return function() end end }),
+   nerdfonts = setmetatable({}, {
+      __index = function()
+         return ''
+      end,
+   }),
+   action_callback = function(fn)
+      return fn
+   end,
+   format = function(t)
+      return t
+   end,
+   action = setmetatable({}, {
+      __index = function()
+         return function() end
+      end,
+   }),
    gui = {
-      enumerate_gpus = function() return {} end,
-      get_guids = function() return {} end,
+      enumerate_gpus = function()
+         return {}
+      end,
+      get_guids = function()
+         return {}
+      end,
    },
 }
 package.loaded['wezterm'] = _G.wezterm
 
 -- ---- the module under test ------------------------------------------------
 local ok_load, right_status = pcall(require, 'events.right-status')
-check('events.right-status loads through the real chain', ok_load,
-      ok_load and nil or right_status)
+check('events.right-status loads through the real chain', ok_load, ok_load and nil or right_status)
 if not ok_load then
    os.exit(1)
 end
@@ -97,9 +112,8 @@ local colorscheme = require('colors.custom')
 local glass_r, glass_g, glass_b, alpha = 0, 0, 0, 0.4
 do
    local glass_str = tostring(tokens.glass)
-   local rs, gs, bs, as = glass_str:match(
-      'rgba%(%s*([%d%.]+)%s*,%s*([%d%.]+)%s*,%s*([%d%.]+)%s*,%s*([%d%.]+)%s*%)'
-   )
+   local rs, gs, bs, as =
+      glass_str:match('rgba%(%s*([%d%.]+)%s*,%s*([%d%.]+)%s*,%s*([%d%.]+)%s*,%s*([%d%.]+)%s*%)')
    if rs then
       glass_r = tonumber(rs) or 0
       glass_g = tonumber(gs) or 0
@@ -139,13 +153,27 @@ for _, name in ipairs(SEGMENTS) do
       check(name .. ': fg is #rrggbb', fg:match('^#%x%x%x%x%x%x$') ~= nil, fg)
       if fg:match('^#%x%x%x%x%x%x$') then
          local ratio = contrast(fg, eff_bg)
-         check(string.format('%s: %.2f:1 on glass composite %s (needs %.1f)',
-                             name, ratio, eff_bg, MIN_CONTRAST),
-               ratio >= MIN_CONTRAST)
+         check(
+            string.format(
+               '%s: %.2f:1 on glass composite %s (needs %.1f)',
+               name,
+               ratio,
+               eff_bg,
+               MIN_CONTRAST
+            ),
+            ratio >= MIN_CONTRAST
+         )
       end
    end
 end
 
-print(string.format('right-status segments: %d pass, %d fail (bg %s, glass alpha %s)',
-                    pass, fail, eff_bg, tostring(alpha)))
+print(
+   string.format(
+      'right-status segments: %d pass, %d fail (bg %s, glass alpha %s)',
+      pass,
+      fail,
+      eff_bg,
+      tostring(alpha)
+   )
+)
 os.exit(fail == 0 and 0 or 1)

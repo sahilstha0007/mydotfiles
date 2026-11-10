@@ -10,7 +10,7 @@ dir="${1:-$PWD}"
 cmd="${2:-}"
 
 cache_dir="${XDG_RUNTIME_DIR:-/tmp}/tmux-status-$(id -u)"
-mkdir -p -m 700 "$cache_dir" 2>/dev/null || true
+mkdir -p "$cache_dir" 2>/dev/null && chmod 700 "$cache_dir" 2>/dev/null || true
 now=$(date +%s)
 
 read_cache() {
@@ -62,9 +62,10 @@ case "$cmd" in
         # State (ahead/behind / stash)
         out=''
         if upstream=$(git -C "$dir" rev-parse --abbrev-ref --symbolic-full-name '@{upstream}' 2>/dev/null); then
-          set -- $(git -C "$dir" rev-list --left-right --count "$upstream"...HEAD 2>/dev/null)
-          [ -n "${1:-}" ] && [ "$1" -gt 0 ] 2>/dev/null && out="${out}↓$1"
-          [ -n "${2:-}" ] && [ "$2" -gt 0 ] 2>/dev/null && out="${out}↑$2"
+          ahead=0 behind=0
+          IFS=$'\t ' read -r ahead behind _ < <(git -C "$dir" rev-list --left-right --count "$upstream"...HEAD 2>/dev/null || true)
+          [ -n "${ahead:-}" ] && [ "$ahead" -gt 0 ] 2>/dev/null && out="${out}↓$ahead"
+          [ -n "${behind:-}" ] && [ "$behind" -gt 0 ] 2>/dev/null && out="${out}↑$behind"
         fi
         stashes=$(git -C "$dir" stash list 2>/dev/null | wc -l)
         [ "${stashes:-0}" -gt 0 ] && out="${out} ⚑${stashes}"
@@ -81,7 +82,7 @@ if read_cache "$cache_agents" 5; then
   agents_raw="$_cache_val"
 else
   n=$(ps -eo comm= 2>/dev/null |
-    LC_ALL=C grep -Eic '^(claude|opencode|opencode\.exe|cline|cline\.exe|codex|copilot|aider|goose|crush|amp|gemini|herdr|omni)$' || true)
+    LC_ALL=C awk '{s=tolower($0); if (s ~ /^(claude|opencode(\.exe)?|cline(\.exe)?|codex|copilot|aider|goose|crush|amp|gemini|herdr|omni)$/) c++} END{print c+0}')
   case "$n" in
     ''|*[!0-9]*) n=0 ;;
   esac

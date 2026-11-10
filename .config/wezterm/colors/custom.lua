@@ -20,61 +20,61 @@ end
 -- Catppuccin mocha (dark wallpaper base)
 local mocha = {
    rosewater = '#f5e0dc',
-   flamingo  = '#f2cdcd',
-   pink      = '#f5c2e7',
-   mauve     = '#cba6f7',
-   red       = '#f38ba8',
-   maroon    = '#eba0ac',
-   peach     = '#fab387',
-   yellow    = '#f9e2af',
-   green     = '#a6e3a1',
-   teal      = '#94e2d5',
-   sky       = '#89dceb',
-   sapphire  = '#74c7ec',
-   blue      = '#89b4fa',
-   lavender  = '#b4befe',
-   text      = '#cdd6f4',
-   subtext1  = '#bac2de',
-   subtext0  = '#a6adc8',
-   overlay2  = '#9399b2',
-   overlay1  = '#7f849c',
-   overlay0  = '#6c7086',
-   surface2  = '#585b70',
-   surface1  = '#45475a',
-   surface0  = '#313244',
-   base      = '#1f1f28',
-   mantle    = '#181825',
-   crust     = '#11111b',
+   flamingo = '#f2cdcd',
+   pink = '#f5c2e7',
+   mauve = '#cba6f7',
+   red = '#f38ba8',
+   maroon = '#eba0ac',
+   peach = '#fab387',
+   yellow = '#f9e2af',
+   green = '#a6e3a1',
+   teal = '#94e2d5',
+   sky = '#89dceb',
+   sapphire = '#74c7ec',
+   blue = '#89b4fa',
+   lavender = '#b4befe',
+   text = '#cdd6f4',
+   subtext1 = '#bac2de',
+   subtext0 = '#a6adc8',
+   overlay2 = '#9399b2',
+   overlay1 = '#7f849c',
+   overlay0 = '#6c7086',
+   surface2 = '#585b70',
+   surface1 = '#45475a',
+   surface0 = '#313244',
+   base = '#1f1f28',
+   mantle = '#181825',
+   crust = '#11111b',
 }
 
 -- Catppuccin latte (light wallpaper base)
 local latte = {
    rosewater = '#dc8a78',
-   flamingo  = '#dd7878',
-   pink      = '#ea76cb',
-   mauve     = '#8839ef',
-   red       = '#d20f39',
-   maroon    = '#e64553',
-   peach     = '#fe640b',
-   yellow    = '#df8e1d',
-   green     = '#40a02b',
-   teal      = '#179299',
-   sky       = '#04a5e5',
-   sapphire  = '#209fb5',
-   blue      = '#1e66f5',
-   lavender  = '#7287fd',
-   text      = '#4c4f69',
-   subtext1  = '#5c5f77',
-   subtext0  = '#6c6f85',
-   overlay2  = '#7c7f93',
-   overlay1  = '#8c8fa1',
-   overlay0  = '#9ca0b0',
-   surface2  = '#acb0be',
-   surface1  = '#bcc0cc',
-   surface0  = '#ccd0da',
-   base      = '#eff1f5',
-   mantle    = '#e6e9ef',
-   crust     = '#dce0e8',
+   flamingo = '#dd7878',
+   pink = '#ea76cb',
+   mauve = '#8839ef',
+   red = '#d20f39',
+   maroon = '#e64553',
+   peach = '#fe640b',
+   yellow = '#df8e1d',
+   green = '#40a02b',
+   teal = '#179299',
+   sky = '#04a5e5',
+   sapphire = '#209fb5',
+   blue = '#1e66f5',
+   lavender = '#7287fd',
+   text = '#4c4f69',
+   subtext1 = '#5c5f77',
+   subtext0 = '#6c6f85',
+   overlay2 = '#7c7f93',
+   overlay1 = '#8c8fa1',
+   overlay0 = '#9ca0b0',
+   surface2 = '#acb0be',
+   surface1 = '#bcc0cc',
+   surface0 = '#ccd0da',
+   base = '#eff1f5',
+   mantle = '#e6e9ef',
+   crust = '#dce0e8',
 }
 
 -- WCAG relative luminance + contrast ratio. The old gate was a hand-picked
@@ -259,13 +259,13 @@ local function apply_wallpaper(base, mat, light)
    for k, v in pairs(base) do
       c[k] = v
    end
-   c.base      = mat.background
-   c.mantle    = mat.background
-   c.crust     = mat.background
+   c.base = mat.background
+   c.mantle = mat.background
+   c.crust = mat.background
    -- Every token is checked against the background it will actually sit on,
    -- so the guard needs the resolved bg, not the light/dark flag.
    local bg = c.base
-   c.text      = guard(mat.foreground, base.text, bg)
+   c.text = guard(mat.foreground, base.text, bg)
    -- Push plain text AWAY from the background, because the background is not
    -- the background the text actually sits on: utils/backdrops.lua composites
    -- the wallpaper UNDER this colour (hsb brightness = wash, then a flat wash
@@ -294,7 +294,7 @@ local function apply_wallpaper(base, mat, light)
    c.subtext1 = blend(c.text, bg, 0.15)
    c.subtext0 = blend(c.text, bg, 0.30)
    -- The Hero Accent: signature wallpaper primary for cursor, tabs, borders, and pills
-   c.accent    = guard(mat.primary, base.blue, bg)
+   c.accent = guard(mat.primary, base.blue, bg)
 
    -- Red (ANSI 1): error / deletion / red. Must be in red/coral range (325..35)
    local err_h = hue(mat.error)
@@ -317,9 +317,17 @@ local function apply_wallpaper(base, mat, light)
 
    -- Yellow (ANSI 3): warning / notice. Must be in yellow/amber range (35..80) and distinct from green
    local tert_h = hue(mat.tertiary)
-   if (tert_h >= 35 and tert_h <= 80) and hue_dist(tert_h, hue(c.green)) >= 25 and contrast(mat.tertiary, bg) >= MIN_CONTRAST then
+   if
+      (tert_h >= 35 and tert_h <= 80)
+      and hue_dist(tert_h, hue(c.green)) >= 25
+      and contrast(mat.tertiary, bg) >= MIN_CONTRAST
+   then
       c.yellow = mat.tertiary
-   elseif (prim_h >= 35 and prim_h <= 80) and hue_dist(prim_h, hue(c.green)) >= 25 and contrast(mat.primary, bg) >= MIN_CONTRAST then
+   elseif
+      (prim_h >= 35 and prim_h <= 80)
+      and hue_dist(prim_h, hue(c.green)) >= 25
+      and contrast(mat.primary, bg) >= MIN_CONTRAST
+   then
       c.yellow = mat.primary
    else
       c.yellow = base.yellow
@@ -368,10 +376,10 @@ local function apply_wallpaper(base, mat, light)
          table.insert(taken, h)
       end
    end
-   c.surface0  = mat.surface0
-   c.surface1  = mat.surface1
-   c.surface2  = mat.surface2
-   c.overlay0  = mat.outline
+   c.surface0 = mat.surface0
+   c.surface1 = mat.surface1
+   c.surface2 = mat.surface2
+   c.overlay0 = mat.outline
    return c
 end
 
@@ -415,12 +423,12 @@ end
 -- BRIGHT_LIFT for why the two can no longer be written independently.
 local ansi = {
    base.surface1, -- black
-   base.red,      -- red
-   base.green,    -- green
-   base.yellow,   -- yellow
-   base.blue,     -- blue
-   base.pink,     -- magenta
-   base.teal,     -- cyan
+   base.red, -- red
+   base.green, -- green
+   base.yellow, -- yellow
+   base.blue, -- blue
+   base.pink, -- magenta
+   base.teal, -- cyan
    base.subtext1, -- white
 }
 

@@ -46,13 +46,25 @@ local function on_attach(_, bufnr)
   end, 'File References')
 
   map('<leader>co', '<cmd>VtsExec organize_imports<cr>', 'Organize Imports')
-  map('<leader>cM', '<cmd>VtsExec add_missing_imports<cr>', 'Add Missing Imports')
-  map('<leader>cu', '<cmd>VtsExec remove_unused_imports<cr>', 'Remove Unused Imports')
+  map(
+    '<leader>cM',
+    '<cmd>VtsExec add_missing_imports<cr>',
+    'Add Missing Imports'
+  )
+  map(
+    '<leader>cu',
+    '<cmd>VtsExec remove_unused_imports<cr>',
+    'Remove Unused Imports'
+  )
   -- NOTE: buffer-local, so it shadows trouble.nvim's global `<leader>cD`
   -- (workspace diagnostics) on TS/JS buffers only. `<leader>cd` (buffer
   -- diagnostics) and `<leader>sD` (snacks workspace diagnostics) remain.
   map('<leader>cD', '<cmd>VtsExec fix_all<cr>', 'Fix All (source.fixAll.ts)')
-  map('<leader>cV', '<cmd>VtsExec select_ts_version<cr>', 'Select TS Workspace Version')
+  map(
+    '<leader>cV',
+    '<cmd>VtsExec select_ts_version<cr>',
+    'Select TS Workspace Version'
+  )
 end
 
 return {

@@ -186,7 +186,7 @@ get_hue() {
 
 hue_dist() {
   local a="$1" b="$2"
-  [ $a -lt 0 ] || [ $b -lt 0 ] && { echo 180; return; }
+  [ "$a" -lt 0 ] || [ "$b" -lt 0 ] && { echo 180; return; }
   local d=$((a - b))
   [ $d -lt 0 ] && d=$((-d))
   [ $d -gt 180 ] && d=$((360 - d))

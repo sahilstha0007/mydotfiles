@@ -45,13 +45,29 @@ _G.wezterm = {
    log_warn = function() end,
    log_info = function() end,
    on = function() end,
-   nerdfonts = setmetatable({}, { __index = function() return '' end }),
-   action_callback = function(fn) return fn end,
-   format = function(t) return t end,
-   action = setmetatable({}, { __index = function() return function() end end }),
+   nerdfonts = setmetatable({}, {
+      __index = function()
+         return ''
+      end,
+   }),
+   action_callback = function(fn)
+      return fn
+   end,
+   format = function(t)
+      return t
+   end,
+   action = setmetatable({}, {
+      __index = function()
+         return function() end
+      end,
+   }),
    gui = {
-      enumerate_gpus = function() return {} end,
-      get_guids = function() return {} end,
+      enumerate_gpus = function()
+         return {}
+      end,
+      get_guids = function()
+         return {}
+      end,
    },
 }
 
@@ -70,24 +86,50 @@ package.loaded['wezterm'] = _G.wezterm
 -- wezterm.lua also scans wallpapers, globs, and sets up event handlers at
 -- load time, so stub the filesystem-facing surface: the point is the merge
 -- result, not the wallpaper library.
-_G.wezterm.glob = function() return {} end
+_G.wezterm.glob = function()
+   return {}
+end
 _G.wezterm.config_dir = root
-_G.wezterm.cli = { get_working_dir = function() return root end }
-_G.wezterm.show = setmetatable({}, { __index = function() return function() end end })
+_G.wezterm.cli = {
+   get_working_dir = function()
+      return root
+   end,
+}
+_G.wezterm.show = setmetatable({}, {
+   __index = function()
+      return function() end
+   end,
+})
 _G.wezterm.wait = function() end
-_G.wezterm.background_child_process = function() return 0 end
-_G.wezterm.run_child_process = function() return 0 end
+_G.wezterm.background_child_process = function()
+   return 0
+end
+_G.wezterm.run_child_process = function()
+   return 0
+end
 _G.wezterm.open_with = function() end
-_G.wezterm.to_notification = function(_, a, b, c) return { title = a, body = b, timeout = c } end
-_G.wezterm.column_width = function(s) return #s end
-_G.wezterm.truncate_right = function(s) return s end
+_G.wezterm.to_notification = function(_, a, b, c)
+   return { title = a, body = b, timeout = c }
+end
+_G.wezterm.column_width = function(s)
+   return #s
+end
+_G.wezterm.truncate_right = function(s)
+   return s
+end
 -- events/tab-title.lua gates a feature on wezterm.version at load time.
 _G.wezterm.version = '20260716-102532-2ef4bef4'
-_G.wezterm.font_with_fallback = function(t) return t end
+_G.wezterm.font_with_fallback = function(t)
+   return t
+end
 -- events/right-status.lua concatenates nerdfont glyphs at load time
 -- (local ICON_DATE = nf.fa_calendar), so each lookup must yield a STRING --
 -- an empty table here fails the concat, not just the value.
-_G.wezterm.nerdfonts = setmetatable({}, { __index = function() return '' end })
+_G.wezterm.nerdfonts = setmetatable({}, {
+   __index = function()
+      return ''
+   end,
+})
 
 local ok_chain, chain = pcall(function()
    -- wezterm.lua's last link in the chain is `.options`, so dofile already
@@ -113,11 +155,7 @@ check(
 )
 
 -- 2. And it must be NONE -- the whole point.
-check(
-   "window_decorations == 'NONE'",
-   deco == 'NONE',
-   'got ' .. tostring(deco)
-)
+check("window_decorations == 'NONE'", deco == 'NONE', 'got ' .. tostring(deco))
 
 -- 3. Guard the specific failure this test was written for: 'TITLE' is what a
 --    half-removal leaves behind, and it is the value that still draws a bar.
@@ -192,7 +230,7 @@ local function writers_of(key)
 
    scan_file(root .. '/wezterm.lua')
    for _, d in ipairs(SCAN_DIRS) do
-      local listing = io.popen(('ls -1 %s 2>/dev/null'):format(("%q"):format(root .. '/' .. d)))
+      local listing = io.popen(('ls -1 %s 2>/dev/null'):format(('%q'):format(root .. '/' .. d)))
       if listing then
          for name in listing:lines() do
             local rel = root .. '/' .. d .. '/' .. name
@@ -238,11 +276,7 @@ local function report(hits)
 end
 
 local title_writers = writers_with_value("'TITLE'")
-check(
-   "no file writes window_decorations = 'TITLE'",
-   #title_writers == 0,
-   report(title_writers)
-)
+check("no file writes window_decorations = 'TITLE'", #title_writers == 0, report(title_writers))
 
 -- 6. And the inverse, stated positively: the one legitimate writer must still
 --    be there. Without this, deleting config/appearance.lua's line turns checks

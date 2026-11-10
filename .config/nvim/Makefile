@@ -7,7 +7,7 @@ STYLUA := $(shell command -v stylua 2>/dev/null || echo $(HOME)/.local/share/nvi
 # Same treatment: a `luarocks --local install` drops it in ~/.luarocks/bin,
 # which is not on PATH for a non-interactive make. PATH wins when it is set.
 LUACHECK := $(shell command -v luacheck 2>/dev/null || echo $(HOME)/.luarocks/bin/luacheck)
-LUA_SOURCES := init.lua lua scripts
+LUA_SOURCES := init.lua lua lsp scripts
 
 # Route to the real harness. scripts/test.sh runs each spec with `nvim -l` and
 # watches three failure channels at once (FAIL: lines, non-zero exit, and nvim

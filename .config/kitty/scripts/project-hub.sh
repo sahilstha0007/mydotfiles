@@ -54,7 +54,7 @@ if [[ "${1:-}" == "--preview" ]]; then
                     printf "Path: %s\n" "$HOME/Projects"
                     if [ -d "$HOME/Projects" ]; then
                         printf "\n\033[1;33mTop-level directories:\033[0m\n"
-                        eza --icons --group-directories-first "$HOME/Projects" 2>/dev/null | head -15 || ls -A "$HOME/Projects" | head -15
+                        eza --icons --group-directories-first "$HOME/Projects" 2>/dev/null | head -15 || find "$HOME/Projects" -maxdepth 1 -mindepth 1 -printf '%f\n' | head -15
                     fi
                     ;;
             esac
@@ -80,7 +80,7 @@ if [[ "${1:-}" == "--preview" ]]; then
                     bat --style=plain --color=always --line-range :25 "$target/README.md" 2>/dev/null || head -25 "$target/README.md"
                 else
                     printf "\033[1;35mDirectory Contents:\033[0m\n"
-                    eza --color=always --icons --group-directories-first "$target" 2>/dev/null | head -20 || ls -A "$target" | head -20
+                    eza --color=always --icons --group-directories-first "$target" 2>/dev/null | head -20 || find "$target" -maxdepth 1 -mindepth 1 -printf '%f\n' | head -20
                 fi
             else
                 printf "Directory not found: %s\n" "$target"

@@ -185,8 +185,7 @@ end
 ---@param delta number signed steps of OPACITY_STEP
 ---@return number the new opacity
 function BackDrops:adjust_opacity(window, delta)
-   local next_op =
-      math.floor(((self.opacity + delta * OPACITY_STEP) + 0.005) * 100) / 100
+   local next_op = math.floor(((self.opacity + delta * OPACITY_STEP) + 0.005) * 100) / 100
    next_op = math.max(OPACITY_MIN, math.min(OPACITY_MAX, next_op))
    if next_op == self.opacity then
       return self.opacity

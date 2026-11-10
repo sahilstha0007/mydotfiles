@@ -16,21 +16,21 @@
 set -uo pipefail
 
 cfg=${1:-$HOME/.config/wezterm/wezterm.lua}
+cfg=$(readlink -f -- "$cfg")
 
 # HOME is redirected because events/fail.lua writes a load marker into
 # $HOME/.cache and removes it when the config finishes loading. Redirected at a
 # scratch dir so a check never mutates the real one -- and so a marker left
 # behind by a real run cannot fail this one.
 #
-# The sandbox is not removed on exit, unlike the pre-commit hook's, which is
-# `rm -rf`'d. This one is left in place and named so a failing run leaves the
-# marker to look at: a few bytes under TMPDIR per run.
+# The sandbox is removed on a clean pass so tests do not leak /tmp dirs; on a
+# failing run it is left in place so the marker and logs remain available.
 sandbox=$(mktemp -d "${TMPDIR:-/tmp}/wz-check-XXXXXX")
 mkdir -p "$sandbox/.cache" "$sandbox/.config"
 ln -s "$(dirname -- "$cfg")" "$sandbox/.config/wezterm"
 marker=$sandbox/.cache/wezterm-config-loaded
 
-out=$(HOME="$sandbox" DISPLAY= timeout 25 wezterm --config-file "$cfg" start 2>&1)
+out=$(HOME="$sandbox" DISPLAY='' timeout 25 wezterm --config-file "$cfg" start 2>&1)
 
 # A load that never finishes emits nothing wezterm prints: the error goes only
 # to wezterm's own log, and the window that opens is drawn from the PREVIOUS
@@ -51,4 +51,5 @@ if printf '%s' "$out" | grep -qiE 'Configuration Error|ERROR'; then
   printf '%s\n' "$out" | sed 's/^/  /'
   exit 1
 fi
+rm -rf "$sandbox"
 echo "wezterm config ok: $cfg"
