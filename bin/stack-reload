@@ -1,0 +1,77 @@
+#!/usr/bin/env bash
+# G2: Non-destructive live reload across tmux, kitty, and wezterm configs.
+# Never kills tmux sessions, nvim buffers, or running zsh shells.
+set -euo pipefail
+
+DRY_RUN=0
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    -h|--help)
+      cat <<'EOF'
+Usage: stack-reload [--dry-run] [--help]
+
+Safely reloads live terminal stack configs without killing sessions or shells:
+  - tmux:    `tmux source-file ~/.config/tmux/tmux.conf` + `on-client-attached.sh`
+  - kitty:   sends SIGUSR1 / `load-config` via active @kitty-* unix sockets
+  - wezterm: triggers config hot-reload on ~/.config/wezterm/wezterm.lua
+EOF
+      exit 0
+      ;;
+    --dry-run)
+      DRY_RUN=1
+      shift
+      ;;
+    *)
+      printf 'stack-reload: unknown option: %s\nUsage: stack-reload [--dry-run] [--help]\n' "$1" >&2
+      exit 2
+      ;;
+  esac
+done
+
+run_or_echo() {
+  if [ "$DRY_RUN" -eq 1 ]; then
+    printf 'DRY-RUN: %s\n' "$*"
+  else
+    "$@"
+  fi
+}
+
+echo "==> Reloading terminal stack (non-destructive)..."
+
+# 1. Tmux live server
+if command -v tmux >/dev/null 2>&1 && tmux list-sessions >/dev/null 2>&1; then
+  run_or_echo tmux source-file "$HOME/.config/tmux/tmux.conf"
+  if [ -x "$HOME/.config/tmux/scripts/on-client-attached.sh" ]; then
+    run_or_echo bash "$HOME/.config/tmux/scripts/on-client-attached.sh" || true
+  fi
+  echo "  [OK] tmux config reloaded and attached profile synced"
+else
+  echo "  [SKIP] no active tmux server under current TMUX_TMPDIR"
+fi
+
+# 2. Kitty live instances (socket-only RC + SIGUSR1 fallback)
+if command -v kitty >/dev/null 2>&1; then
+  kitty_reloaded=0
+  if [ -r /proc/net/unix ]; then
+    while IFS= read -r sock; do
+      [ -n "$sock" ] || continue
+      if run_or_echo kitty @ --to "unix:${sock}" load-config >/dev/null 2>&1; then
+        kitty_reloaded=$((kitty_reloaded + 1))
+      fi
+    done < <(grep -oE '@kitty-[0-9]+' /proc/net/unix 2>/dev/null | sort -u || true)
+  fi
+  if [ "$kitty_reloaded" -eq 0 ] && pgrep -u "$(id -u)" -x kitty >/dev/null 2>&1; then
+    run_or_echo pkill -USR1 -u "$(id -u)" -x kitty || true
+    echo "  [OK] kitty signaled with SIGUSR1"
+  elif [ "$kitty_reloaded" -gt 0 ]; then
+    echo "  [OK] kitty reloaded via $kitty_reloaded remote socket(s)"
+  fi
+fi
+
+# 3. WezTerm live auto-reload
+if pgrep -u "$(id -u)" -f 'wezterm-gui' >/dev/null 2>&1 && [ -e "$HOME/.config/wezterm/wezterm.lua" ]; then
+  run_or_echo touch -c "$HOME/.config/wezterm/wezterm.lua"
+  echo "  [OK] triggered wezterm config mtime watch"
+fi
+
+echo "==> Note: long-lived interactive shells only adopt new .zshenv/.zshrc on 'exec zsh'."
