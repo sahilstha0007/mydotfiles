@@ -21,3 +21,6 @@ export TMUX_TMPDIR="${TMUX_TMPDIR:-$HOME/.cache/tmux}"
 
 # Truecolor advertisement for tools that sniff COLORTERM instead of TERM.
 export COLORTERM=truecolor
+
+# Keep Neovim log files out of working directories (e.g. .config/wezterm/nvim.log).
+export NVIM_LOG_FILE="${XDG_STATE_HOME:-$HOME/.local/state}/nvim/nvim.log"

@@ -62,13 +62,6 @@ done
 # 2. VS Code / Code - OSS / VSCodium User Configuration
 code_src="$repo/.config/Code/User"
 if [ -d "$code_src" ]; then
-  # Support standard VSCode, Code - OSS, and VSCodium paths on Linux
-  candidate_dirs=(
-    "$HOME/.config/Code/User"
-    "$HOME/.config/Code - OSS/User"
-    "$HOME/.config/VSCodium/User"
-  )
-
   # Always link to Code/User by default
   target_dirs=("$HOME/.config/Code/User")
 
@@ -170,13 +163,24 @@ if [ -d "$bin_src" ]; then
   done
 fi
 
-# 5. Ensure executable permissions on all shell scripts
+# 5. Ensure gitignored generated theme includes exist on a fresh clone
+if [ ! -f "$repo/.config/kitty/colors-matugen.conf" ] && [ -f "$repo/.config/kitty/themes/nightfox.conf" ]; then
+  cp "$repo/.config/kitty/themes/nightfox.conf" "$repo/.config/kitty/colors-matugen.conf"
+  echo "  [INIT]   $repo/.config/kitty/colors-matugen.conf (from nightfox default)"
+fi
+if [ ! -f "$repo/.config/btop/themes/matugen.theme" ] && [ -f "$repo/.config/btop/themes/nightfox.theme" ]; then
+  cp "$repo/.config/btop/themes/nightfox.theme" "$repo/.config/btop/themes/matugen.theme"
+  echo "  [INIT]   $repo/.config/btop/themes/matugen.theme (from nightfox default)"
+fi
+mkdir -p "${XDG_STATE_HOME:-$HOME/.local/state}/nvim"
+
+# 6. Ensure executable permissions on all shell scripts
 echo "==> Setting executable permissions on scripts..."
 find "$repo/.config" -type f -name "*.sh" -exec chmod +x {} + 2>/dev/null || true
 find "$repo/.config" -type f -name "*.py" -exec chmod +x {} + 2>/dev/null || true
 find "$repo/bin" -type f -exec chmod +x {} + 2>/dev/null || true
 
-# 6. Rebuild bat theme cache if bat is installed
+# 7. Rebuild bat theme cache if bat is installed
 if command -v bat >/dev/null 2>&1 && [ -d "$HOME/.config/bat/themes" ]; then
   bat cache --build >/dev/null 2>&1 || true
   echo "  [OK]     bat theme cache rebuilt"
