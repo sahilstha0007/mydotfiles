@@ -88,8 +88,15 @@ for raw in sys.stdin:
 {
   # --- nvim -------------------------------------------------------------
   echo "### nvim  (leader: Space)   — in-editor menu: Space+sk"
-  nvim --headless \
-    -c 'redir! > '"$workdir/nvim.out"' | silent verbose nmap | redir END | qa!' 2>/dev/null || true
+  nvim_data="${XDG_DATA_HOME:-$HOME/.local/share}/nvim/lazy/lazy.nvim"
+  if [ -d "$nvim_data" ]; then
+    timeout 4 nvim --headless \
+      -c 'redir! > '"$workdir/nvim.out"' | silent verbose nmap | redir END | qa!' 2>/dev/null || true
+  elif [ -f "$HOME/.config/nvim/lua/keymaps.lua" ]; then
+    # Clean-clone / offline fallback: load static keymaps without cloning lazy.nvim plugins
+    timeout 4 nvim --headless --noplugin -u NONE \
+      -c 'let mapleader=" " | silent! luafile '"$HOME"'/.config/nvim/lua/keymaps.lua | redir! > '"$workdir/nvim.out"' | silent verbose nmap | redir END | qa!' 2>/dev/null || true
+  fi
   if [ -s "$workdir/nvim.out" ]; then
     grep -E '^[^ ].*<[^>]+>' "$workdir/nvim.out" | sed 's/[[:space:]]\+/ /g' | cut -c1-160 || true
   fi
