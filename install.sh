@@ -8,6 +8,14 @@
 #   - Tmux        (~/.config/tmux)
 #   - WezTerm     (~/.config/wezterm)
 #   - Kitty Dev   (~/.config/kitty)
+#   - Oh-My-Posh  (~/.config/ohmyposh)
+#   - Bat         (~/.config/bat)
+#   - Yazi        (~/.config/yazi)
+#   - LazyGit     (~/.config/lazygit)
+#   - LazyDocker  (~/.config/lazydocker)
+#   - Btop        (~/.config/btop)
+#   - Fastfetch   (~/.config/fastfetch)
+#   - Atuin       (~/.config/atuin)
 #   - VS Code     (~/.config/Code/User, Code - OSS, VSCodium)
 #
 # Automatically backs up any existing non-symlink directories into
@@ -23,7 +31,7 @@ echo "==> Deploying portable dotfiles from $repo..."
 
 # 1. Standard config directories (~/.config/<name>)
 mkdir -p "$HOME/.config"
-for name in nvim tmux wezterm kitty; do
+for name in nvim tmux wezterm kitty ohmyposh bat yazi lazygit lazydocker btop fastfetch atuin; do
   src="$repo/.config/$name"
   dst="$HOME/.config/$name"
 
@@ -98,12 +106,11 @@ if [ -d "$code_src" ]; then
   done
 fi
 
-# 3. Shell Runtime Configurations (~/.zshrc, ~/.zshrc_custom, ~/.bashrc_custom, ~/.omni-aliases.zsh, ~/.zshenv)
+# 3. Shell Runtime Configurations (~/.zshrc, ~/.bashrc_custom, ~/.omni-aliases.zsh, ~/.zshenv)
 shell_src="$repo/shell"
 if [ -d "$shell_src" ]; then
   declare -A shell_map=(
     ["zshrc"]="$HOME/.zshrc"
-    ["zshrc_custom"]="$HOME/.zshrc_custom"
     ["bashrc_custom"]="$HOME/.bashrc_custom"
     ["omni-aliases.zsh"]="$HOME/.omni-aliases.zsh"
     ["zshenv"]="$HOME/.zshenv"
@@ -168,6 +175,48 @@ echo "==> Setting executable permissions on scripts..."
 find "$repo/.config" -type f -name "*.sh" -exec chmod +x {} + 2>/dev/null || true
 find "$repo/.config" -type f -name "*.py" -exec chmod +x {} + 2>/dev/null || true
 find "$repo/bin" -type f -exec chmod +x {} + 2>/dev/null || true
+
+# 6. Rebuild bat theme cache if bat is installed
+if command -v bat >/dev/null 2>&1 && [ -d "$HOME/.config/bat/themes" ]; then
+  bat cache --build >/dev/null 2>&1 || true
+  echo "  [OK]     bat theme cache rebuilt"
+fi
+
+# 7. Protect mydotfiles-managed paths from ML4W dotfiles installer updates
+ml4w_installer_cfg="$HOME/.config/ml4w-dotfiles-installer"
+if [ -d "$ml4w_installer_cfg" ]; then
+  echo "==> Registering protected paths in ML4W installer blacklists..."
+  protected_entries=(
+    ".config/kitty"
+    ".config/nvim"
+    ".config/tmux"
+    ".config/wezterm"
+    ".config/ohmyposh"
+    ".config/bat"
+    ".config/yazi"
+    ".config/lazygit"
+    ".config/lazydocker"
+    ".config/btop"
+    ".config/fastfetch"
+    ".config/atuin"
+    ".zshrc"
+    ".zshrc_custom"
+    ".zshenv"
+    ".bashrc_custom"
+    ".omni-aliases.zsh"
+  )
+  for profile_dir in "$ml4w_installer_cfg"/*/; do
+    [ -d "$profile_dir" ] || continue
+    bl="${profile_dir%/}/blacklist"
+    touch "$bl"
+    for entry in "${protected_entries[@]}"; do
+      if ! grep -Fxq "$entry" "$bl"; then
+        printf '%s\n' "$entry" >> "$bl"
+      fi
+    done
+    echo "  [LOCKED] $bl"
+  done
+fi
 
 # 4. Tmux Plugin Manager (TPM) reminder
 if [ ! -d "$HOME/.tmux/plugins/tpm" ] && [ ! -d "$repo/.config/tmux/plugins/tpm" ]; then

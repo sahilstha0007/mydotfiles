@@ -1,10 +1,29 @@
+local wezterm = require('wezterm')
+
+-- Open compiler `file://path#line` links directly in Neovim instead of the browser
+wezterm.on('open-uri', function(window, pane, uri)
+   local path, line = uri:match('^file://([^#]+)#(%d+)$')
+   if not path then
+      return
+   end
+   local cmd = { 'nvim', '+' .. line, path }
+   window:perform_action(
+      wezterm.action.SpawnCommandInNewTab({
+         args = cmd,
+         cwd = pane:get_current_working_dir() and pane:get_current_working_dir().file_path or nil,
+      }),
+      pane
+   )
+   return false
+end)
+
 ---@type Config
 return {
    -- behaviours
    automatically_reload_config = true,
    exit_behavior = 'CloseOnCleanExit', -- if the shell program exited with a successful status
    exit_behavior_messaging = 'Verbose',
-   status_update_interval = 1000,
+   status_update_interval = 5000,
    audible_bell = 'Disabled',
 
    -- nvim binds <C-Arrow> to window resize; tmux binds -n S-Arrow to pane

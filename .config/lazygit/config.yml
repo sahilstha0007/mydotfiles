@@ -1,0 +1,20 @@
+git:
+  diffRenderers:
+    - colorArg: always
+      command: delta --dark --paging=never
+gui:
+  showRandomTip: false
+  border: rounded
+  theme:
+    activeBorderColor:
+      - '#ffb4ac'
+      - bold
+    inactiveBorderColor:
+      - '#a08c8a'
+    selectedLineBgColor:
+      - '#322826'
+  sidePanelWidth: 0.33
+  expandFocusedSidePanel: true
+quitOnTopLevelReturn: true
+disableStartupPopups: true
+notARepository: quit

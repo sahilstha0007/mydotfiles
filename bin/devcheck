@@ -134,6 +134,11 @@ if [ -x "$TMUX_TESTS/check-colour-propagation.sh" ]; then
 else
   skip "tmux: colour prop" "script missing"
 fi
+if [ -f "$HOME/.config/tmux/scripts/on-client-attached.sh" ] && [ -f "$HOME/.config/tmux/scripts/status-right.sh" ]; then
+  run "tmux: scripts syntax" "$TMUX" bash -n "$HOME/.config/tmux/scripts/on-client-attached.sh" "$HOME/.config/tmux/scripts/status-right.sh"
+else
+  skip "tmux: scripts syntax" "tmux scripts missing"
+fi
 
 
 # --- kitty ------------------------------------------------------------------
@@ -145,12 +150,62 @@ else
   skip "kitty: config parse" "no custom.conf"
 fi
 
-KITTY_DEV="$HOME/.config/kitty/dev.conf"
-if [ -f "$KITTY_DEV" ]; then
-  run "kitty: dev profile" "$HOME/.config/kitty" \
-    bash -c 'python3 -m py_compile tab_bar.py pass_keys.py && kitty --config dev.conf --help >/dev/null'
+KITTY_CONF="$HOME/.config/kitty/kitty.conf"
+if [ -f "$KITTY_CONF" ]; then
+  run "kitty: full profile" "$HOME/.config/kitty" \
+    bash -c 'python3 -m py_compile tab_bar.py pass_keys.py && kitty --config kitty.conf --help >/dev/null'
+  run "kitty: collisions" "$HOME/.config/kitty" \
+    python3 -c '
+import re, subprocess, sys
+lines = open("custom.conf").read().splitlines()
+maps = [re.match(r"^map\s+(\S+)", l.strip()).group(1) for l in lines if l.strip().startswith("map ")]
+prefixes = {k.split(">")[0] for k in maps if ">" in k}
+bare = set(maps) - {k for k in maps if ">" in k}
+overlap = sorted(prefixes & bare)
+if overlap:
+    sys.exit("Kitty key prefix overlaps bare map: " + ", ".join(overlap))
+tmux_root = subprocess.run(["tmux", "list-keys", "-T", "root"], capture_output=True, text=True)
+if tmux_root.returncode == 0:
+    tmux_m = {m.group(1).lower() for line in tmux_root.stdout.splitlines()
+              for m in [re.match(r"^bind-key\s+(?:-\S+\s+)*-T\s+root\s+M-(\S+)", line)] if m}
+    kitty_alt = {k[4:].lower() for k in bare if k.lower().startswith("alt+")}
+    steals = sorted(tmux_m & kitty_alt)
+    if steals:
+        sys.exit("Kitty bare alt+ steals tmux root M-: " + ", ".join(steals))
+out = subprocess.run(["kitty", "+runpy", "from kitty.config import load_config; load_config(\"kitty.conf\")"], capture_output=True, text=True)
+bad = [l for l in (out.stdout + out.stderr).splitlines() if "Ignoring invalid config line" in l]
+if bad:
+    sys.exit("Kitty config warnings:\n" + "\n".join(bad))
+'
 else
-  skip "kitty: dev profile" "no dev.conf"
+  skip "kitty: full profile" "no kitty.conf"
+fi
+
+KITTY_TAB_TEST="$HOME/mydotfiles/tests/kitty/check-tab-bar.py"
+if [ -f "$KITTY_TAB_TEST" ]; then
+  run "kitty: tab_bar specs" "$HOME/.config/kitty" python3 "$KITTY_TAB_TEST"
+fi
+
+# --- zsh --------------------------------------------------------------------
+if command -v zsh >/dev/null 2>&1; then
+  run "zsh: syntax" "$HOME" zsh -n "$HOME/.zshrc" "$HOME/.zshenv"
+  run "zsh: startup <= 120ms" "$HOME" \
+    python3 -c '
+import subprocess, time, sys
+t0 = time.perf_counter()
+subprocess.run(["zsh", "-i", "-c", "exit"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
+ms = (time.perf_counter() - t0) * 1000
+if ms > 120:
+    sys.exit(f"zsh startup too slow: {ms:.1f}ms > 120ms")
+'
+fi
+
+# --- bin --------------------------------------------------------------------
+if command -v python3 >/dev/null 2>&1; then
+  run "bin: python syntax" "$HOME/mydotfiles" \
+    python3 -m py_compile "$HOME/mydotfiles/bin/project-task" "$HOME/mydotfiles/bin/terminal-cheatsheet"
+else
+  skip "bin: python syntax" "python3 not installed"
 fi
 
 # --- docs vs live configs ---------------------------------------------------

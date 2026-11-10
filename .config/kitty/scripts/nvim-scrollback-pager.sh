@@ -21,6 +21,5 @@ cat > "$TMP_PAGER_FILE"
 exec nvim \
   -c "set buftype=nofile noswapfile nomodified readonly cursorline number relativenumber wrap linebreak breakindent" \
   -c "nnoremap <silent> q :qa!<CR>" \
-  -c "nnoremap <silent> <ESC> :qa!<CR>" \
   -c "normal! G" \
   "$TMP_PAGER_FILE"

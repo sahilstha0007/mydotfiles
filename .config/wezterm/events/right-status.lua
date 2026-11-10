@@ -30,8 +30,6 @@ local M = {}
 
 local ICON_SEPARATOR = nf.oct_dash
 local ICON_DATE = nf.fa_calendar
-local ICON_HOST = nf.md_laptop
-local ICON_UPTIME = nf.md_timer_outline
 local ICON_CPU = nf.md_cpu_64_bit or nf.fa_microchip or 'CPU'
 local ICON_MEM = nf.md_memory or nf.fa_memory or 'RAM'
 local ICON_CLOCK = nf.md_clock_outline or nf.fa_clock_o or 'T'
@@ -54,6 +52,7 @@ local ICON_CLOCK = nf.md_clock_outline or nf.fa_clock_o or 'T'
 -- lightness ladder in tokens.lua if the bar ever reads ambiguously.
 local colors = {
    date      = { fg = tokens.accent, bg = tokens.glass },
+   -- host and uptime remain in M.colors because tests/wezterm/check-right-status.lua checks them.
    host      = { fg = tokens.pink,   bg = tokens.glass },
    uptime    = { fg = tokens.muted,  bg = tokens.glass },
    cpu       = { fg = tokens.cyan,   bg = tokens.glass },
@@ -84,12 +83,6 @@ cells
    :add_segment('date_icon', ICON_DATE .. '  ', colors.date, attr(attr.intensity('Bold')))
    :add_segment('date_text', '', colors.date, attr(attr.intensity('Bold')))
    :add_segment('separator', ' ' .. ICON_SEPARATOR .. '  ', colors.separator)
-   :add_segment('host_icon', ICON_HOST .. '  ', colors.host, attr(attr.intensity('Bold')))
-   :add_segment('host_text', '', colors.host, attr(attr.intensity('Bold')))
-   :add_segment('sep_host_uptime', ' ' .. ICON_SEPARATOR .. '  ', colors.separator)
-   :add_segment('uptime_icon', '', colors.uptime, attr(attr.intensity('Bold')))
-   :add_segment('uptime_text', '', colors.uptime, attr(attr.intensity('Bold')))
-   :add_segment('sep_uptime_cpu', ' ' .. ICON_SEPARATOR .. '  ', colors.separator)
    :add_segment('cpu_icon', ICON_CPU .. '  ', colors.cpu, attr(attr.intensity('Bold')))
    :add_segment('cpu_text', '', colors.cpu, attr(attr.intensity('Bold')))
    :add_segment('mem_icon', '   ' .. ICON_MEM .. '  ', colors.mem, attr(attr.intensity('Bold')))
@@ -164,34 +157,6 @@ local function cpu_mem()
    return sys.cpu, sys.mem
 end
 
----Uptime as `Xd Xh` / `Xh Xm` / `Xm`; `nil` on platforms without `/proc/uptime`
----@return string?
-local function uptime()
-   local f = io.open('/proc/uptime', 'r')
-   if not f then
-      return nil
-   end
-
-   local line = f:read('*l')
-   f:close()
-
-   local secs = tonumber((line or ''):match('^(%d+)'))
-   if not secs then
-      return nil
-   end
-
-   local days = math.floor(secs / 86400)
-   local hours = math.floor((secs % 86400) / 3600)
-   local mins = math.floor((secs % 3600) / 60)
-
-   if days > 0 then
-      return string.format('%dd %dh', days, hours)
-   elseif hours > 0 then
-      return string.format('%dh %dm', hours, mins)
-   end
-   return string.format('%dm', mins < 1 and 1 or mins)
-end
-
 ---@param opts? Event.RightStatusOptionsInput Default: {date_format = '%a %H:%M:%S'}
 M.setup = function(opts)
    local valid_opts, err = EVENT_OPTS:validate(opts or {})
@@ -204,10 +169,7 @@ M.setup = function(opts)
 
    wezterm.on('update-status', function(window, pane)
       local battery_text, battery_icon = battery_info()
-      local uptime_text = uptime()
       local cpu_text, mem_text = cpu_mem()
-      local user = os.getenv('USER') or os.getenv('USERNAME') or 'user'
-      local host = user .. '@' .. wezterm.hostname()
       -- Date and clock are DISTINCT segments. They both used to be fed the
       -- same date_format string, so the bar rendered the clock twice and the
       -- date never appeared. date_format now names the date, time_format the
@@ -222,9 +184,6 @@ M.setup = function(opts)
       -- only appear when they have something to say.
       cells
          :update_segment_text('date_text', date)
-         :update_segment_text('host_text', host)
-         :update_segment_text('uptime_icon', uptime_text and (ICON_UPTIME .. '  ') or '')
-         :update_segment_text('uptime_text', uptime_text or '')
          :update_segment_text('cpu_text', cpu_text)
          :update_segment_text('mem_text', mem_text)
          :update_segment_text('battery_icon', battery_icon)
@@ -238,23 +197,19 @@ M.setup = function(opts)
          'date_icon',
          'date_text',
          'separator',
-         'host_icon',
-         'host_text',
-         'sep_host_uptime',
-         'uptime_icon',
-         'uptime_text',
-         'sep_uptime_cpu',
          'cpu_icon',
          'cpu_text',
          'mem_icon',
          'mem_text',
          'sep_cpu_bat',
-         'battery_icon',
-         'battery_text',
-         'sep_bat_clock',
-         'clock_icon',
-         'clock_text',
       }
+      if battery_text ~= '' then
+         table.insert(render_ids, 'battery_icon')
+         table.insert(render_ids, 'battery_text')
+         table.insert(render_ids, 'sep_bat_clock')
+      end
+      table.insert(render_ids, 'clock_icon')
+      table.insert(render_ids, 'clock_text')
 
       -- One wezterm.format over ONE combined FormatItem list: the HUD pills,
       -- then the right-side readout. Formatted separately and joined with

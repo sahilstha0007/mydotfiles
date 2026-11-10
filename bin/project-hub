@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# =============================================================================
+# project-hub CLI command
+# Opens the Interactive Project Hub (fzf over active sessions, ~/Projects, scratch)
+# =============================================================================
+exec "$HOME/.config/kitty/scripts/project-hub.sh" "$@"

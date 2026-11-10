@@ -229,8 +229,25 @@ tmp = out + '.tmp'
 # current-line bg; gutter/preview stay the background; the gate-repaired
 # success token is the accent (hl, prompt, pointer, marker, spinner) — the
 # same "commands are green" the zsh styles use, so both surfaces agree.
+def legible_bg(c, fg, *fbs):
+    """Return `c` if contrast(fg, c) >= MIN_CONTRAST; else shift lightness away from fg."""
+    if c and contrast(fg, c) >= MIN_CONTRAST:
+        return c
+    target = 0.0 if rl(fg) > 0.18 else 1.0
+    if c:
+        h, l, s = colorsys.rgb_to_hls(*rgb(c))
+        for step in range(1, 17):
+            cand = hx(colorsys.hls_to_rgb(h, l + (target - l) * step / 16, s))
+            if contrast(fg, cand) >= MIN_CONTRAST:
+                return cand
+    return max(fbs, key=lambda x: contrast(fg, x))
+
+
+SEL_BG = legible_bg(tok.get('surface1') or tok.get('surface0'), TEXT, bg, '#313244', '#ccd0da')
+
+
 FZF_ROLES = [
-    ('fg', TEXT), ('bg', bg), ('hl', GREEN), ('fg+', TEXT), ('bg+', MUTED),
+    ('fg', TEXT), ('bg', bg), ('hl', GREEN), ('fg+', TEXT), ('bg+', SEL_BG),
     ('border', MUTED), ('gutter', bg), ('info', MUTED),
     ('prompt', GREEN), ('pointer', GREEN), ('marker', GREEN),
     ('spinner', GREEN), ('header', MUTED), ('label', YELLOW),

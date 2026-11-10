@@ -331,6 +331,7 @@ emit() { # emit <name> <value>: single set -g line
   emit overlay0 "$outline"
   emit surface_0 "$surface0"
   emit surface0 "$surface0"
+  emit glass "$surface0"
   emit surface_1 "$surface1"
   emit surface1 "$surface1"
   emit surface_2 "$surface2"

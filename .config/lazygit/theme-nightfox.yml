@@ -1,0 +1,19 @@
+# Nightfox theme overlay for lazygit (used when TERMINAL_STACK_PROFILE=kitty)
+git:
+  diffRenderers:
+    - colorArg: always
+      command: delta --dark --paging=never --syntax-theme=nightfox
+gui:
+  border: rounded
+  theme:
+    activeBorderColor:
+      - '#719cd6'
+      - bold
+    inactiveBorderColor:
+      - '#575860'
+    selectedLineBgColor:
+      - '#212e3f'
+    selectedRangeBgColor:
+      - '#212e3f'
+    optionsTextColor:
+      - '#719cd6'

@@ -16,9 +16,22 @@ if [[ ! -x $bin ]]; then
     exit 1
 fi
 
-action=$(printf 'run\ntest\nlint\nformat\n' |
-    fzf --prompt "project action ❯ " --height 100% --reverse \
-        --header "$(basename "$dir")") || exit 0
+fzf_args=(
+    --prompt "project action ❯ "
+    --height 100%
+    --reverse
+    --border=rounded
+    --header "$(basename "$dir")"
+)
+if [[ "${TERMINAL_STACK_PROFILE:-}" == "kitty" ]]; then
+    fzf_args+=(
+        "--color=bg+:#212e3f,bg:-1,spinner:#719cd6,hl:#719cd6"
+        "--color=fg:#cdcecf,header:#719cd6,info:#828f9f,pointer:#719cd6"
+        "--color=marker:#81b29a,fg+:#cdcecf,prompt:#719cd6,hl+:#719cd6,border:#719cd6"
+    )
+fi
+
+action=$(printf 'run\ntest\nlint\nformat\n' | fzf "${fzf_args[@]}") || exit 0
 
 [[ -n $action ]] || exit 0
 

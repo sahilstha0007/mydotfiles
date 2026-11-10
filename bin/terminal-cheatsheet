@@ -1,0 +1,157 @@
+#!/usr/bin/env python3
+"""Unified Terminal Stack Cheatsheet & Keybinding HUD.
+
+Covers Kitty, WezTerm, Tmux, Neovim, and Shell shortcuts with interactive FZF
+search and standalone formatted table rendering.
+"""
+
+from __future__ import annotations
+
+import shutil
+import subprocess
+import sys
+
+CHEATSHEET_ENTRIES = [
+    # Category, Key, Action, Context
+    ("Kitty", "Ctrl + Shift + d", "Vertical split (side-by-side)", "Splits"),
+    ("Kitty", "Ctrl + Shift + s", "Horizontal split (stacked)", "Splits"),
+    ("Kitty", "Ctrl + Shift + z", "Toggle stack / zoom layout", "Splits"),
+    ("Kitty", "Ctrl + h/j/k/l", "Seamless split navigation (Kitty & Neovim)", "Navigation"),
+    ("Kitty", "Ctrl + Shift + t", "Create new tab (inherits cwd)", "Tabs"),
+    ("Kitty", "Ctrl + Shift + w", "Close current tab", "Tabs"),
+    ("Kitty", "Ctrl + Shift + q", "Close current window / split", "Panes"),
+    ("Kitty", "Ctrl + Shift + Tab", "Interactive fuzzy tab & window switcher", "Tabs"),
+    ("Kitty", "Ctrl + Shift + f", "Fuzzy search scrollback (fzf)", "Scrollback"),
+    ("Kitty", "Ctrl + Shift + h", "Neovim scrollback pager", "Scrollback"),
+    ("Kitty", "Ctrl + Shift + g", "Open LazyGit overlay", "Overlays"),
+    ("Kitty", "Ctrl + Shift + y", "Open Yazi file manager overlay", "Overlays"),
+    ("Kitty", "Ctrl + Shift + m", "Open btop system monitor overlay", "Overlays"),
+    ("Kitty", "Ctrl + Shift + o", "Open Project Hub overlay", "Overlays"),
+    ("Kitty", "Ctrl + Shift + b", "Broadcast typing across splits in tab", "Panes"),
+    ("Kitty", "Ctrl + Shift + Space", "QuickSelect word to clipboard", "Hints"),
+    ("Kitty", "Ctrl + Shift + p > ...", "Leader hints & overlays (c palette, d docker, f/h/n)", "Hints/Tools"),
+
+    ("WezTerm", "Alt + t", "Create new tab", "Tabs"),
+    ("WezTerm", "Alt + [ / ]", "Previous / Next tab", "Tabs"),
+    ("WezTerm", "Alt + Ctrl + [ / ]", "Move tab left / right", "Tabs"),
+    ("WezTerm", "Alt + Ctrl + w", "Close current tab", "Tabs"),
+    ("WezTerm", "Alt + 0", "Prompt to rename tab title", "Tabs"),
+    ("WezTerm", "Alt + Ctrl + 0", "Reset tab title to default", "Tabs"),
+    ("WezTerm", "Alt + Ctrl + s", "Open tmux sessionizer tab (Project Hub)", "Tabs/Mux"),
+    ("WezTerm", "Alt + Ctrl + r", "Run project task (dispatcher)", "Tools"),
+    ("WezTerm", "Alt + Enter", "Toggle pane zoom state", "Panes"),
+    ("WezTerm", "Alt + Ctrl + x", "Close current pane", "Panes"),
+    ("WezTerm", "Alt + Ctrl + p", "Interactive pane switcher (number chip)", "Panes"),
+    ("WezTerm", "Alt + o", "Backdrop control panel", "Visuals"),
+    ("WezTerm", "Alt + p", "Live wallpaper picker", "Visuals"),
+    ("WezTerm", "Alt + y / Alt + Shift + y", "Adjust window opacity (+/- 0.05 step)", "Visuals"),
+    ("WezTerm", "Alt + u / Alt + Shift + u", "Adjust backdrop frost wash (+/-)", "Visuals"),
+    ("WezTerm", "Alt + s", "Switch workspace", "Workspaces"),
+    ("WezTerm", "Alt + Ctrl + Space, w", "Workspace key table", "Workspaces"),
+    ("WezTerm", "Alt + Ctrl + 9", "Toggle top tab bar visibility", "Chrome"),
+    ("WezTerm", "Alt + f", "Search scrollback buffer", "Scrollback"),
+    ("WezTerm", "Ctrl + Shift + Space", "QuickSelect (URLs, hashes, paths)", "Shortcuts"),
+    ("WezTerm", "Alt + Ctrl + u", "QuickSelect URL & open in browser", "Shortcuts"),
+
+    ("Tmux", "Ctrl + a", "Primary prefix key", "Global"),
+    ("Tmux", "Prefix + -", "Split pane stacked (vertical)", "Splits"),
+    ("Tmux", "Prefix + |", "Split pane side-by-side (horizontal)", "Splits"),
+    ("Tmux", "Prefix + z", "Toggle pane zoom", "Panes"),
+    ("Tmux", "Prefix + x", "Kill pane (with confirmation)", "Panes"),
+    ("Tmux", "Prefix + X", "Kill pane immediately (no prompt)", "Panes"),
+    ("Tmux", "Prefix + c", "Create new window (inherits cwd)", "Windows"),
+    ("Tmux", "Prefix + p / n", "Previous / Next window (repeatable)", "Windows"),
+    ("Tmux", "Prefix + Left / Right", "Previous / Next window (repeatable arrows)", "Windows"),
+    ("Tmux", "Prefix + 0..9", "Jump directly to window 0-9 (or Alt+1..9)", "Windows"),
+    ("Tmux", "Prefix + w", "Interactive session/window chooser tree", "Navigation"),
+    ("Tmux", "Prefix + Tab", "Switch to last active session", "Sessions"),
+    ("Tmux", "Prefix + f", "Project Hub popup", "Sessions"),
+    ("Tmux", "Prefix + s", "Session/window tree", "Sessions"),
+    ("Tmux", "Prefix + S", "FZF session switcher popup", "Sessions"),
+    ("Tmux", "Prefix + d", "LazyDocker popup", "Popups"),
+    ("Tmux", "Prefix + D", "Detach from current session", "Sessions"),
+    ("Tmux", "Prefix + P", "Project task menu", "Tools"),
+    ("Tmux", "Prefix + g / G / b / T / V", "LazyGit / gh-dash / Yazi / btop / nvtop", "Popups"),
+    ("Tmux", "Prefix + [", "Enter copy mode (vi keys)", "Copy Mode"),
+    ("Tmux", "Prefix + ]", "Paste latest tmux buffer", "Buffers"),
+    ("Tmux", "Prefix + ?", "List all keybindings (built-in)", "Help"),
+    ("Tmux", "Prefix + k", "Unified Cross-Layer Keymap Dump", "Help"),
+
+    ("Neovim", "Space", "Leader key", "Global"),
+    ("Neovim", "Space + e", "Toggle file explorer tree (nvim-tree)", "Files"),
+    ("Neovim", "-", "Open parent directory in Oil", "Files"),
+    ("Neovim", "Space + f + f", "Find files (Snacks picker)", "Pickers"),
+    ("Neovim", "Space + f + g", "Find git files (Snacks picker)", "Pickers"),
+    ("Neovim", "Space + s + g", "Live grep across project", "Pickers"),
+    ("Neovim", "Space + f + b", "Switch open buffer", "Buffers"),
+    ("Neovim", "Space + b + d", "Delete buffer without breaking splits", "Buffers"),
+    ("Neovim", "Alt + j / Alt + k", "Move current line / selection down / up", "Editing"),
+    ("Neovim", "Ctrl + h/j/k/l", "Seamlessly navigate splits (nvim & tmux/kitty)", "Navigation"),
+    ("Neovim", "Space + c + a", "LSP Code Action", "LSP"),
+    ("Neovim", "Space + c + r", "LSP Rename symbol", "LSP"),
+    ("Neovim", "g + d", "Jump to definition", "LSP"),
+    ("Neovim", "g + r", "Show LSP references", "LSP"),
+    ("Neovim", "Space + x + x", "Toggle Trouble diagnostic list", "Diagnostics"),
+    ("Neovim", "Space + g + g", "Open LazyGit floating window", "Git"),
+    ("Neovim", "Space + g + D", "Open Diffview git diff", "Git"),
+    ("Neovim", "Space + P", "Open Project Tasks menu", "Tools"),
+    ("Neovim", "Space + d + c", "DAP Continue / Start debug (Go delve / Python)", "DAP"),
+    ("Neovim", "Space + d + b", "DAP Toggle breakpoint", "DAP"),
+
+    ("Shell", "Alt + Left / Right", "Jump word backward / forward (universal)", "Readline"),
+    ("Shell", "Ctrl + r", "Search shell history (Atuin)", "History"),
+    ("Shell", "Ctrl + t", "FZF find files into command line", "FZF"),
+    ("Shell", "Alt + c", "FZF cd into selected subdirectory", "Zoxide/FZF"),
+    ("Shell", "z <pattern>", "Jump to directory via zoxide", "Zoxide"),
+    ("Shell", "devcheck", "Run all stack verification gates (fast tier)", "Verification"),
+    ("Shell", "devcheck --all", "Run full suite including mutation tests", "Verification"),
+    ("Shell", "terminal-cheatsheet", "Open this keybinding cheatsheet (FZF / --table)", "Help"),
+]
+
+
+def render_fzf() -> None:
+    lines = []
+    for cat, key, action, ctx in CHEATSHEET_ENTRIES:
+        lines.append(f"[{cat:^7}] {key:<26} │ {action:<52} │ {ctx}")
+    input_text = "\n".join(lines)
+    header = "Terminal Stack Cheatsheet (Kitty / WezTerm / Tmux / Neovim / Shell) [Esc to exit]"
+    fzf_cmd = [
+        "fzf",
+        "--ansi",
+        "--header", header,
+        "--prompt", "Search Keybinds > ",
+        "--layout", "reverse",
+        "--border", "rounded",
+        "--height", "100%" if "--popup" in sys.argv else "60%",
+    ]
+    try:
+        subprocess.run(fzf_cmd, input=input_text, text=True)
+    except FileNotFoundError:
+        render_table()
+
+
+def render_table() -> None:
+    bold = "\033[1m"
+    cyan = "\033[36m"
+    green = "\033[32m"
+    dim = "\033[2m"
+    reset = "\033[0m"
+    print(f"\n{bold}{cyan}=== UNIFIED TERMINAL STACK CHEATSHEET ==={reset}\n")
+    current_cat = ""
+    for cat, key, action, ctx in CHEATSHEET_ENTRIES:
+        if cat != current_cat:
+            current_cat = cat
+            print(f"\n{bold}{green}--- {cat.upper()} ---{reset}")
+        print(f"  {bold}{key:<26}{reset} │ {action:<52} │ {dim}{ctx}{reset}")
+    print()
+
+
+def main() -> None:
+    if "--table" in sys.argv or not sys.stdin.isatty() or not shutil.which("fzf"):
+        render_table()
+    else:
+        render_fzf()
+
+
+if __name__ == "__main__":
+    main()

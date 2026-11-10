@@ -65,12 +65,13 @@ local function rename_workspace(window, pane)
             { Text = 'Rename workspace "' .. current .. '" to:' },
          },
          action = wezterm.action_callback(function(win, _p, line)
-            if not line or line == '' then
+            if not line or line == '' or line == current then
                return
             end
-            -- wezterm has no rename workspace API; create new + switch,
-            -- leaving the old (empty) one behind. Harmless.
-            win:perform_action(switch_to(line), pane)
+            local ok = pcall(wezterm.mux.rename_workspace, current, line)
+            if not ok then
+               win:perform_action(switch_to(line), pane)
+            end
          end),
       },
       pane
@@ -120,11 +121,11 @@ local function switch_workspace_picker(window, pane)
          choices = choices,
          fuzzy = true,
          fuzzy_description = 'Workspace: ',
-         action = wezterm.action_callback(function(win, _p, idx)
-            if not idx then
+         action = wezterm.action_callback(function(win, _p, id)
+            if not id or id == '' then
                return
             end
-            win:perform_action(switch_to(choices[idx].id), pane)
+            win:perform_action(switch_to(id), pane)
          end),
       },
       pane

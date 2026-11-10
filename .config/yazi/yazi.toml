@@ -1,0 +1,20 @@
+# Yazi configuration
+[mgr]
+ratio = [1, 3, 4]
+sort_by = "alphabetical"
+sort_sensitive = false
+sort_reverse = false
+sort_dir_first = true
+linemode = "size"
+show_hidden = false
+show_symlink = true
+
+[preview]
+tab_size = 2
+max_width = 800
+max_height = 1000
+
+[opener]
+edit = [
+	{ run = "${EDITOR:-nvim} \"$@\"", desc = "$EDITOR", block = true },
+]

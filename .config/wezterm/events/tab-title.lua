@@ -196,7 +196,7 @@ local colors = {
 
 ---@param pct number
 local function _pct_to_frame(pct)
-   local frame = math.floor(pct * #ICON_PROGRESS_PCT_FRAMES / 100)
+   local frame = math.max(1, math.min(#ICON_PROGRESS_PCT_FRAMES, math.ceil(pct * #ICON_PROGRESS_PCT_FRAMES / 100)))
    return ICON_PROGRESS_PCT_FRAMES[frame]
 end
 
@@ -755,7 +755,12 @@ M.setup = function(opts)
                if line ~= nil then
                   local tab = window:active_tab()
                   local id = tab:tab_id()
-                  tab_list[id]:update_and_lock_title(line)
+                  tab_list[id] = tab_list[id] or Tab:new()
+                  if line == '' then
+                     tab_list[id].title_locked = false
+                  else
+                     tab_list[id]:update_and_lock_title(line)
+                  end
                end
             end),
          }),
@@ -769,6 +774,7 @@ M.setup = function(opts)
       ---@cast window Window
       local tab = window:active_tab()
       local id = tab:tab_id()
+      tab_list[id] = tab_list[id] or Tab:new()
       tab_list[id].title_locked = false
    end)
 

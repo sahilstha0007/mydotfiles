@@ -60,21 +60,6 @@ local function pill(text, fg, bg)
    }
 end
 
---Name of the active key table, or nil when not inside one.
----WezTerm reports '' (or nil) when no table is active, so a non-empty string
----is the only thing worth showing.
----@param window Window
----@return string?
-local function key_table_badge(window)
-   local ok, active = pcall(function()
-      return window:active_key_table()
-   end)
-   if not ok or type(active) ~= 'string' or active == '' then
-      return nil
-   end
-   return active
-end
-
 ---Remote hostname for this pane, or nil when it is the local machine.
 ---Reads the pane's OSC 1337 data -- the channel an SSH session updates. The
 ---pcall matters because get_osc_data is not present on every pane/WezTerm
@@ -246,32 +231,25 @@ local function pane_count_badge(window)
 end
 
 local function add_signals(parts, window, pane)
-   -- 1. key table: loudest, and placed first so a long host name can never
-   -- push it off the end of a narrow window.
-   local name = key_table_badge(window)
-   if name then
-      table.insert(parts, pill(string.upper(name), tokens.red, tokens.on_surface))
-   end
-
-   -- 2. remote host: red on a light-contrast pill so it reads as an alarm in
-   -- either theme branch.
+   -- 1. remote host: red on a light-contrast pill so it reads as an alarm in
+   -- either theme branch. (Active key table is owned exclusively by left-status.lua.)
    local host = remote_host(pane)
    if host then
       table.insert(parts, pill(string.upper(host), tokens.red, tokens.on_accent))
    end
 
-   -- 3. disk: amber pill when free space on HOME is below threshold.
+   -- 2. disk: amber pill when free space on HOME is below threshold.
    local disk = disk_free_badge(10)
    if disk then
       table.insert(parts, pill(disk, tokens.yellow, tokens.glass))
    end
 
-   -- 4. sync: amber pill when pane_synchronized is on.
+   -- 3. sync: amber pill when pane_synchronized is on.
    if pane_sync_on(pane) then
       table.insert(parts, pill('SYNC', tokens.yellow, tokens.glass))
    end
 
-   -- 5. pane count: quiet surface pill, only when the active tab is split.
+   -- 4. pane count: quiet surface pill, only when the active tab is split.
    local panes = pane_count_badge(window)
    if panes then
       table.insert(parts, pill(panes, tokens.cyan, tokens.glass))

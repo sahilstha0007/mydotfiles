@@ -236,6 +236,11 @@ else:
         if r < MIN_CONTRAST:
             errs.append('fzf fg/bg is %.2f:1 on %s (needs %.1f)'
                         % (r, bg, MIN_CONTRAST))
+    if HEX.match(pairs.get('fg+', '')) and HEX.match(pairs.get('bg+', '')):
+        r = contrast(pairs['fg+'], pairs['bg+'])
+        if r < MIN_CONTRAST:
+            errs.append('fzf fg+/bg+ is %.2f:1 on %s (needs %.1f)'
+                        % (r, pairs['bg+'], MIN_CONTRAST))
 
 for e in errs:
     print('      ! ' + e)

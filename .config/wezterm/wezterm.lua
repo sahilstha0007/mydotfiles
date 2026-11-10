@@ -17,7 +17,7 @@ require('utils.backdrops')
 require('events.fail').setup()
 
 require('events.left-status').setup()
-require('events.right-status').setup({ date_format = '%a %d %b', time_format = '%H:%M:%S' })
+require('events.right-status').setup({ date_format = '%a %d %b', time_format = '%H:%M' })
 require('events.tab-title').setup({
    hide_active_tab_unseen = true,
    unseen_icon = 'numbered_box',

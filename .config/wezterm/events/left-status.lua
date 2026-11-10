@@ -18,8 +18,8 @@ local ICON_WORKSPACE = (nf and nf.md_view_dashboard_outline) or 'WS'
 
 ---@type table<string, Cells.SegmentColors>
 local colors = {
-   kt_pill = { bg = tokens.yellow or '#e0c989', fg = tokens.surface0 or '#192330' },
-   kt_edge = { bg = tokens.glass, fg = tokens.yellow or '#e0c989' },
+   kt_pill = { bg = tokens.accent, fg = tokens.on_accent },
+   kt_edge = { bg = tokens.glass, fg = tokens.accent },
    ws_pill = { bg = tokens.pill, fg = tokens.pill_fg },
    ws_edge = { bg = tokens.glass, fg = tokens.pill },
 }

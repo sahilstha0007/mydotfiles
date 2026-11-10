@@ -26,7 +26,11 @@ try:
             print(f"{tid}\t{is_active} Tab {tid}: {title} ({windows} win)")
 except Exception:
     pass
-' | fzf --ansi --delimiter=$'\t' --with-nth=2 --prompt="󰓩 Switch Tab ❯ " --height=100% --reverse) || true
+' | fzf --ansi --delimiter=$'\t' --with-nth=2 \
+    --prompt="󰓩 Switch Tab ❯ " --height=100% --reverse --border=rounded \
+    --color=bg+:#212e3f,bg:-1,spinner:#719cd6,hl:#719cd6 \
+    --color=fg:#cdcecf,header:#719cd6,info:#828f9f,pointer:#719cd6 \
+    --color=marker:#81b29a,fg+:#cdcecf,prompt:#719cd6,hl+:#719cd6,border:#719cd6) || true
 
 if [[ -n "$selected" ]]; then
   tab_id=$(echo "$selected" | cut -f1)

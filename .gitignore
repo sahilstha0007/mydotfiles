@@ -39,3 +39,4 @@ node_modules/
 /playwright/.cache/
 /playwright/.auth/
 /.config/kitty/colors-matugen.conf
+/.config/btop/themes/matugen.theme

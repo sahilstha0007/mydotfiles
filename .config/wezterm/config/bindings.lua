@@ -145,10 +145,8 @@ local function resize_window(window, delta)
    -- from the Wayland toplevel and causes severe graphical glitching/tearing.
    -- Delegate the window resize to Hyprland's compositor dispatcher.
    if os.getenv('HYPRLAND_INSTANCE_SIGNATURE') then
-      local cmd = string.format('hl.dsp.window.resize({ x = %d, y = %d, relative = true })', delta, delta)
       local spawn = wezterm.background_child_process or wezterm.run_child_process
-      local ok = pcall(spawn, { 'hyprctl', 'dispatch', cmd })
-      if not ok then
+      if spawn then
          pcall(spawn, { 'hyprctl', 'dispatch', 'resizeactive', string.format('%d %d', delta, delta) })
       end
       return
@@ -227,6 +225,7 @@ local keys = {
    -- tabs --
    -- tabs: spawn+close
    { key = 't',          mods = mod.SUPER,     action = act.SpawnTab('DefaultDomain') },
+   { key = 't',          mods = 'CTRL|SHIFT',  action = act.SpawnTab('DefaultDomain') },
    { key = 'w',          mods = mod.SUPER_REV, action = act.CloseCurrentTab({ confirm = false }) },
 
    -- THE wezterm/tmux BRIDGE.
@@ -254,7 +253,7 @@ local keys = {
    -- Detaching the session closes the tab (exit_behavior = CloseOnCleanExit);
    -- the session itself survives in tmux, as sessions do.
    { key = 's',          mods = mod.SUPER_REV, action = act.SpawnCommandInNewTab {
-      args = { 'zsh', '-lc', 'exec "$HOME/.config/tmux/sessionizer.sh"' },
+      args = { 'zsh', '-lc', 'exec "$HOME/.local/bin/project-hub"' },
    } },
 
    -- PROJECT TASKS — the same dispatcher zed's tasks, tmux's `Prefix P` and the
@@ -271,6 +270,8 @@ local keys = {
    -- tabs: navigation
    { key = '[',          mods = mod.SUPER,     action = act.ActivateTabRelative(-1) },
    { key = ']',          mods = mod.SUPER,     action = act.ActivateTabRelative(1) },
+   { key = '[',          mods = 'CTRL|SHIFT',  action = act.ActivateTabRelative(-1) },
+   { key = ']',          mods = 'CTRL|SHIFT',  action = act.ActivateTabRelative(1) },
    { key = '[',          mods = mod.SUPER_REV, action = act.MoveTabRelative(-1) },
    { key = ']',          mods = mod.SUPER_REV, action = act.MoveTabRelative(1) },
 
@@ -510,16 +511,12 @@ local keys = {
    -- panes: WezTerm strictly owns tabs only; tmux owns all splits/panes.
    -- (Native split bindings disabled to prevent multiplexer layering overlap)
 
-   -- panes: zoom+close pane
+   -- panes: zoom+close pane (confirm=true and guarded off bare Alt to prevent readline M-w/M-q steals)
    { key = 'Enter', mods = mod.SUPER,     action = act.TogglePaneZoomState },
-   { key = 'w',     mods = mod.SUPER,     action = act.CloseCurrentPane({ confirm = false }) },
-   { key = 'x',     mods = 'SUPER',       action = act.SendString('\x01x') },
+   { key = 'x',     mods = mod.SUPER_REV, action = act.CloseCurrentPane({ confirm = true }) },
 
-   -- app / window close:
-   -- Alt+q (mod.SUPER on Linux) closes the current pane/window (never kills all WezTerm instances).
-   -- Alt+Shift+Q quits the entire application.
-   { key = 'q',     mods = mod.SUPER,     action = act.CloseCurrentPane({ confirm = false }) },
-   { key = 'Q',     mods = mod.SUPER,     action = act.QuitApplication },
+   -- app close: Alt+Ctrl+Shift+Q quits all windows (avoiding bare Alt+q / Super collisions)
+   { key = 'Q',     mods = mod.SUPER_REV, action = act.QuitApplication },
 
    -- workspaces: fast fuzzy switch (Alt+s), new (Alt+Shift+S), key table (Leader+w)
    { key = 'w',     mods = 'LEADER',      action = act.ActivateKeyTable { name = 'workspaces', one_shot = false } },
@@ -572,18 +569,6 @@ local keys = {
          one_shot = false,
          timeout_milliseconds = 1000,
       }),
-   },
-   -- quit wezterm (default bindings are disabled, so we add our own)
-   -- Use the actual Windows/SUPER key, not ALT (mod.SUPER is ALT on Linux)
-   {
-      key = 'q',
-      mods = 'SUPER',
-      action = act.CloseCurrentPane({ confirm = false }),
-   },
-   {
-      key = 'Q',
-      mods = 'SUPER',
-      action = act.QuitApplication,
    },
 }
 

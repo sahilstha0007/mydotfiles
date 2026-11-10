@@ -1,0 +1,79 @@
+# Zen prompt — oh-my-posh
+# AUTO-GENERATED into ~/.config/ohmyposh/zen.toml by omp-palette.sh on every
+# wallpaper sync. Edit THIS template to change the prompt design. The @@TOKENS@@
+# below are replaced with live wallpaper hexes, so the prompt stays in the same
+# palette family as wezterm/tmux/nvim (and no longer goes stale inside tmux,
+# where named ANSI colors are frozen at attach time).
+console_title_template = '{{ .Shell }} in {{ .Folder }}'
+version = 3
+final_space = true
+shell_integration = true
+
+[secondary_prompt]
+  template = '❯❯ '
+  foreground = '#a6e3a1'
+  background = 'transparent'
+
+[transient_prompt]
+  template = '❯ '
+  background = 'transparent'
+  foreground_templates = ['{{if gt .Code 0}}#ffb4ab{{end}}', '{{if eq .Code 0}}#a6e3a1{{end}}']
+
+[[blocks]]
+  type = 'prompt'
+  alignment = 'left'
+  newline = true
+
+  [[blocks.segments]]
+    template = '{{ .Path }}'
+    foreground = '#ffb4ac'
+    background = 'transparent'
+    type = 'path'
+    style = 'plain'
+
+    [blocks.segments.properties]
+      cache_duration = 'none'
+      style = 'folder'
+
+  [[blocks.segments]]
+    template = ' {{ .HEAD }}{{ if or (.Working.Changed) (.Staging.Changed) }}*{{ end }} <#ffb4ac>{{ if gt .Behind 0 }}⇣{{ end }}{{ if gt .Ahead 0 }}⇡{{ end }}</>'
+    foreground = '#a08c8a'
+    background = 'transparent'
+    type = 'git'
+    style = 'plain'
+
+    [blocks.segments.properties]
+      branch_icon = ' '
+      cache_duration = 'none'
+      commit_icon = '@'
+      fetch_status = true
+
+[[blocks]]
+  type = 'rprompt'
+  overflow = 'hidden'
+
+  [[blocks.segments]]
+    template = '{{ .FormattedMs }}'
+    foreground = '#f9e2af'
+    background = 'transparent'
+    type = 'executiontime'
+    style = 'plain'
+
+    [blocks.segments.properties]
+      cache_duration = 'none'
+      threshold = 5000
+
+[[blocks]]
+  type = 'prompt'
+  alignment = 'left'
+  newline = true
+
+  [[blocks.segments]]
+    template = '❯'
+    background = 'transparent'
+    type = 'text'
+    style = 'plain'
+    foreground_templates = ['{{if gt .Code 0}}#ffb4ab{{end}}', '{{if eq .Code 0}}#a6e3a1{{end}}']
+
+    [blocks.segments.properties]
+      cache_duration = 'none'

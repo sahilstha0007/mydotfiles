@@ -87,30 +87,43 @@ local function contrast(a, b)
 end
 
 -- ---- the background the segments actually paint on -------------------------
--- glass is rgba(0, 0, 0, <alpha>) composited over colors.background; the
--- composite, not the raw background, is the reference surface.
+-- glass is rgba(r, g, b, <alpha>) (matching tab_bar.background) composited over
+-- colors.background; the composite, not the raw background, is the reference
+-- surface.
 local tokens = require('utils.tokens')
 local colorscheme = require('colors.custom')
 
-local alpha = 0.4
+local glass_r, glass_g, glass_b, alpha = 0, 0, 0, 0.4
 do
-   local a = tostring(tokens.glass):match('rgba%b()')
-   if a then
-      local n = tostring(tokens.glass):match('([%d%.]+)%s*%)%s*$')
-      if n then
-         alpha = tonumber(n) or alpha
+   local glass_str = tostring(tokens.glass)
+   local rs, gs, bs, as = glass_str:match(
+      'rgba%(%s*([%d%.]+)%s*,%s*([%d%.]+)%s*,%s*([%d%.]+)%s*,%s*([%d%.]+)%s*%)'
+   )
+   if rs then
+      glass_r = tonumber(rs) or 0
+      glass_g = tonumber(gs) or 0
+      glass_b = tonumber(bs) or 0
+      alpha = tonumber(as) or alpha
+   else
+      local a = glass_str:match('rgba%b()')
+      if a then
+         local n = glass_str:match('([%d%.]+)%s*%)%s*$')
+         if n then
+            alpha = tonumber(n) or alpha
+         end
       end
    end
 end
 
 local bg_hex = colorscheme.background
-local function composite(hex, a)
-   local r = math.floor(tonumber(hex:sub(2, 3), 16) * (1 - a) + 0.5)
-   local g = math.floor(tonumber(hex:sub(4, 5), 16) * (1 - a) + 0.5)
-   local b = math.floor(tonumber(hex:sub(6, 7), 16) * (1 - a) + 0.5)
+local function composite(hex, a, sr, sg, sb)
+   sr, sg, sb = sr or 0, sg or 0, sb or 0
+   local r = math.floor(sr * a + tonumber(hex:sub(2, 3), 16) * (1 - a) + 0.5)
+   local g = math.floor(sg * a + tonumber(hex:sub(4, 5), 16) * (1 - a) + 0.5)
+   local b = math.floor(sb * a + tonumber(hex:sub(6, 7), 16) * (1 - a) + 0.5)
    return string.format('#%02x%02x%02x', r, g, b)
 end
-local eff_bg = composite(bg_hex, alpha)
+local eff_bg = composite(bg_hex, alpha, glass_r, glass_g, glass_b)
 
 -- ---- assertions ------------------------------------------------------------
 local MIN_CONTRAST = 4.5

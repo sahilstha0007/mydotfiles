@@ -1,0 +1,52 @@
+# Yazi theme — ANSI-adaptive so it automatically harmonizes with both
+# Kitty (Nightfox) and WezTerm (Matugen wallpaper palette) with zero drift.
+
+[mgr]
+cwd = { fg = "cyan", bold = true }
+hovered = { reversed = true, bold = true }
+preview_hovered = { underline = true }
+find_keyword = { fg = "yellow", bold = true, italic = true, underline = true }
+find_position = { fg = "magenta", bg = "reset", bold = true, italic = true }
+symlink_target = { italic = true }
+marker_copied = { fg = "lightgreen", bg = "lightgreen" }
+marker_cut = { fg = "lightred", bg = "lightred" }
+marker_marked = { fg = "lightcyan", bg = "lightcyan" }
+marker_selected = { fg = "lightyellow", bg = "lightyellow" }
+count_copied = { fg = "black", bg = "green" }
+count_cut = { fg = "black", bg = "red" }
+count_selected = { fg = "black", bg = "yellow" }
+border_style = { fg = "blue" }
+
+[tabs]
+active = { fg = "black", bg = "blue", bold = true }
+inactive = { fg = "blue", bg = "reset" }
+
+[mode]
+normal_main = { fg = "black", bg = "blue", bold = true }
+normal_alt = { fg = "blue", bg = "reset" }
+select_main = { fg = "black", bg = "green", bold = true }
+select_alt = { fg = "green", bg = "reset" }
+unset_main = { fg = "black", bg = "red", bold = true }
+unset_alt = { fg = "red", bg = "reset" }
+
+[status]
+overall = { bg = "reset" }
+progress_label = { fg = "blue", bold = true }
+progress_normal = { fg = "blue", bg = "reset" }
+progress_error = { fg = "red", bg = "reset" }
+
+[which]
+mask = { bg = "reset" }
+cand = { fg = "cyan", bold = true }
+rest = { fg = "darkgray" }
+desc = { fg = "magenta" }
+separator_style = { fg = "darkgray" }
+
+[confirm]
+border = { fg = "blue" }
+title = { fg = "blue", bold = true }
+
+[notify]
+title_info = { fg = "blue" }
+title_warn = { fg = "yellow" }
+title_error = { fg = "red" }

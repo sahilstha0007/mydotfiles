@@ -103,7 +103,7 @@ matugen_rc=0
 #
 # So success = matugen exited 0, said NOTHING on stdout/stderr, and left a
 # non-empty palette. Anything else fails loudly and is left retryable.
-matugen_log=$(/usr/bin/matugen -c "$HOME/.config/matugen/wezterm.toml" image "$work" \
+matugen_log=$("$(command -v matugen || echo /usr/bin/matugen)" -c "$HOME/.config/matugen/wezterm.toml" image "$work" \
    --prefer saturation --type scheme-tonal-spot -m smart 2>&1) || matugen_rc=$?
 
 if [ "$matugen_rc" -ne 0 ] || [ -n "$matugen_log" ] || [ ! -s "$wez_palette" ]; then
@@ -137,20 +137,20 @@ printf '%s' "$t" > "$cache"
 
 # Re-render herdr's chrome from the same palette (config.toml is generated
 # from config.template.toml by herdr-palette.sh).
-"$HOME/.config/herdr/herdr-palette.sh"
+[ -x "$HOME/.config/herdr/herdr-palette.sh" ] && "$HOME/.config/herdr/herdr-palette.sh"
 
 # opencode lives in this cascade (it's a TUI app of the dev stack).
-"$HOME/.config/opencode/opencode-palette.sh"
+[ -x "$HOME/.config/opencode/opencode-palette.sh" ] && "$HOME/.config/opencode/opencode-palette.sh"
 
 # The Atlas vault's Obsidian snippet is the only non-TUI consumer left; Zed
 # keeps its own theme and is deliberately out of this cascade.
-"$HOME/.config/wezterm/utils/obsidian-palette.sh"
+[ -x "$HOME/.config/wezterm/utils/obsidian-palette.sh" ] && "$HOME/.config/wezterm/utils/obsidian-palette.sh"
 
 # lazygit + lazydocker: the last two TUIs still pinned to a hardcoded `blue`.
 # Regenerate their config.yml theme from the same palette so they follow the
 # wallpaper like everything else. They read config at launch (no live reload),
 # so the new accent shows on the next Ctrl+a g / Ctrl+a d — which is fine.
-"$HOME/.config/wezterm/utils/lazygit-lazydocker-palette.sh"
+[ -x "$HOME/.config/wezterm/utils/lazygit-lazydocker-palette.sh" ] && "$HOME/.config/wezterm/utils/lazygit-lazydocker-palette.sh"
 
 # Palette byte-identical (two images mapping to the same colors)? Skip the
 # reload cascade — no tmux redraw, no wezterm config reload. btop is included
@@ -164,7 +164,7 @@ printf '%s' "$t" > "$cache"
 # current wallpaper from $cache, so the reload does not reshuffle). herdr
 # re-reads its generated config.toml too (silently skipped when not running).
 tmux source-file "$HOME/.config/tmux/tmux.conf" 2>/dev/null || true
-herdr server reload-config >/dev/null 2>&1 || true
+command -v herdr >/dev/null 2>&1 && herdr server reload-config >/dev/null 2>&1 || true
 touch "$HOME/.config/wezterm/wezterm.lua"
 
 # Notify running Neovim instances in background jobs so they re-tint immediately

@@ -236,18 +236,28 @@ resume_most_recent() {
 # --- Main Interactive Hub Loop -----------------------------------------------
 SELF_PATH="$(readlink -f "${BASH_SOURCE[0]}")"
 
-export FZF_DEFAULT_OPTS=" \
-  --color=bg+:#212429,bg:#101418,spinner:#99ccfa,hl:#99ccfa \
-  --color=fg:#e0e2e8,header:#a39ec4,info:#aca98a,pointer:#99ccfa \
-  --color=marker:#9ec49f,fg+:#ffffff,prompt:#9ec49f,hl+:#99ccfa \
-  --color=border:#82858a \
-  --prompt='󰉋 Dev Hub ❯ ' \
-  --pointer='▶' \
-  --marker='✓' \
-  --layout=reverse \
-  --border=rounded \
-  --height=100% \
-  --info=inline"
+if [[ "${TERMINAL_STACK_PROFILE:-kitty}" == "kitty" ]]; then
+  export FZF_DEFAULT_OPTS=" \
+    --color=bg+:#212e3f,bg:-1,spinner:#719cd6,hl:#719cd6 \
+    --color=fg:#cdcecf,header:#719cd6,info:#828f9f,pointer:#719cd6 \
+    --color=marker:#81b29a,fg+:#cdcecf,prompt:#719cd6,hl+:#719cd6,border:#719cd6 \
+    --prompt='󰉋 Dev Hub ❯ ' \
+    --pointer='▶' \
+    --marker='✓' \
+    --layout=reverse \
+    --border=rounded \
+    --height=100% \
+    --info=inline"
+else
+  export FZF_DEFAULT_OPTS="${FZF_DEFAULT_OPTS:-} \
+    --prompt='󰉋 Dev Hub ❯ ' \
+    --pointer='▶' \
+    --marker='✓' \
+    --layout=reverse \
+    --border=rounded \
+    --height=100% \
+    --info=inline"
+fi
 
 header_text="[Enter] Open  [C-r] Resume Last  [C-n] Scratch  [C-p] ~/Projects  [C-x] Kill Session  [Esc] Shell"
 

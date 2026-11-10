@@ -62,10 +62,24 @@ trap 'rm -f "$tmp"' EXIT
   else
     echo "  (bindings.lua not found)"
   fi
+  echo
+
+  # --- kitty ------------------------------------------------------------
+  echo "### kitty  (profile: custom.conf)  — Ctrl+Shift+<key>"
+  kf=$HOME/.config/kitty/custom.conf
+  if [[ -f $kf ]]; then
+    grep -E '^map[[:space:]]+' "$kf" |
+      sed -E 's/^map[[:space:]]+([^[:space:]]+)[[:space:]]+(.*)$/\1|\2/' |
+      while IFS='|' read -r key cmd; do
+        printf '  %-24s %s\n' "$key" "$cmd"
+      done
+  else
+    echo "  (custom.conf not found)"
+  fi
 } > "$tmp.out" 2>/dev/null
 
 fzf --ansi --no-sort \
-  --header='tmux C-a · nvim Space · wezterm Alt+Ctrl+Space — every layer, one list' \
+  --header='tmux C-a · nvim Space · wezterm Alt+Ctrl+Space · kitty Ctrl+Shift — every layer, one list' \
   --prompt='keys> ' \
   --preview 'printf "%s\n" {} | fold -sw 100' \
   < "$tmp.out"

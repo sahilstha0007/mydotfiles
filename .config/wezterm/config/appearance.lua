@@ -78,7 +78,7 @@ return {
    -- titles / progress / unseen-count, which only cost one line.
    hide_tab_bar_if_only_one_tab = false,
    use_fancy_tab_bar = false,
-   tab_max_width = 23,
+   tab_max_width = 32,
    switch_to_last_active_tab_when_closing_tab = true,
 
    -- command palette — adopts the colorscheme (wallpaper-synced) instead of
@@ -105,24 +105,24 @@ return {
    window_decorations = 'NONE',
 
    window_padding = {
-      left = 0,
-      right = 0,
-      top = 10,
-      bottom = 7.5,
+      left = 8,
+      right = 8,
+      top = 8,
+      bottom = 8,
    },
-   -- No window title text. There is no `show_window_title` key in wezterm's
-   -- Config -- that was an invented field, and it only ever produced a startup
-   -- warning. The supported way to blank the title is to make the
-   -- format-window-title event return an empty string; see the event at the
-   -- bottom of this file.
+   -- There is no `show_window_title` key in wezterm's Config -- that was an
+   -- invented field, and it only ever produced a startup warning. With
+   -- `window_decorations = 'NONE'` no in-window titlebar is drawn, while the
+   -- `format-window-title` event at the bottom of this file still provides the
+   -- active pane title (or `'wezterm'`) for Wayland/Hyprland overviews.
 
    adjust_window_size_when_changing_font_size = false,
    use_resize_increments = true,
    window_close_confirmation = 'NeverPrompt',
-   -- No dimming on inactive panes/partitions: wallpaper stays uniform and seamless
+   -- Subtle dimming on inactive panes so active focus pops without hiding the wallpaper
    inactive_pane_hsb = {
-      saturation = 1.0,
-      brightness = 1.0,
+      saturation = 0.9,
+      brightness = 0.85,
    },
 
    visual_bell = {

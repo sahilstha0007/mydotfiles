@@ -1,0 +1,12 @@
+# Nightfox theme for lazydocker (used when TERMINAL_STACK_PROFILE=kitty)
+gui:
+  border: rounded
+  theme:
+    activeBorderColor:
+      - '#719cd6'
+      - bold
+    inactiveBorderColor:
+      - '#575860'
+    selectedLineBgColor:
+      - reverse
+reporting: local

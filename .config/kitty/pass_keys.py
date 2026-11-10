@@ -30,8 +30,9 @@ def handle_result(args, result, target_window_id, boss):
         return
     direction = args[1]
     key_mapping = args[2]
+    tab = boss.active_tab
 
-    if is_window_vim(w, r'n?vim|tmux'):
+    if is_window_vim(w, r'n?vim|tmux') or tab is None or len(tab.windows) <= 1:
         encode_key_mapping(w, key_mapping)
     else:
-        boss.active_tab.neighboring_window(direction)
+        tab.neighboring_window(direction)

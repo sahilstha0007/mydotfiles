@@ -1,0 +1,3 @@
+# Bat defaults (theme is selected per terminal profile via BAT_THEME in zshrc)
+--style="numbers,changes,header"
+--paging=auto

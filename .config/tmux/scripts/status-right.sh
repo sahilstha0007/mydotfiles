@@ -9,6 +9,36 @@ set -u
 dir="${1:-$PWD}"
 cmd="${2:-}"
 
+cache_dir="${XDG_RUNTIME_DIR:-/tmp}/tmux-status-$(id -u)"
+mkdir -p -m 700 "$cache_dir" 2>/dev/null || true
+now=$(date +%s)
+
+read_cache() {
+  local file="$1" ttl="$2" line="" ts="" val=""
+  _cache_val=""
+  [ -f "$file" ] || return 1
+  IFS= read -r line <"$file" 2>/dev/null || return 1
+  case "$line" in
+    *'|'*)
+      ts="${line%%|*}"
+      val="${line#*|}"
+      ;;
+    *) return 1 ;;
+  esac
+  case "$ts" in
+    ''|*[!0-9]*) return 1 ;;
+  esac
+  [ $((now - ts)) -ge 0 ] && [ $((now - ts)) -lt "$ttl" ] || return 1
+  _cache_val="$val"
+}
+
+write_cache() {
+  local file="$1" val="$2" tmp="${1}.tmp.$$"
+  if printf '%s|%s\n' "$now" "$val" >"$tmp" 2>/dev/null; then
+    mv -f "$tmp" "$file" 2>/dev/null || rm -f "$tmp" 2>/dev/null || true
+  fi
+}
+
 # 1. Git branch & state (hidden while nvim/vim owns the pane to avoid duplication with lualine)
 git_info=""
 git_state=""
@@ -45,36 +75,28 @@ case "$cmd" in
 esac
 
 # 2. Coding agents (cached 5s)
-agents=""
-cache_agents=/tmp/tmux-agents
-now=$(date +%s)
-read_agent_cache=0
-if [ -f "$cache_agents" ]; then
-  read -r ts val <"$cache_agents" 2>/dev/null || true
-  if [ -n "${ts:-}" ] && [ $((now - ts)) -lt 5 ]; then
-    agents="$val"
-    read_agent_cache=1
-  fi
-fi
-if [ "$read_agent_cache" -eq 0 ]; then
+agents_raw=""
+cache_agents="$cache_dir/agents"
+if read_cache "$cache_agents" 5; then
+  agents_raw="$_cache_val"
+else
   n=$(ps -eo comm= 2>/dev/null |
-    grep -Eic '^(claude|opencode|opencode\.exe|cline|cline\.exe|codex|copilot|aider|goose|crush|amp|gemini|herdr|omni)$')
-  [ "${n:-0}" -gt 0 ] && agents="  󰚩 ${n} "
-  printf '%s %s\n' "$now" "$agents" >"$cache_agents" 2>/dev/null || true
+    LC_ALL=C grep -Eic '^(claude|opencode|opencode\.exe|cline|cline\.exe|codex|copilot|aider|goose|crush|amp|gemini|herdr|omni)$' || true)
+  case "$n" in
+    ''|*[!0-9]*) n=0 ;;
+  esac
+  [ "$n" -gt 0 ] && agents_raw="$n"
+  write_cache "$cache_agents" "$agents_raw"
 fi
+agents=""
+[ -n "$agents_raw" ] && agents="  󰚩 ${agents_raw} "
 
 # 3. Containers (cached 10s)
-containers=""
-cache_cont=/tmp/tmux-containers
-read_cont_cache=0
-if [ -f "$cache_cont" ]; then
-  read -r ts val <"$cache_cont" 2>/dev/null || true
-  if [ -n "${ts:-}" ] && [ $((now - ts)) -lt 10 ]; then
-    containers="$val"
-    read_cont_cache=1
-  fi
-fi
-if [ "$read_cont_cache" -eq 0 ] && command -v podman >/dev/null 2>&1; then
+containers_raw=""
+cache_cont="$cache_dir/containers"
+if read_cache "$cache_cont" 10; then
+  containers_raw="$_cache_val"
+elif command -v podman >/dev/null 2>&1; then
   names=$(podman ps --format '{{.Names}}' 2>/dev/null | sort)
   if [ -n "$names" ]; then
     n=$(printf '%s\n' "$names" | wc -l | tr -d ' ')
@@ -101,10 +123,12 @@ if [ "$read_cont_cache" -eq 0 ] && command -v podman >/dev/null 2>&1; then
 $names
 EOF
     [ "$dropped" -eq 1 ] && joined="${joined}…"
-    containers="  󰡨 ${n}  ${joined} "
+    containers_raw="${n}  ${joined}"
   fi
-  printf '%s %s\n' "$now" "$containers" >"$cache_cont" 2>/dev/null || true
+  write_cache "$cache_cont" "$containers_raw"
 fi
+containers=""
+[ -n "$containers_raw" ] && containers="  󰡨 ${containers_raw} "
 
 # Output composite status with color styling tokens
 res=""

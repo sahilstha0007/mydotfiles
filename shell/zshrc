@@ -8,7 +8,14 @@
 # ---------------------------------------------------------------------------
 export EDITOR="nvim"
 export VISUAL="nvim"
-export BROWSER="/usr/bin/helium-browser"
+# Detect first available browser (fallback to xdg-open if present)
+for _browser in helium-browser brave chromium google-chrome firefox xdg-open; do
+  if (( $+commands[$_browser] )); then
+    export BROWSER="$commands[$_browser]"
+    break
+  fi
+done
+unset _browser
 
 export ZSH="$HOME/.oh-my-zsh"
 export ZSH_DISABLE_COMPFIX="true"
@@ -53,6 +60,9 @@ if [ -d "$ZSH" ]; then
   [ -f "$ZSH/lib/completion.zsh" ]   && source "$ZSH/lib/completion.zsh"
   [ -f "$ZSH/lib/history.zsh" ]      && source "$ZSH/lib/history.zsh"
 
+  # Add custom completions to fpath BEFORE compinit
+  [ -d "$ZSH_CUSTOM/plugins/zsh-completions/src" ] && fpath=("$ZSH_CUSTOM/plugins/zsh-completions/src" $fpath)
+
   # Fast cached compinit (-C skips checking newer completion definitions on every boot)
   autoload -Uz compinit
   compinit -C -d "${ZSH_COMPDUMP:-$HOME/.zcompdump-${HOST}-${ZSH_VERSION}}"
@@ -61,11 +71,27 @@ if [ -d "$ZSH" ]; then
   [ -f "$ZSH/plugins/git/git.plugin.zsh" ]   && source "$ZSH/plugins/git/git.plugin.zsh"
   [ -f "$ZSH/plugins/sudo/sudo.plugin.zsh" ] && source "$ZSH/plugins/sudo/sudo.plugin.zsh"
   [ -f "$ZSH_CUSTOM/plugins/fzf-tab/fzf-tab.plugin.zsh" ] && source "$ZSH_CUSTOM/plugins/fzf-tab/fzf-tab.plugin.zsh"
+
+  # fzf-tab styling & contextual previews (bat for files, eza for directories, ps for kill)
+  zstyle ':completion:*:git-checkout:*' sort false
+  zstyle ':completion:*:descriptions' format '[%d]'
+  zstyle ':completion:*' list-colors ${(s.:.)LS_COLORS}
+  zstyle ':completion:*' menu no
+  zstyle ':fzf-tab:complete:cd:*' fzf-preview 'eza -1 --color=always --icons=always $realpath'
+  zstyle ':fzf-tab:complete:z:*' fzf-preview 'eza -1 --color=always --icons=always $realpath'
+  zstyle ':fzf-tab:complete:(nvim|vim|nano|bat|cat):*' fzf-preview '[[ -d $realpath ]] && eza -1 --color=always --icons=always $realpath || bat --color=always --line-range=:200 $realpath 2>/dev/null'
+  zstyle ':fzf-tab:complete:kill:argument-rest' fzf-preview 'ps --pid=$word -o cmd --no-headers -w -w'
+  zstyle ':fzf-tab:complete:kill:argument-rest' fzf-flags '--preview-window=down:3:wrap'
+  zstyle ':fzf-tab:*' continuous-trigger '/'
+
   [ -f "$ZSH_CUSTOM/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh" ] && source "$ZSH_CUSTOM/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh"
   [ -f "$ZSH_CUSTOM/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh" ] && source "$ZSH_CUSTOM/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
 fi
 
 # Multi-distro portable FZF keybindings & completion
+# Atuin (initialized below) owns Ctrl+R when installed; suppress FZF's redundant Ctrl+R widget
+# while preserving Ctrl+T (files) and Alt+C (cd into directory).
+(( $+commands[atuin] )) && FZF_CTRL_R_COMMAND=""
 for _fzf_dir in /usr/share/fzf /usr/local/opt/fzf/shell /opt/homebrew/opt/fzf/shell /usr/share/doc/fzf/examples "$HOME/.fzf/shell"; do
   if [ -d "$_fzf_dir" ]; then
     [ -f "$_fzf_dir/key-bindings.zsh" ] && source "$_fzf_dir/key-bindings.zsh"
@@ -74,6 +100,7 @@ for _fzf_dir in /usr/share/fzf /usr/local/opt/fzf/shell /opt/homebrew/opt/fzf/sh
   fi
 done
 unset _fzf_dir
+(( $+commands[atuin] )) && unset FZF_CTRL_R_COMMAND
 
 # ---------------------------------------------------------------------------
 # 3. Zsh History
@@ -84,85 +111,93 @@ SAVEHIST=100000
 setopt appendhistory hist_ignore_all_dups hist_reduce_blanks sharehistory
 
 # ---------------------------------------------------------------------------
-# 4. Modern Tools (Cached Inits for Zero Startup Latency)
+# 4. Modern Tools (Cached Inits for Zero Startup Latency, Binary-Mtime Checked)
 # ---------------------------------------------------------------------------
-
-# zoxide: smarter cd -> use `z <partial-name>`
-_zoxide_cache="$HOME/.cache/zsh-cache/zoxide.zsh"
-if [[ -f "$_zoxide_cache" ]]; then
-  source "$_zoxide_cache"
-elif command -v zoxide >/dev/null 2>&1; then
-  mkdir -p "${_zoxide_cache:h}"
-  zoxide init zsh > "$_zoxide_cache" 2>/dev/null && source "$_zoxide_cache" || eval "$(zoxide init zsh)"
-fi
-
-# direnv: per-directory environment switching
-_direnv_cache="$HOME/.cache/zsh-cache/direnv.zsh"
-if [[ -f "$_direnv_cache" ]]; then
-  source "$_direnv_cache"
-elif command -v direnv >/dev/null 2>&1; then
-  mkdir -p "${_direnv_cache:h}"
-  direnv hook zsh > "$_direnv_cache" 2>/dev/null && source "$_direnv_cache" || eval "$(direnv hook zsh)"
-fi
-
-# mise: per-project tool versions (node/python/go/bun) — shims on PATH, lazy activate CLI
-export PATH="$HOME/.local/share/mise/shims:$PATH"
-mise() {
-  unset -f mise
-  eval "$(command /usr/bin/mise activate zsh)"
-  mise "$@"
+_zsh_cached_init() {
+  local bin="$commands[$1]" cache="$2" dep="$3"
+  shift 3
+  [[ -n "$bin" ]] || return 0
+  if [[ ! -s "$cache" || ! "$bin" -ot "$cache" || ( -n "$dep" && -e "$dep" && ! "$dep" -ot "$cache" ) ]]; then
+    mkdir -p "${cache:h}"
+    "$@" >| "$cache" 2>/dev/null || { eval "$("$@")"; return; }
+  fi
+  source "$cache"
 }
 
-# atuin: synced, searchable shell history — takes over Ctrl+R
-_atuin_cache="$HOME/.cache/zsh-cache/atuin.zsh"
-if [[ -f "$_atuin_cache" ]]; then
-  source "$_atuin_cache"
-elif command -v atuin >/dev/null 2>&1; then
-  mkdir -p "${_atuin_cache:h}"
-  atuin init zsh > "$_atuin_cache" 2>/dev/null && source "$_atuin_cache" || eval "$(atuin init zsh)"
+# zoxide: smarter cd -> use `z <partial-name>`
+_zsh_cached_init zoxide "$HOME/.cache/zsh-cache/zoxide.zsh" "" zoxide init zsh
+
+# direnv: per-directory environment switching
+_zsh_cached_init direnv "$HOME/.cache/zsh-cache/direnv.zsh" "" direnv hook zsh
+
+# mise: per-project tool versions (node/python/go/bun) — shims on PATH, lazy activate CLI
+[ -d "$HOME/.local/share/mise/shims" ] && path=("$HOME/.local/share/mise/shims" $path)
+if (( $+commands[mise] )); then
+  mise() {
+    unset -f mise
+    eval "$(command mise activate zsh)"
+    mise "$@"
+  }
 fi
 
-# fzf: fd-backed sources + nice UI + bat preview (Ctrl-/ toggles preview)
+# atuin: synced, searchable shell history — takes over Ctrl+R and Up-arrow bindings
+_zsh_cached_init atuin "$HOME/.cache/zsh-cache/atuin.zsh" "" atuin init zsh
+
+# fzf: fd-backed sources + per-mode previews (Ctrl-T files -> bat, Alt-C dirs -> eza)
 export FZF_DEFAULT_COMMAND="fd --type f --hidden --follow --exclude .git --exclude node_modules"
 export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
 export FZF_ALT_C_COMMAND="fd --type d --hidden --follow --exclude .git --exclude node_modules"
 export FZF_DEFAULT_OPTS="--height=45% --layout=reverse --border=rounded --info=inline \
-  --preview 'bat --color=always --style=numbers --line-range=:300 {1}' \
   --bind 'ctrl-/:toggle-preview'"
+export FZF_CTRL_T_OPTS="--preview 'bat --color=always --style=numbers --line-range=:300 {1}'"
+export FZF_ALT_C_OPTS="--preview 'eza --tree --level=2 --icons=always --color=always {}'"
 
 # ---------------------------------------------------------------------------
-# 5. Dual Profile Architecture: Kitty (Dev Nightfox) vs WezTerm (Wallpaper Matugen)
+# 5. Dual Profile Architecture: Kitty Primary (Nightfox) vs WezTerm Fallback (Matugen)
 # ---------------------------------------------------------------------------
+# Explicit TERMINAL_STACK_PROFILE wins first so attaching to a shared tmux
+# server from a different terminal is never hijacked by stale KITTY_WINDOW_ID /
+# WEZTERM_PANE variables captured at server startup.
 _is_kitty=0
 _is_wezterm=0
 
-if [[ -n "$KITTY_WINDOW_ID" || "$TERMINAL_STACK_PROFILE" == "kitty" ]]; then
+if [[ "$TERMINAL_STACK_PROFILE" == "kitty" ]]; then
   _is_kitty=1
-elif [[ -n "$WEZTERM_PANE" || "$TERMINAL_STACK_PROFILE" == "wezterm" ]]; then
+elif [[ "$TERMINAL_STACK_PROFILE" == "wezterm" ]]; then
+  _is_wezterm=1
+elif [[ -n "$KITTY_WINDOW_ID" ]]; then
+  _is_kitty=1
+elif [[ -n "$WEZTERM_PANE" ]]; then
   _is_wezterm=1
 fi
 
+_omp_init_cached() {
+  local cfg="$1" cache="$2"
+  _zsh_cached_init oh-my-posh "$cache" "$cfg" oh-my-posh init zsh --config "$cfg"
+  # Each shell needs its own POSH_SESSION_ID rather than sharing one baked into the cache
+  [[ -r /proc/sys/kernel/random/uuid ]] && export POSH_SESSION_ID="$(</proc/sys/kernel/random/uuid)"
+}
+
 if [[ "$_is_kitty" -eq 1 ]]; then
   # --- KITTY DEV PROFILE (Nightfox) ---
-  if command -v oh-my-posh >/dev/null 2>&1; then
-    _omp_cache="$HOME/.cache/zsh-cache/omp-nightfox.zsh"
-    if [[ -f "$_omp_cache" && "$HOME/.config/ohmyposh/zen-nightfox.toml" -ot "$_omp_cache" ]]; then
-      source "$_omp_cache"
-    else
-      mkdir -p "${_omp_cache:h}"
-      oh-my-posh init zsh --config "$HOME/.config/ohmyposh/zen-nightfox.toml" > "$_omp_cache" 2>/dev/null && source "$_omp_cache" || eval "$(oh-my-posh init zsh --config "$HOME/.config/ohmyposh/zen-nightfox.toml")"
-    fi
-  fi
+  _omp_init_cached "$HOME/.config/ohmyposh/zen-nightfox.toml" "$HOME/.cache/zsh-cache/omp-nightfox.zsh"
 
   export BAT_THEME="nightfox"
   export FZF_DEFAULT_OPTS="--height=45% --layout=reverse --border=rounded --info=inline \
     --color=bg+:#212e3f,bg:-1,spinner:#719cd6,hl:#719cd6 \
     --color=fg:#cdcecf,header:#719cd6,info:#828f9f,pointer:#719cd6 \
     --color=marker:#81b29a,fg+:#cdcecf,prompt:#719cd6,hl+:#719cd6,border:#719cd6 \
-    --preview 'bat --color=always --style=numbers --line-range=:300 {1}' \
     --bind 'ctrl-/:toggle-preview'"
   export LG_CONFIG_FILE="$HOME/.config/lazygit/config.yml,$HOME/.config/lazygit/theme-nightfox.yml"
   export CONFIG_DIR="$HOME/.config/lazydocker/nightfox"
+
+  # Nightfox theme for btop under Kitty when no explicit -c/--config is passed
+  btop() {
+    case " $* " in
+      *" -c "*|*" --config "*) command btop "$@" ;;
+      *) command btop -c "$HOME/.config/btop/btop-nightfox.conf" "$@" ;;
+    esac
+  }
 
   ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE="fg=#575860"
 
@@ -197,15 +232,7 @@ if [[ "$_is_kitty" -eq 1 ]]; then
 
 elif [[ "$_is_wezterm" -eq 1 ]]; then
   # --- WEZTERM IMMERSION PROFILE (Matugen Dynamic) ---
-  if command -v oh-my-posh >/dev/null 2>&1; then
-    _omp_zen_cache="$HOME/.cache/zsh-cache/omp-zen.zsh"
-    if [[ -f "$_omp_zen_cache" && "$HOME/.config/ohmyposh/zen.toml" -ot "$_omp_zen_cache" ]]; then
-      source "$_omp_zen_cache"
-    else
-      mkdir -p "${_omp_zen_cache:h}"
-      oh-my-posh init zsh --config "$HOME/.config/ohmyposh/zen.toml" > "$_omp_zen_cache" 2>/dev/null && source "$_omp_zen_cache" || eval "$(oh-my-posh init zsh --config "$HOME/.config/ohmyposh/zen.toml")"
-    fi
-  fi
+  _omp_init_cached "$HOME/.config/ohmyposh/zen.toml" "$HOME/.cache/zsh-cache/omp-zen.zsh"
 
   # OSC 7 directory reporting: keeps new WezTerm tabs/splits in the current directory
   _wezterm_osc7() {
@@ -214,6 +241,7 @@ elif [[ "$_is_wezterm" -eq 1 ]]; then
   autoload -Uz add-zsh-hook
   add-zsh-hook precmd _wezterm_osc7
 
+  export BAT_THEME="ansi"
   export OPENCODE_TUI_CONFIG="$HOME/.config/opencode/tui-wezterm.json"
   ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE="fg=#9b8f80"
 
@@ -247,18 +275,19 @@ elif [[ "$_is_wezterm" -eq 1 ]]; then
   ZSH_HIGHLIGHT_STYLES[cursor-matchingbracket]="fg=#ede0d4,bold"
 
   [ -f "$HOME/.cache/zsh-wallpaper.zsh" ] && source "$HOME/.cache/zsh-wallpaper.zsh"
+  export FZF_DEFAULT_OPTS="$FZF_DEFAULT_OPTS --color=bg:-1,gutter:-1,preview-bg:-1"
 
 else
   # --- GENERIC / SSH / TTY FALLBACK ---
-  if command -v oh-my-posh >/dev/null 2>&1; then
-    _omp_fallback="$HOME/.cache/zsh-cache/omp-fallback.zsh"
-    if [[ -f "$_omp_fallback" && "$HOME/.config/ohmyposh/zen.toml" -ot "$_omp_fallback" ]]; then
-      source "$_omp_fallback"
-    else
-      mkdir -p "${_omp_fallback:h}"
-      oh-my-posh init zsh --config "$HOME/.config/ohmyposh/zen.toml" > "$_omp_fallback" 2>/dev/null && source "$_omp_fallback" || eval "$(oh-my-posh init zsh --config "$HOME/.config/ohmyposh/zen.toml")"
-    fi
-  fi
+  _omp_init_cached "$HOME/.config/ohmyposh/zen.toml" "$HOME/.cache/zsh-cache/omp-fallback.zsh"
+fi
+
+unset -f _zsh_cached_init _omp_init_cached
+
+# Syntax-highlighted man pages via bat
+if (( $+commands[bat] )); then
+  export MANPAGER="sh -c 'col -bx | bat -l man -p'"
+  export MANROFFOPT="-c"
 fi
 
 # ---------------------------------------------------------------------------
@@ -277,9 +306,10 @@ alias zed='zeditor'
 
 # Eza modern file listing
 if command -v eza >/dev/null 2>&1; then
-  alias ls='eza -a --icons=always'
-  alias ll='eza -al --icons=always'
-  alias lt='eza -a --tree --level=1 --icons=always'
+  alias ls='eza --icons=always --group-directories-first'
+  alias la='eza -a --icons=always --group-directories-first'
+  alias ll='eza -al --icons=always --group-directories-first'
+  alias lt='eza -a --tree --level=2 --icons=always --group-directories-first'
 fi
 
 # Git shortcuts
@@ -305,36 +335,59 @@ alias ptt='$HOME/.local/bin/project-task test'
 alias ptl='$HOME/.local/bin/project-task lint'
 alias ptf='$HOME/.local/bin/project-task format'
 
+# Yazi CWD synchronization wrapper: `y` opens yazi and cds on quit
+if command -v yazi >/dev/null 2>&1; then
+  function y() {
+    local tmp="$(mktemp -t "yazi-cwd.XXXXXX")" cwd
+    command yazi "$@" --cwd-file="$tmp"
+    if cwd="$(command cat -- "$tmp")" && [ -n "$cwd" ] && [ "$cwd" != "$PWD" ]; then
+      builtin cd -- "$cwd"
+    fi
+    rm -f -- "$tmp"
+  }
+fi
+
 # TMUX — shared session management
 if command -v tmux >/dev/null 2>&1; then
   alias ta='tmux attach-session -t main 2>/dev/null || tmux new-session -s main'
-  alias tn='tmux new-session -s main'
-  alias tk='tmux ls'
+  alias tn='tmux new-session -A -s main'
+  alias tl='tmux ls'
+  unalias tk 2>/dev/null
+  tk() {
+    if [ $# -gt 0 ]; then
+      tmux kill-session -t "$1"
+    else
+      tmux kill-session
+    fi
+  }
   alias td='tmux detach-client'
 fi
 
-# jcode: claude-code-style /model (routes through omniroute profile)
-jcode() {
-  if [ "$1" = "/model" ]; then
-    shift
-    if [ $# -eq 0 ]; then
-      command jcode --provider-profile omniroute
-    else
-      local m="$1"; shift
-      if [ $# -gt 0 ]; then
-        command jcode run --provider-profile omniroute -m "$m" "$@"
+# jcode: claude-code-style /model shortcut (routes through omniroute profile when installed)
+if (( $+commands[jcode] )); then
+  jcode() {
+    if [ "$1" = "/model" ]; then
+      shift
+      if [ $# -eq 0 ]; then
+        command jcode --provider-profile omniroute
       else
-        command jcode --provider-profile omniroute -m "$m"
+        local m="$1"; shift
+        if [ $# -gt 0 ]; then
+          command jcode run --provider-profile omniroute -m "$m" "$@"
+        else
+          command jcode --provider-profile omniroute -m "$m"
+        fi
       fi
+      return
     fi
-    return
-  fi
-  command jcode "$@"
-}
+    command jcode "$@"
+  }
+fi
 
-# Omni-Aliases & Custom Shortcuts (if present)
-[ -f "$HOME/.omni-aliases.zsh" ] && source "$HOME/.omni-aliases.zsh"
-[ -f "$HOME/mydotfiles/shell/omni-aliases.zsh" ] && source "$HOME/mydotfiles/shell/omni-aliases.zsh"
+# OmniRoute user-service aliases (loaded in interactive shells only, not ~/.zshenv)
+if ! alias omnion >/dev/null 2>&1; then
+  [ -f "$HOME/.omni-aliases.zsh" ] && source "$HOME/.omni-aliases.zsh"
+fi
 
 # Desktop / ML4W helper commands (graceful fallback if running in container / standard distro)
 if [ -d "$HOME/.config/ml4w" ]; then
