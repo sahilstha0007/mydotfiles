@@ -265,7 +265,7 @@ def collect_tmux(repo_root: pathlib.Path) -> list[dict[str, str]]:
         sock = f"devcheck-kbd-sync-{os.getpid()}"
         try:
             start = subprocess.run(
-                ["tmux", "-L", sock, "-f", str(conf), "start-server"],
+                ["tmux", "-L", sock, "-f", str(conf), "new-session", "-d", "-s", "kbd-probe"],
                 capture_output=True,
                 text=True,
                 env=sock_env,

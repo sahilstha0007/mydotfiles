@@ -19,7 +19,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
-TMUX_TMPDIR="$tmpdir" tmux -L "$sock" -f "$CONF" start-server
+TMUX_TMPDIR="$tmpdir" tmux -L "$sock" -f "$CONF" new-session -d -s reload-probe
 TMUX_TMPDIR="$tmpdir" tmux -L "$sock" source-file "$CONF"
 TMUX_TMPDIR="$tmpdir" tmux -L "$sock" source-file "$CONF"
 
