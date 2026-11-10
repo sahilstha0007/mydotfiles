@@ -43,7 +43,9 @@ return {
         'toml',
       }
 
-      require('nvim-treesitter').install(ensure_installed)
+      if vim.env.NVIM_NO_AUTO_INSTALL ~= '1' then
+        require('nvim-treesitter').install(ensure_installed)
+      end
 
       vim.filetype.add {
         pattern = {

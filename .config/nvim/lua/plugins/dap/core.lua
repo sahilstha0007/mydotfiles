@@ -145,8 +145,8 @@ return {
     cmd = { 'DapInstall', 'DapUninstall' },
     opts = {
       -- Makes a best effort to setup the various debuggers with
-      -- reasonable debug configurations
-      automatic_installation = true,
+      -- reasonable debug configurations (disabled during headless tool runs)
+      automatic_installation = vim.env.NVIM_NO_AUTO_INSTALL ~= '1',
 
       -- You can provide additional configuration to the handlers,
       -- see mason-nvim-dap README for more information
@@ -154,7 +154,7 @@ return {
 
       -- You'll need to check that you have the required things installed
       -- online, please don't ask me how to install them :)
-      ensure_installed = {
+      ensure_installed = vim.env.NVIM_NO_AUTO_INSTALL == '1' and {} or {
         -- DAP adapter names (not mason package names). Add/remove per language.
         -- JS/TS (pwa-node) is wired separately in plugins/languages/typescript.lua.
         'python', -- debugpy — Python

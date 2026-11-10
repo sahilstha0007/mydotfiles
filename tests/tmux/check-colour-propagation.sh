@@ -34,7 +34,7 @@
 set -uo pipefail
 
 conf_dir=${TMUX_TEST_CONF_DIR:-$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../../.config/tmux" && pwd)}
-sock=${TMUX_TEST_SOCK:-colour-propagation-$$}
+sock=${TMUX_TEST_SOCK:-cp-$$}
 # Under $HOME rather than /tmp: a stray TMPDIR=/tmp would otherwise place the
 # scratch dir inside the directory being copied, and `cp -r` would recurse into
 # itself (it tries to copy all of /tmp, fails on unreadable systemd dirs, and
@@ -42,6 +42,7 @@ sock=${TMUX_TEST_SOCK:-colour-propagation-$$}
 scratch_root=${TMUX_TEST_TMPDIR:-$HOME/.cache/tmux-tests}
 mkdir -p "$scratch_root"
 work=$(mktemp -d "$scratch_root/probe.XXXXXX")
+export TMUX_TMPDIR="$work"
 
 trap '
   [ -n "${sock:-}" ] && tmux -L "$sock" kill-server 2>/dev/null || true
@@ -73,6 +74,7 @@ case "$(readlink -f "$work/tmux/tmux.conf")" in
 esac
 sed -i \
   -e "s|source-file -q ~/.config/tmux/colors-matugen.conf|source-file -q $work/fixture.conf|" \
+  -e "s|^if-shell '.*plugins/tpm/tpm.*|run 'true'|" \
   -e "s|^run '~/.config/tmux/plugins/tpm/tpm'|run 'true'|" \
   "$work/tmux/tmux.conf"
 

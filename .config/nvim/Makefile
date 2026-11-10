@@ -83,5 +83,5 @@ check: test lint fmt-check
 # The verification path AGENT.md:242 documents for keymap changes. Bootstraps
 # its own probe git repo at /tmp/probe_repo so gitsigns' buffer maps attach.
 keymaps:
-	nvim --headless -u init.lua -c "luafile scripts/keymaps-dump.lua" -c "qa!"
+	NVIM_NO_AUTO_INSTALL=1 nvim --headless -u init.lua -c "luafile scripts/keymaps-dump.lua" -c "qa!"
 	@echo "keymaps: wrote ~/.cache/nvim/keymaps_dump.json"
