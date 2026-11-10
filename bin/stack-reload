@@ -36,14 +36,57 @@ run_or_echo() {
   fi
 }
 
+STAMP_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/terminal-stack-reload"
+
+proc_start_ticks() {
+  local pid="$1" stat_line rest
+  [ -r "/proc/$pid/stat" ] || return 1
+  stat_line=$(<"/proc/$pid/stat")
+  rest="${stat_line##*) }"
+  local -a fields
+  read -ra fields <<< "$rest"
+  [ -n "${fields[19]:-}" ] || return 1
+  printf '%s' "${fields[19]}"
+}
+
+record_reload_stamps() {
+  local layer="$1"
+  shift
+  if [ "$DRY_RUN" -eq 1 ]; then
+    printf 'DRY-RUN: record reload stamp for %s (%s)\n' "$layer" "$*"
+    return 0
+  fi
+  [ "$#" -gt 0 ] || return 0
+  mkdir -p "$STAMP_DIR"
+  chmod 700 "$STAMP_DIR" 2>/dev/null || true
+  local stamp_file="$STAMP_DIR/${layer}.stamps"
+  local tmp_file
+  tmp_file=$(mktemp "${stamp_file}.XXXXXX")
+  local pid ticks ts
+  ts=$(date +%s)
+  for pid in "$@"; do
+    [ -n "$pid" ] || continue
+    if ticks=$(proc_start_ticks "$pid"); then
+      printf '%s:%s:%s\n' "$pid" "$ticks" "$ts" >> "$tmp_file"
+    fi
+  done
+  if [ -s "$tmp_file" ]; then
+    mv -f "$tmp_file" "$stamp_file"
+  else
+    rm -f "$tmp_file"
+  fi
+}
+
 echo "==> Reloading terminal stack (non-destructive)..."
 
 # 1. Tmux live server
 if command -v tmux >/dev/null 2>&1 && tmux list-sessions >/dev/null 2>&1; then
   run_or_echo tmux source-file "$HOME/.config/tmux/tmux.conf"
-  if [ -x "$HOME/.config/tmux/scripts/on-client-attached.sh" ]; then
+  if [ -x "$HOME/.config/tmux/scripts/on-client-attached.sh" ] && [ -n "$(tmux list-clients 2>/dev/null || true)" ]; then
     run_or_echo bash "$HOME/.config/tmux/scripts/on-client-attached.sh" || true
   fi
+  tmux_pid=$(tmux display-message -p '#{pid}' 2>/dev/null || pgrep -u "$(id -u)" -x 'tmux: server' | head -1 || true)
+  [ -n "$tmux_pid" ] && record_reload_stamps tmux "$tmux_pid"
   echo "  [OK] tmux config reloaded and attached profile synced"
 else
   echo "  [SKIP] no active tmux server under current TMUX_TMPDIR"
@@ -52,25 +95,32 @@ fi
 # 2. Kitty live instances (socket-only RC + SIGUSR1 fallback)
 if command -v kitty >/dev/null 2>&1; then
   kitty_reloaded=0
+  kitty_reloaded_pids=()
   if [ -r /proc/net/unix ]; then
     while IFS= read -r sock; do
       [ -n "$sock" ] || continue
       if run_or_echo kitty @ --to "unix:${sock}" load-config >/dev/null 2>&1; then
         kitty_reloaded=$((kitty_reloaded + 1))
+        kitty_reloaded_pids+=("${sock#@kitty-}")
       fi
     done < <(grep -oE '@kitty-[0-9]+' /proc/net/unix 2>/dev/null | sort -u || true)
   fi
   if [ "$kitty_reloaded" -eq 0 ] && pgrep -u "$(id -u)" -x kitty >/dev/null 2>&1; then
     run_or_echo pkill -USR1 -u "$(id -u)" -x kitty || true
+    mapfile -t kitty_reloaded_pids < <(pgrep -u "$(id -u)" -x kitty 2>/dev/null || true)
+    record_reload_stamps kitty "${kitty_reloaded_pids[@]}"
     echo "  [OK] kitty signaled with SIGUSR1"
   elif [ "$kitty_reloaded" -gt 0 ]; then
+    record_reload_stamps kitty "${kitty_reloaded_pids[@]}"
     echo "  [OK] kitty reloaded via $kitty_reloaded remote socket(s)"
   fi
 fi
 
 # 3. WezTerm live auto-reload
-if pgrep -u "$(id -u)" -f 'wezterm-gui' >/dev/null 2>&1 && [ -e "$HOME/.config/wezterm/wezterm.lua" ]; then
+if pgrep -u "$(id -u)" -x 'wezterm-gui' >/dev/null 2>&1 && [ -e "$HOME/.config/wezterm/wezterm.lua" ]; then
   run_or_echo touch -c "$HOME/.config/wezterm/wezterm.lua"
+  mapfile -t wz_reloaded_pids < <(pgrep -u "$(id -u)" -x 'wezterm-gui' 2>/dev/null || true)
+  record_reload_stamps wezterm "${wz_reloaded_pids[@]}"
   echo "  [OK] triggered wezterm config mtime watch"
 fi
 

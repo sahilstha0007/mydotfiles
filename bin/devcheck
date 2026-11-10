@@ -543,7 +543,32 @@ if [ "$RUN_ALL" -eq 1 ]; then
   if [ "${DEVCHECK_IN_CLEAN_CLONE:-0}" != "1" ]; then
     CLEAN_TEST="$REPO_ROOT/tests/clean-clone.sh"
     if [ -f "$CLEAN_TEST" ]; then
-      run "clean: clone" "$REPO_ROOT" bash "$CLEAN_TEST"
+      clean_start=$(date +%s%N)
+      if ( cd "$REPO_ROOT" && bash "$CLEAN_TEST" ) > "$DEVCHECK_LOG" 2>&1; then
+        clean_ms=$(( ($(date +%s%N) - clean_start) / 1000000 ))
+        clean_skips=$(grep -c 'external Atlas vault absent in clean-clone' "$DEVCHECK_LOG" || true)
+        clean_summary=$(sed -n 's/^all gates pass[[:space:]]*dims: \([0-9]\+\) run, \([0-9]\+\) skipped.*/\1 passed, \2 skipped/p' "$DEVCHECK_LOG" | tail -n 1)
+        clean_total_skips=$(sed -n 's/^all gates pass[[:space:]]*dims: [0-9]\+ run, \([0-9]\+\) skipped.*/\1/p' "$DEVCHECK_LOG" | tail -n 1)
+        if [ "${clean_total_skips:-0}" -ne "${clean_skips:-0}" ]; then
+          FAILED=$((FAILED + 1))
+          NAMES+=("clean: clone")
+          RESULTS+=("${RED}FAIL${R}")
+          printf '  %sclean: clone%s  %-28s %sFAIL (unexpected skips: %s != %s Atlas skips)%s\n' \
+            "$BOLD" "$R" "" "$RED" "${clean_total_skips:-?}" "${clean_skips:-0}" "$R"
+        else
+          NAMES+=("clean: clone")
+          RESULTS+=("${GRN}pass${R}")
+          printf '  %sclean: clone%s  %-28s %s%dms%s  %s(%s; %s legitimate Atlas skips: vault absent)%s\n' \
+            "$BOLD" "$R" "" "$DIM" "$clean_ms" "$R" "$DIM" "${clean_summary:-ok}" "${clean_skips:-0}" "$R"
+        fi
+      else
+        clean_rc=$?
+        FAILED=$((FAILED + 1))
+        NAMES+=("clean: clone")
+        RESULTS+=("${RED}FAIL${R}")
+        printf '  %sclean: clone%s  %-28s %sFAIL (exit %d)%s\n' "$BOLD" "$R" "" "$RED" "$clean_rc" "$R"
+        tail -12 "$DEVCHECK_LOG" | sed 's/^/      /'
+      fi
     else
       fail "clean: clone" "missing $CLEAN_TEST"
     fi
