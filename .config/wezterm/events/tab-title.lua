@@ -417,16 +417,19 @@ end
 ---@param max_width number
 ---@param inset number
 local function create_title(title, max_width, inset)
-   if wezterm.column_width(title) > max_width - inset then
-      local diff = wezterm.column_width(title) - max_width + inset
-      title = wezterm.truncate_right(title, wezterm.column_width(title) - diff)
-   else
-      local padding = max_width - wezterm.column_width(title) - inset
-      title = title .. string.rep(' ', padding)
+   local target = math.max(1, max_width - inset)
+   local width = ustr.display_width(title)
+   if width > target then
+      title = ustr.truncate_title(title, target)
+      width = ustr.display_width(title)
+   end
+   if width < target then
+      title = title .. string.rep(' ', target - width)
    end
 
    return title
 end
+M.create_title = create_title
 
 local progress_stale = (function()
    -- stylua: ignore

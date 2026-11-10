@@ -17,6 +17,7 @@ import shutil
 import subprocess
 import threading
 import time
+import unicodedata
 from kitty.fast_data_types import Screen, get_options
 from kitty.tab_bar import (
     DrawData,
@@ -24,7 +25,6 @@ from kitty.tab_bar import (
     TabBarData,
     as_rgb,
     color_as_int,
-    draw_title,
     get_boss,
     wcswidth,
 )
@@ -744,6 +744,185 @@ def get_tab_icon(tab: TabBarData) -> str:
     return DEFAULT_PROCESS_ICON
 
 
+def _is_zero_width_cp(cp: int) -> bool:
+    ch = chr(cp)
+    if cp < 0x20 or (0x7F <= cp <= 0x9F):
+        return True
+    if 0xFE00 <= cp <= 0xFE0F or 0xE0100 <= cp <= 0xE01EF:
+        return True
+    if 0x1F3FB <= cp <= 0x1F3FF:
+        return True
+    cat = unicodedata.category(ch)
+    return cat in ("Mn", "Mc", "Me", "Cf")
+
+
+def _cp_cell_width(cp: int) -> int:
+    if _is_zero_width_cp(cp):
+        return 0
+    if (
+        (0x1100 <= cp <= 0x115F)
+        or cp in (0x2329, 0x232A)
+        or (0x231A <= cp <= 0x231B)
+        or (0x23E9 <= cp <= 0x23F3)
+        or (0x23F8 <= cp <= 0x23FA)
+        or (0x25FD <= cp <= 0x25FE)
+        or (0x2600 <= cp <= 0x27BF)
+        or (0x2B50 <= cp <= 0x2B55)
+        or (0x1F000 <= cp <= 0x1FAFF)
+        or unicodedata.east_asian_width(chr(cp)) in ("W", "F")
+    ):
+        return 2
+    return 1
+
+
+def _grapheme_clusters(text: str) -> list[tuple[str, int]]:
+    """Split text into atomic visual clusters with wcwidth cell counts."""
+    clusters: list[tuple[str, int]] = []
+    prev_was_zwj = False
+    for ch in text:
+        cp = ord(ch)
+        w = _cp_cell_width(cp)
+        if prev_was_zwj and clusters:
+            cur_s, cur_w = clusters[-1]
+            clusters[-1] = (cur_s + ch, cur_w)
+            prev_was_zwj = False
+        elif w == 0 and clusters:
+            cur_s, cur_w = clusters[-1]
+            if cp == 0xFE0F and cur_w == 1:
+                cur_w = 2
+            clusters[-1] = (cur_s + ch, cur_w)
+            prev_was_zwj = cp == 0x200D
+        else:
+            clusters.append((ch, w))
+            prev_was_zwj = cp == 0x200D
+    return clusters
+
+
+def _text_display_width(text: str) -> int:
+    """Measure display columns cleanly across ASCII, CJK, emoji, and ZWJ clusters."""
+    if not text:
+        return 0
+    return sum(w for _, w in _grapheme_clusters(text))
+
+
+def _truncate_right(text: str, max_cols: int) -> str:
+    if max_cols <= 0:
+        return ""
+    clusters = _grapheme_clusters(text)
+    if sum(w for _, w in clusters) <= max_cols:
+        return text
+    if max_cols == 1:
+        return "…"
+    budget = max_cols - 1
+    out: list[str] = []
+    used = 0
+    for cluster, w in clusters:
+        if used + w > budget:
+            break
+        out.append(cluster)
+        used += w
+    out.append("…")
+    return "".join(out)
+
+
+def _truncate_left(text: str, max_cols: int) -> str:
+    if max_cols <= 0:
+        return ""
+    clusters = _grapheme_clusters(text)
+    if sum(w for _, w in clusters) <= max_cols:
+        return text
+    if max_cols == 1:
+        return "…"
+    budget = max_cols - 1
+    kept: list[str] = []
+    used = 0
+    for cluster, w in reversed(clusters):
+        if used + w > budget:
+            break
+        kept.append(cluster)
+        used += w
+    kept.reverse()
+    return "…" + "".join(kept)
+
+
+def smart_truncate_title(text: str, max_cols: int) -> str:
+    """Width-aware truncation appending '…', preserving command and basename for long paths."""
+    if max_cols <= 0:
+        return ""
+    if _text_display_width(text) <= max_cols:
+        return text
+    if max_cols == 1:
+        return "…"
+
+    head_ctx = ""
+    path_part = ""
+    m = re.match(r"^(.*?\s)(~/.*|/.*)$", text)
+    if m:
+        head_ctx, path_part = m.group(1), m.group(2)
+    elif text.startswith("/") or text.startswith("~/"):
+        path_part = text
+
+    if path_part:
+        trimmed = path_part.rstrip("/")
+        basename = trimmed.rsplit("/", 1)[-1] if "/" in trimmed else ""
+        if basename and trimmed != basename:
+            if trimmed.startswith("~/"):
+                root_prefix = "~/"
+                rest = trimmed[2:]
+            elif trimmed.startswith("/"):
+                root_prefix = "/"
+                rest = trimmed[1:]
+            else:
+                root_prefix = ""
+                rest = trimmed
+            segs = [s for s in rest.split("/") if s]
+            if segs:
+                tail = segs[-1]
+                leading_seg = root_prefix
+                stop_idx = 0
+                if len(segs) >= 2 and _text_display_width(f"{head_ctx}{root_prefix}{segs[0]}/…/{tail}") <= max_cols:
+                    leading_seg = f"{root_prefix}{segs[0]}/"
+                    stop_idx = 1
+
+                kept_tail = tail
+                for idx in range(len(segs) - 2, stop_idx, -1):
+                    cand_tail = f"{segs[idx]}/{kept_tail}"
+                    probe = f"{head_ctx}{leading_seg}…/{cand_tail}"
+                    if _text_display_width(probe) <= max_cols:
+                        kept_tail = cand_tail
+                    else:
+                        break
+
+                middle = f"{head_ctx}{leading_seg}…/{kept_tail}"
+                if _text_display_width(middle) <= max_cols:
+                    return middle
+
+                head_slash = f"{head_ctx}…/{tail}"
+                if _text_display_width(head_slash) <= max_cols:
+                    return head_slash
+
+                ctx_w = _text_display_width(head_ctx)
+                if head_ctx and 0 < ctx_w <= max_cols - 3:
+                    return head_ctx + _truncate_left(f"/{tail}", max_cols - ctx_w)
+                return _truncate_left(f"/{tail}", max_cols)
+
+    return _truncate_right(text, max_cols)
+
+
+def format_tab_title(tab: TabBarData, max_cols: int) -> str:
+    """Format Kitty tab title matching active/window/stack markers with wcwidth truncation."""
+    raw = tab.title or ""
+    prefix = "▸ " if getattr(tab, "is_active", False) else ""
+    num_win = getattr(tab, "num_windows", 1) or 1
+    layout = getattr(tab, "layout_name", "") or ""
+    suffix = (f" [{num_win}]" if num_win > 1 else "") + (" 󰁌" if layout == "stack" else "")
+
+    budget = max_cols - _text_display_width(prefix) - _text_display_width(suffix)
+    if budget >= 3:
+        return f"{prefix}{smart_truncate_title(raw, budget)}{suffix}"
+    return _truncate_right(f"{prefix}{raw}{suffix}", max_cols)
+
+
 def draw_tab(
     draw_data: DrawData,
     screen: Screen,
@@ -763,16 +942,16 @@ def draw_tab(
     screen.cursor.fg = tab_bg
     screen.draw("")
 
-    # 2. Pill body: draw index + process icon badge + title
+    # 2. Pill body: draw index + process icon badge + wcwidth-truncated title
     screen.cursor.bg = tab_bg
     screen.cursor.fg = tab_fg
     icon = get_tab_icon(tab)
     badge = f" {index} {icon} "
     screen.draw(badge)
 
-    badge_width = wcswidth(badge)
+    badge_width = _text_display_width(badge) if wcswidth(badge) <= 0 else wcswidth(badge)
     effective_title_len = max(1, max_title_length - badge_width - 2) if max_title_length > badge_width + 2 else max_title_length
-    draw_title(draw_data, screen, tab, index, effective_title_len)
+    screen.draw(format_tab_title(tab, min(effective_title_len, 22) if max_title_length <= 0 else effective_title_len))
     screen.draw(" ")
 
     # 3. Right rounded pill cap

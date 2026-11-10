@@ -681,9 +681,51 @@ class KittyTabBarTests(unittest.TestCase):
         conf = (KITTY_DIR / "custom.conf").read_text()
         self.assertIn("tab_bar_min_tabs 1", conf)
         self.assertIn("allow_remote_control socket-only", conf)
-        self.assertIn('tab_title_template "{title[:22]}"', conf)
-        self.assertIn("▸ {title[:22]}", conf)
+        self.assertIn('tab_title_template "{title}"', conf)
+        self.assertIn("▸ {title}", conf)
+        self.assertNotIn("[:22]", conf)
         self.assertNotIn("title.split()", conf)
+
+    def test_tab_title_wcwidth_truncation_ascii_cjk_emoji_and_200_path(self) -> None:
+        long_ascii = "build-and-deploy-microservice-production-target"
+        t_ascii = tab_bar.smart_truncate_title(long_ascii, 22)
+        self.assertTrue(t_ascii.endswith("…"), t_ascii)
+        self.assertLessEqual(tab_bar._text_display_width(t_ascii), 22)
+
+        long_cjk = "这是一个非常长的中文标签页标题测试字符串"
+        t_cjk = tab_bar.smart_truncate_title(long_cjk, 14)
+        self.assertTrue(t_cjk.endswith("…"), t_cjk)
+        self.assertLessEqual(tab_bar._text_display_width(t_cjk), 14)
+
+        long_emoji = "🚀🔥✨🎯📦⚙️🧪🎉hello-world"
+        t_emoji = tab_bar.smart_truncate_title(long_emoji, 10)
+        self.assertTrue(t_emoji.endswith("…"), t_emoji)
+        self.assertLessEqual(tab_bar._text_display_width(t_emoji), 10)
+        # ZWJ cluster must stay intact as a 2-cell unit without splitting codepoints
+        zwj = "👨\u200d👩\u200d👧abc"
+        self.assertEqual(tab_bar._text_display_width(zwj), 5)
+        self.assertEqual(tab_bar.smart_truncate_title(zwj, 4), "👨\u200d👩\u200d👧a…")
+
+        deep_200 = "/home/sahil/workspace/" + ("nested-component/" * 10) + "target-file.py"
+        self.assertGreater(len(deep_200), 200)
+        t_path = tab_bar.smart_truncate_title(deep_200, 26)
+        self.assertIn("…/", t_path)
+        self.assertTrue(t_path.endswith("target-file.py"), t_path)
+        self.assertLessEqual(tab_bar._text_display_width(t_path), 26)
+
+        cmd_200 = f"nvim {deep_200}"
+        t_cmd_path = tab_bar.smart_truncate_title(cmd_200, 30)
+        self.assertTrue(t_cmd_path.startswith("nvim "), t_cmd_path)
+        self.assertIn("…/", t_cmd_path)
+        self.assertTrue(t_cmd_path.endswith("target-file.py"), t_cmd_path)
+        self.assertLessEqual(tab_bar._text_display_width(t_cmd_path), 30)
+
+        active_tab = TabBarData(title=long_cjk, is_active=True, num_windows=2, layout_name="stack")
+        rendered = tab_bar.format_tab_title(active_tab, 20)
+        self.assertTrue(rendered.startswith("▸ "), rendered)
+        self.assertTrue(rendered.endswith(" [2] 󰁌"), rendered)
+        self.assertIn("…", rendered)
+        self.assertLessEqual(tab_bar._text_display_width(rendered), 20)
 
 
 globals().update(locals())

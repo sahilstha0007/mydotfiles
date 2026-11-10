@@ -174,5 +174,79 @@ check('no bell: unseen dot survives', attn(false, nil, 'dot', '!') == 'dot')
 check('nothing to show: empty slot', attn(false, nil, nil, '!') == nil)
 check('active tab shows neither', attn(true, true, 'dot', '!') == nil)
 
+-- ---- C3: wcwidth-aware UTF-8 & path truncation with '…' ------------------
+local ustr = require('utils.str')
+local create_title = tab_title.create_title
+check('create_title exposed for truncation tests', type(create_title) == 'function')
+check(
+   'display_width CJK double-width',
+   ustr.display_width('中文标题') == 8,
+   ustr.display_width('中文标题')
+)
+check(
+   'display_width emoji double-width',
+   ustr.display_width('🚀🔥abc') == 7,
+   ustr.display_width('🚀🔥abc')
+)
+check(
+   'display_width ZWJ emoji cluster single 2-cell width',
+   ustr.display_width('👨‍👩‍👧a') == 3,
+   ustr.display_width('👨‍👩‍👧a')
+)
+
+if type(create_title) == 'function' then
+   local function rstrip(s)
+      return (s:gsub('%s+$', ''))
+   end
+
+   local long_ascii = 'build-and-deploy-microservice-production-target'
+   local t_ascii = create_title(long_ascii, 26, 4) -- target = 22
+   check(
+      'long title appends ellipsis and stays <= target width',
+      ustr.ends_with(rstrip(t_ascii), '…') and ustr.display_width(t_ascii) == 22,
+      t_ascii
+   )
+
+   local long_cjk = '这是一个非常长的中文标签页标题测试字符串'
+   local t_cjk = create_title(long_cjk, 18, 4) -- target = 14
+   check(
+      'CJK title truncates cleanly by display columns with ellipsis',
+      ustr.ends_with(rstrip(t_cjk), '…') and ustr.display_width(t_cjk) == 14,
+      t_cjk .. ' (w=' .. tostring(ustr.display_width(t_cjk)) .. ')'
+   )
+
+   local long_emoji = '🚀🔥✨🎯📦⚙️🧪🎉hello-world'
+   local t_emoji = create_title(long_emoji, 14, 4) -- target = 10
+   check(
+      'emoji title truncates at grapheme boundary with ellipsis',
+      ustr.ends_with(rstrip(t_emoji), '…') and ustr.display_width(t_emoji) == 10,
+      t_emoji .. ' (w=' .. tostring(ustr.display_width(t_emoji)) .. ')'
+   )
+
+   local deep_200 = '/home/sahil/workspace/'
+      .. string.rep('nested-component/', 10)
+      .. 'target-file.lua'
+   check('200-char path fixture length > 200', #deep_200 > 200, #deep_200)
+   local t_path = create_title(deep_200, 30, 4) -- target = 26
+   check(
+      '200-char path preserves basename and truncates middle with ellipsis',
+      t_path:find('…/', 1, true) ~= nil
+         and ustr.ends_with(rstrip(t_path), 'target-file.lua')
+         and ustr.display_width(t_path) == 26,
+      t_path
+   )
+
+   local cmd_200 = 'nvim ' .. deep_200
+   local t_cmd_path = create_title(cmd_200, 32, 4) -- target = 28
+   check(
+      'command + 200-char path preserves both command and basename',
+      ustr.starts_with(t_cmd_path, 'nvim ')
+         and t_cmd_path:find('…/', 1, true) ~= nil
+         and ustr.ends_with(rstrip(t_cmd_path), 'target-file.lua')
+         and ustr.display_width(t_cmd_path) == 28,
+      t_cmd_path
+   )
+end
+
 print(string.format('tab-title composition: %d pass, %d fail', pass, fail))
 os.exit(fail == 0 and 0 or 1)
