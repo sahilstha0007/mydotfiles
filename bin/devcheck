@@ -145,6 +145,7 @@ EXPECTED_GATES=(
   "repo: shellcheck"
   "tests: lua fmt"
   "tests: lua lint"
+  "contrast: wcag"
   "docs: vs config"
 )
 if [ "$RUN_ALL" -eq 1 ]; then
@@ -388,6 +389,13 @@ if require_cmd luacheck; then
   run "tests: lua lint" "$REPO_ROOT/tests" luacheck .
 else
   fail "tests: lua lint" "luacheck not installed"
+fi
+
+CONTRAST_CHECK="$REPO_ROOT/tests/contrast/check-contrast.py"
+if [ -f "$CONTRAST_CHECK" ] && require_cmd python3; then
+  run "contrast: wcag" "$REPO_ROOT" python3 "$CONTRAST_CHECK"
+else
+  fail "contrast: wcag" "missing $CONTRAST_CHECK or python3"
 fi
 
 # --- docs vs live configs ---------------------------------------------------
