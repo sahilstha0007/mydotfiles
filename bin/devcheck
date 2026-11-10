@@ -129,6 +129,7 @@ EXPECTED_GATES=(
   "wezterm: border"
   "wezterm: theme-source"
   "wezterm: platform"
+  "wezterm: hyprland"
   "wezterm: lint"
   "wezterm: fmt"
   "keys: wezterm vs tmux"
@@ -193,7 +194,8 @@ if [ -d "$WZ" ] && require_cmd luajit; then
     "wezterm: tab-title|check-tab-title.lua" \
     "wezterm: border|check_border.lua" \
     "wezterm: theme-source|check_theme_source.lua" \
-    "wezterm: platform|check_platform.lua"; do
+    "wezterm: platform|check_platform.lua" \
+    "wezterm: hyprland|check_hyprland.lua"; do
     g_name="${pair%%|*}"
     g_file="$WZ_TESTS/${pair##*|}"
     if [ "$g_name" = "wezterm: right-status" ]; then

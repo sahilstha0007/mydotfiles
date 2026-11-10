@@ -1,6 +1,7 @@
 local wezterm = require('wezterm')
 local platform = require('utils.platform')
 local backdrops = require('utils.backdrops')
+local hyprland = require('utils.hyprland')
 local workspaces = require('utils.workspaces')
 local act = wezterm.action
 
@@ -145,13 +146,7 @@ local function resize_window(window, delta)
    -- from the Wayland toplevel and causes severe graphical glitching/tearing.
    -- Delegate the window resize to Hyprland's compositor dispatcher.
    if os.getenv('HYPRLAND_INSTANCE_SIGNATURE') then
-      local spawn = wezterm.background_child_process or wezterm.run_child_process
-      if spawn then
-         pcall(
-            spawn,
-            { 'hyprctl', 'dispatch', 'resizeactive', string.format('%d %d', delta, delta) }
-         )
-      end
+      hyprland.resize(delta, wezterm.run_child_process)
       return
    end
 
