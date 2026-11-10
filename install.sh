@@ -172,7 +172,9 @@ if [ ! -f "$repo/.config/btop/themes/matugen.theme" ] && [ -f "$repo/.config/bto
   cp "$repo/.config/btop/themes/nightfox.theme" "$repo/.config/btop/themes/matugen.theme"
   echo "  [INIT]   $repo/.config/btop/themes/matugen.theme (from nightfox default)"
 fi
-mkdir -p "${XDG_STATE_HOME:-$HOME/.local/state}/nvim"
+tmux_tmp_dir="${TMUX_TMPDIR:-$HOME/.cache/tmux}"
+mkdir -p "$tmux_tmp_dir" "$HOME/.cache/zsh-cache" "${XDG_STATE_HOME:-$HOME/.local/state}/nvim"
+chmod 700 "$tmux_tmp_dir" 2>/dev/null || true
 
 # 6. Ensure executable permissions on all shell scripts
 echo "==> Setting executable permissions on scripts..."
@@ -180,11 +182,84 @@ find "$repo/.config" -type f -name "*.sh" -exec chmod +x {} + 2>/dev/null || tru
 find "$repo/.config" -type f -name "*.py" -exec chmod +x {} + 2>/dev/null || true
 find "$repo/bin" -type f -exec chmod +x {} + 2>/dev/null || true
 
-# 7. Rebuild bat theme cache if bat is installed
+# 7. Rebuild bat theme cache if bat is installed (idempotent: only rebuild if missing or older than themes)
 if command -v bat >/dev/null 2>&1 && [ -d "$HOME/.config/bat/themes" ]; then
-  bat cache --build >/dev/null 2>&1 || true
-  echo "  [OK]     bat theme cache rebuilt"
+  bat_cache_bin="${XDG_CACHE_HOME:-$HOME/.cache}/bat/themes.bin"
+  bat_need_rebuild=0
+  if [ ! -s "$bat_cache_bin" ]; then
+    bat_need_rebuild=1
+  else
+    for tf in "$HOME/.config/bat/themes"/*.tmTheme; do
+      [ -e "$tf" ] && [ "$tf" -nt "$bat_cache_bin" ] && bat_need_rebuild=1 && break
+    done
+  fi
+  if [ "$bat_need_rebuild" -eq 1 ]; then
+    bat cache --build >/dev/null 2>&1 || true
+    echo "  [WARM]   bat theme cache rebuilt"
+  else
+    echo "  [OK]     bat theme cache warm"
+  fi
 fi
+
+# 7b. Pre-warm zsh init caches and compdump (D2) without sourcing secrets (~/.zshrc.local)
+prewarm_zsh_tool() {
+  local tool="$1" cache="$2" dep="$3"
+  shift 3
+  local bin_path
+  bin_path="$(command -v "$tool" 2>/dev/null || true)"
+  [ -n "$bin_path" ] || return 0
+  if [ ! -s "$cache" ] || [ "$bin_path" -nt "$cache" ] || { [ -n "$dep" ] && [ -e "$dep" ] && [ "$dep" -nt "$cache" ]; }; then
+    local tmp_c
+    tmp_c="$(mktemp "${cache}.XXXXXX")"
+    if "$@" > "$tmp_c" 2>/dev/null && [ -s "$tmp_c" ]; then
+      mv -f "$tmp_c" "$cache"
+      echo "  [WARM]   $cache"
+      return 0
+    fi
+    rm -f "$tmp_c"
+  fi
+  return 0
+}
+
+prewarm_zsh_tool zoxide "$HOME/.cache/zsh-cache/zoxide.zsh" "" zoxide init zsh
+prewarm_zsh_tool direnv "$HOME/.cache/zsh-cache/direnv.zsh" "" direnv hook zsh
+prewarm_zsh_tool atuin  "$HOME/.cache/zsh-cache/atuin.zsh"  "" atuin init zsh
+if command -v oh-my-posh >/dev/null 2>&1; then
+  [ -f "$HOME/.config/ohmyposh/zen-nightfox.toml" ] && \
+    prewarm_zsh_tool oh-my-posh "$HOME/.cache/zsh-cache/omp-nightfox.zsh" "$HOME/.config/ohmyposh/zen-nightfox.toml" \
+      oh-my-posh init zsh --config "$HOME/.config/ohmyposh/zen-nightfox.toml"
+  [ -f "$HOME/.config/ohmyposh/zen.toml" ] && \
+    prewarm_zsh_tool oh-my-posh "$HOME/.cache/zsh-cache/omp-zen.zsh" "$HOME/.config/ohmyposh/zen.toml" \
+      oh-my-posh init zsh --config "$HOME/.config/ohmyposh/zen.toml"
+  [ -f "$HOME/.config/ohmyposh/zen.toml" ] && \
+    prewarm_zsh_tool oh-my-posh "$HOME/.cache/zsh-cache/omp-fallback.zsh" "$HOME/.config/ohmyposh/zen.toml" \
+      oh-my-posh init zsh --config "$HOME/.config/ohmyposh/zen.toml"
+fi
+
+if [ -x "$HOME/.config/wezterm/utils/zsh-highlight-sync.sh" ] && [ -f "$HOME/.config/wezterm/colors/matugen.lua" ]; then
+  if [ ! -s "$HOME/.cache/zsh-wallpaper.zsh" ] || [ "$HOME/.config/wezterm/colors/matugen.lua" -nt "$HOME/.cache/zsh-wallpaper.zsh" ]; then
+    bash "$HOME/.config/wezterm/utils/zsh-highlight-sync.sh" >/dev/null 2>&1 || true
+    echo "  [WARM]   $HOME/.cache/zsh-wallpaper.zsh"
+  fi
+fi
+
+if command -v zsh >/dev/null 2>&1; then
+  zcomp_warm=$(zsh -fc '
+    dump="$HOME/.zcompdump-${HOST}-${ZSH_VERSION}"
+    omz_comp="$HOME/.oh-my-zsh/custom/plugins/zsh-completions/src"
+    [ -d "$omz_comp" ] && fpath=("$omz_comp" $fpath)
+    if [ ! -s "$dump" ] || { [ -d "$omz_comp" ] && [ "$omz_comp" -nt "$dump" ]; }; then
+      autoload -Uz compinit
+      zmodload -F zsh/files b:zf_mv 2>/dev/null && mv() { zf_mv "$@"; }
+      compinit -u -d "$dump" >/dev/null 2>&1
+      echo "WARMED:$dump"
+    fi
+  ' 2>/dev/null || true)
+  case "$zcomp_warm" in
+    WARMED:*) echo "  [WARM]   ${zcomp_warm#WARMED:}" ;;
+  esac
+fi
+echo "  [OK]     shell caches warm"
 
 # 7. Protect mydotfiles-managed paths from ML4W dotfiles installer updates
 ml4w_installer_cfg="$HOME/.config/ml4w-dotfiles-installer"
