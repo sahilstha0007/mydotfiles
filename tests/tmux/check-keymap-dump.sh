@@ -32,7 +32,7 @@ def extract_show_keys(cfg: str) -> set[tuple[str, str]]:
             section = "mouse"
         elif section and section != "mouse" and "->" in line:
             left, right = line.split("->", 1)
-            entry = f"{re.sub(r'\\s{2,}', ' ', left.strip())} -> {' '.join(right.strip().split())}"
+            entry = f"{re.sub(r'\s{2,}', ' ', left.strip())} -> {' '.join(right.strip().split())}"
             pairs.add((section, entry))
     return pairs
 
