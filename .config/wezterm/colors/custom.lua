@@ -163,6 +163,49 @@ local function blend(a, b, t)
    )
 end
 
+local function min_contrast_on(hex, refs)
+   local worst = 21
+   for _, ref in ipairs(refs) do
+      local r = contrast(hex, ref)
+      if r < worst then
+         worst = r
+      end
+   end
+   return worst
+end
+
+---Walk `hex` toward `extreme` until it clears `min_ratio` on every bg in `refs`.
+local function ensure_contrast_refs(hex, refs, extreme, min_ratio)
+   min_ratio = min_ratio or MIN_CONTRAST
+   if type(hex) ~= 'string' or not hex:match('^#%x%x%x%x%x%x$') then
+      return hex
+   end
+   if min_contrast_on(hex, refs) >= min_ratio then
+      return hex
+   end
+   local lo, hi, best = 0, 1, extreme
+   for _ = 1, 18 do
+      local mid = (lo + hi) * 0.5
+      local cand = blend(hex, extreme, mid)
+      if min_contrast_on(cand, refs) >= min_ratio then
+         best = cand
+         hi = mid
+      else
+         lo = mid
+      end
+   end
+   return best
+end
+
+local function pick_extreme_for(bg)
+   return rel_lum(bg) < 0.1791 and '#ffffff' or '#000000'
+end
+
+local function translucent_refs(bg)
+   -- Opacity 0.85 composited over #000000 and #ffffff backdrop extremes.
+   return { bg, blend(bg, '#000000', 0.15), blend(bg, '#ffffff', 0.15) }
+end
+
 -- Two derived colours, and the reason each one exists.
 --
 -- Every value below was picked by measuring, not by taste: run the numbers in
@@ -421,8 +464,27 @@ end
 -- The 8 normal ANSI slots, in wezterm's order. Built here as a value (not
 -- inlined in the table below) because `brights` is DERIVED from it -- see
 -- BRIGHT_LIFT for why the two can no longer be written independently.
+local extreme = light and '#000000' or '#ffffff'
+local bg_refs = translucent_refs(base.base)
+
+-- Keep every readable slot above MIN_CONTRAST on flat bg AND 0.85 translucent extremes.
+base.text = ensure_contrast_refs(base.text, bg_refs, extreme, MIN_CONTRAST)
+base.subtext1 = ensure_contrast_refs(base.subtext1, bg_refs, extreme, MIN_CONTRAST)
+base.subtext0 = ensure_contrast_refs(base.subtext0, bg_refs, extreme, MIN_CONTRAST)
+base.overlay0 = ensure_contrast_refs(base.overlay0, bg_refs, extreme, MIN_CONTRAST)
+base.red = ensure_contrast_refs(base.red, bg_refs, extreme, MIN_CONTRAST)
+base.green = ensure_contrast_refs(base.green, bg_refs, extreme, MIN_CONTRAST)
+base.yellow = ensure_contrast_refs(base.yellow, bg_refs, extreme, MIN_CONTRAST)
+base.blue = ensure_contrast_refs(base.blue, bg_refs, extreme, MIN_CONTRAST)
+base.pink = ensure_contrast_refs(base.pink, bg_refs, extreme, MIN_CONTRAST)
+base.teal = ensure_contrast_refs(base.teal, bg_refs, extreme, MIN_CONTRAST)
+if base.accent then
+   base.accent = ensure_contrast_refs(base.accent, bg_refs, extreme, MIN_CONTRAST)
+end
+
+local ansi_black = ensure_contrast_refs(base.surface1, bg_refs, extreme, MIN_CONTRAST)
 local ansi = {
-   base.surface1, -- black
+   ansi_black, -- black (repaired for legibility when tools emit SGR 30)
    base.red, -- red
    base.green, -- green
    base.yellow, -- yellow
@@ -431,11 +493,6 @@ local ansi = {
    base.teal, -- cyan
    base.subtext1, -- white
 }
-
--- The palette extremity for this theme direction. Dark themes brighten toward
--- white, light themes darken toward black -- always AWAY from the background,
--- which is what keeps a lifted slot more readable than the one it came from.
-local extreme = light and '#000000' or '#ffffff'
 
 ---Lift one slot to its `brights` counterpart.
 ---@param slot string
@@ -466,11 +523,27 @@ end
 -- only light themes pay for the lift. Darkening on a light theme and
 -- lightening on a dark one are the same operation: move away from the page.
 local cursor = guard(base.accent or base.blue, brighten(base.accent or base.blue), base.base)
+cursor = ensure_contrast_refs(cursor, bg_refs, extreme, MIN_CONTRAST)
 
 -- The selection: a soft accent lift, with the label pinned to the extreme so
 -- the pair always clears MIN_CONTRAST. Both numbers are argued in
 -- SELECTION_LIFT / SELECTION_FG above.
 local selection_bg = blend(base.base, cursor, SELECTION_LIFT)
+
+local qs_label_fg =
+   ensure_contrast_refs(base.text, { base.surface1 }, pick_extreme_for(base.surface1), MIN_CONTRAST)
+local qs_match_fg =
+   ensure_contrast_refs(base.crust, { base.yellow }, pick_extreme_for(base.yellow), MIN_CONTRAST)
+local tab_active_fg =
+   ensure_contrast_refs(base.text, { base.surface2 }, pick_extreme_for(base.surface2), MIN_CONTRAST)
+local tab_inactive_fg = ensure_contrast_refs(
+   base.subtext1,
+   { base.surface0 },
+   pick_extreme_for(base.surface0),
+   MIN_CONTRAST
+)
+local tab_hover_fg =
+   ensure_contrast_refs(base.text, { base.surface0 }, pick_extreme_for(base.surface0), MIN_CONTRAST)
 
 local colorscheme = {
    foreground = base.text,
@@ -487,9 +560,9 @@ local colorscheme = {
    selection_fg = light and SELECTION_FG.light or SELECTION_FG.dark,
    -- quick_select_* need `ColorSpec` tables on this wezterm version
    quick_select_label_bg = { Color = base.surface1 },
-   quick_select_label_fg = { Color = base.text },
+   quick_select_label_fg = { Color = qs_label_fg },
    quick_select_match_bg = { Color = base.yellow },
-   quick_select_match_fg = { Color = base.crust },
+   quick_select_match_fg = { Color = qs_match_fg },
    ansi = ansi,
    brights = {
       brighten(ansi[1]), -- black
@@ -505,15 +578,15 @@ local colorscheme = {
       background = rgba(base.base, 0.4),
       active_tab = {
          bg_color = base.surface2,
-         fg_color = base.text,
+         fg_color = tab_active_fg,
       },
       inactive_tab = {
          bg_color = base.surface0,
-         fg_color = base.subtext1,
+         fg_color = tab_inactive_fg,
       },
       inactive_tab_hover = {
          bg_color = base.surface0,
-         fg_color = base.text,
+         fg_color = tab_hover_fg,
       },
       new_tab = {
          bg_color = base.base,

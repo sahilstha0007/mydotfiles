@@ -165,29 +165,31 @@ local RV = {
 -- stylua: ignore
 local colors = {
    text_default          = { bg = tokens.surface, fg = tokens.on_surface },
-   text_hover            = { bg = tokens.surface_hover, fg = tokens.on_surface },
+   text_hover            = { bg = tokens.surface_hover, fg = tokens.on_surface_hover },
    text_active           = { bg = tokens.accent, fg = tokens.on_accent },
 
-   unseen_output_default = { bg = tokens.surface, fg = tokens.unseen },
-   unseen_output_hover   = { bg = tokens.surface_hover, fg = tokens.unseen },
-   unseen_output_active  = { bg = tokens.accent, fg = tokens.unseen },
+   unseen_output_default = { bg = tokens.surface, fg = tokens.contrast_fg(tokens.unseen, tokens.surface) },
+   unseen_output_hover   = { bg = tokens.surface_hover, fg = tokens.contrast_fg(tokens.unseen, tokens.surface_hover) },
+   unseen_output_active  = { bg = tokens.accent, fg = tokens.contrast_fg(tokens.unseen, tokens.accent) },
 
    scircle_default       = { bg = tokens.glass, fg = tokens.surface },
    scircle_hover         = { bg = tokens.glass, fg = tokens.surface_hover },
    scircle_active        = { bg = tokens.glass, fg = tokens.accent },
 
-   progress_percentage_default    = { bg = tokens.surface, fg = tokens.progress_ok },
-   progress_percentage_hover      = { bg = tokens.surface_hover, fg = tokens.progress_ok },
-   progress_percentage_active     = { bg = tokens.accent, fg = tokens.progress_ok },
+   progress_percentage_default    = { bg = tokens.surface, fg = tokens.contrast_fg(tokens.progress_ok, tokens.surface) },
+   progress_percentage_hover      = { bg = tokens.surface_hover, fg = tokens.contrast_fg(tokens.progress_ok, tokens.surface_hover) },
+   progress_percentage_active     = { bg = tokens.accent, fg = tokens.contrast_fg(tokens.progress_ok, tokens.accent) },
 
-   progress_error_default         = { bg = tokens.surface, fg = tokens.progress_error },
-   progress_error_hover           = { bg = tokens.surface_hover, fg = tokens.progress_error },
-   progress_error_active          = { bg = tokens.accent, fg = tokens.progress_error },
+   progress_error_default         = { bg = tokens.surface, fg = tokens.contrast_fg(tokens.progress_error, tokens.surface) },
+   progress_error_hover           = { bg = tokens.surface_hover, fg = tokens.contrast_fg(tokens.progress_error, tokens.surface_hover) },
+   progress_error_active          = { bg = tokens.accent, fg = tokens.contrast_fg(tokens.progress_error, tokens.accent) },
 
-   progress_indeterminate_default = { bg = tokens.surface, fg = tokens.progress_indeterminate },
-   progress_indeterminate_hover   = { bg = tokens.surface_hover, fg = tokens.progress_indeterminate },
-   progress_indeterminate_active  = { bg = tokens.accent, fg = tokens.progress_indeterminate },
+   progress_indeterminate_default = { bg = tokens.surface, fg = tokens.contrast_fg(tokens.progress_indeterminate, tokens.surface) },
+   progress_indeterminate_hover   = { bg = tokens.surface_hover, fg = tokens.contrast_fg(tokens.progress_indeterminate, tokens.surface_hover) },
+   progress_indeterminate_active  = { bg = tokens.accent, fg = tokens.contrast_fg(tokens.progress_indeterminate, tokens.accent) },
 }
+
+M.colors = colors
 
 ---
 -- ================

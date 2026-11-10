@@ -236,7 +236,14 @@ local function add_signals(parts, window, pane)
    -- either theme branch. (Active key table is owned exclusively by left-status.lua.)
    local host = remote_host(pane)
    if host then
-      table.insert(parts, pill(string.upper(host), tokens.red, tokens.on_accent))
+      table.insert(
+         parts,
+         pill(
+            string.upper(host),
+            tokens.contrast_fg(tokens.red, tokens.on_accent),
+            tokens.on_accent
+         )
+      )
    end
 
    -- 2. disk: amber pill when free space on HOME is below threshold.

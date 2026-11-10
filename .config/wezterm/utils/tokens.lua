@@ -48,18 +48,31 @@ local function blend(a, b, t)
    )
 end
 
-local function ensure_contrast(hex, bg, extreme)
+local function ensure_contrast(hex, bg, extreme, min_ratio)
+   min_ratio = min_ratio or 4.5
    if type(hex) ~= 'string' or not hex:match('^#%x%x%x%x%x%x$') then
       return hex
    end
-   if contrast(hex, bg) >= 4.5 then
+   local refs = type(bg) == 'table' and bg or { bg }
+   local function passes(cand)
+      for _, r in ipairs(refs) do
+         if contrast(cand, r) < min_ratio then
+            return false
+         end
+      end
+      return true
+   end
+   if passes(hex) then
       return hex
    end
+   if not extreme then
+      extreme = rel_lum(refs[1]) < 0.1791 and '#ffffff' or '#000000'
+   end
    local lo, hi, best = 0, 1, extreme
-   for _ = 1, 16 do
+   for _ = 1, 18 do
       local mid = (lo + hi) * 0.5
       local candidate = blend(hex, extreme, mid)
-      if contrast(candidate, bg) >= 4.5 then
+      if passes(candidate) then
          best = candidate
          hi = mid
       else
@@ -67,6 +80,11 @@ local function ensure_contrast(hex, bg, extreme)
       end
    end
    return best
+end
+
+local function contrast_fg(fg, bg, min_ratio)
+   local extreme = rel_lum(bg) < 0.1791 and '#ffffff' or '#000000'
+   return ensure_contrast(fg, bg, extreme, min_ratio or 4.5)
 end
 
 local M = {}
@@ -78,36 +96,41 @@ local extreme = M.light and '#000000' or '#ffffff'
 -- Core palette (flips with the theme by construction).
 M.bg = colors.background
 M.fg = colors.foreground
+M.contrast_fg = contrast_fg
+
+local glass_refs = {
+   M.bg,
+   blend(M.bg, '#000000', 0.15),
+   blend(M.bg, '#ffffff', 0.15),
+}
+
 -- The shared accent (wezterm tab pill, pane-select, tmux pill, editor): the
 -- wallpaper primary hero accent.
-M.accent = ensure_contrast(colors.cursor_bg or colors.ansi[5], M.bg, extreme)
+M.accent = ensure_contrast(colors.cursor_bg or colors.ansi[5], glass_refs, extreme)
 -- Wallpaper accents from the ANSI slots (vivid on dark themes, walked toward
 -- readable on light themes when a latte fallback misses 4.5:1).
-M.red = ensure_contrast(colors.ansi[2], M.bg, extreme)
-M.green = ensure_contrast(colors.ansi[3], M.bg, extreme)
-M.yellow = ensure_contrast(colors.ansi[4], M.bg, extreme)
-M.pink = ensure_contrast(colors.ansi[6], M.bg, extreme)
-M.cyan = ensure_contrast(colors.ansi[7], M.bg, extreme)
+M.red = ensure_contrast(colors.ansi[2], glass_refs, extreme)
+M.green = ensure_contrast(colors.ansi[3], glass_refs, extreme)
+M.yellow = ensure_contrast(colors.ansi[4], glass_refs, extreme)
+M.pink = ensure_contrast(colors.ansi[6], glass_refs, extreme)
+M.cyan = ensure_contrast(colors.ansi[7], glass_refs, extreme)
 
--- Inactive pill: mocha surface1 vs latte surface1. Text on it stays the same
--- near-black so it reads on the light chip (and matches today's dark look).
+-- Inactive pill: mocha surface1 vs latte surface1. Hover pill stays in the
+-- same dark/light surface polarity so tab labels never flip polarity on hover.
 M.surface = M.light and '#bcc0cc' or '#45475A'
--- Hover pill: blue-tinted lift of the surface, per mode.
-M.surface_hover = M.light and '#a6b0d8' or '#7188b0'
--- Text drawn ON a surface pill (both modes keep the dark label).
-M.on_surface = M.light and '#1C1B19' or '#1C1B19'
--- Text drawn ON the accent pill: light theme accent is dark -> near-white text;
--- dark theme accent is bright -> near-black text (colors.background inverts
--- with the mode and is a better match than a fixed hex).
-M.on_accent = M.light and colors.background or '#11111B'
+M.surface_hover = M.light and '#a6b0d8' or '#52566c'
+-- Text drawn ON a surface / hover / accent pill, derived via contrast_fg().
+M.on_surface = contrast_fg(M.light and '#1C1B19' or colors.foreground, M.surface)
+M.on_surface_hover = contrast_fg(M.light and '#1C1B19' or colors.foreground, M.surface_hover)
+M.on_accent = contrast_fg(M.light and colors.background or '#11111B', M.accent)
 
 -- Status dot / unseen indicator (orange) and progress colors. Dark values
 -- match the previous chrome; light values are their readable latte relatives.
 M.unseen = M.light and '#b35a00' or '#FFA066'
 -- Muted separator/label color: the wallpaper's outline token, carried on the
 -- resolved scheme's `split` slot (verified live = mat.outline), guarded to
--- 4.5:1 on M.bg so separators and muted labels stay legible on any theme.
-M.muted = ensure_contrast(colors.split, M.bg, extreme)
+-- 4.5:1 across glass composites so separators and muted labels stay legible.
+M.muted = ensure_contrast(colors.split, glass_refs, extreme)
 M.progress_ok = M.light and '#40a02b' or '#9df296'
 M.progress_error = M.light and '#d20f39' or '#fa3970'
 M.progress_indeterminate = M.light and '#c2544a' or '#f5e0dc'
