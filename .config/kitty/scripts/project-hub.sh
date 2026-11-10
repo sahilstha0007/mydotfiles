@@ -8,8 +8,24 @@ set -uo pipefail
 
 export TERMINAL_STACK_PROFILE="${TERMINAL_STACK_PROFILE:-kitty}"
 
+# --- CLI Option Validation (E2) ----------------------------------------------
+case "${1:-}" in
+    -h|--help)
+        cat <<'EOF'
+Usage: project-hub [--help]
+
+Opens the interactive FZF Project Hub (tmux sessions, ~/Projects, scratch).
+EOF
+        exit 0
+        ;;
+esac
+
 # --- Preview Dispatcher ------------------------------------------------------
 if [[ "${1:-}" == "--preview" ]]; then
+    if [[ "$#" -lt 3 ]]; then
+        printf 'project-hub: --preview requires <type> <target>\n' >&2
+        exit 2
+    fi
     item_type="${2:-}"
     target="${3:-}"
 
@@ -91,6 +107,11 @@ if [[ "${1:-}" == "--preview" ]]; then
             ;;
     esac
     exit 0
+fi
+
+if [[ "$#" -gt 0 ]]; then
+    printf 'project-hub: unknown argument: %s\nUsage: project-hub [--help]\n' "$1" >&2
+    exit 2
 fi
 
 # --- Helper: Generate Item List ----------------------------------------------

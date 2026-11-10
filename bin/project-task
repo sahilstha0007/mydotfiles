@@ -204,12 +204,21 @@ def run(project: Path, action: str) -> None:
 
 def main() -> None:
     args = sys.argv[1:]
+    if any(a in ("-h", "--help") for a in args):
+        print(__doc__.strip())
+        return
+    if args and args[0].startswith("-"):
+        fail(f"unknown option: {args[0]}\nusage: project-task [run|test|lint|format] [project-directory]")
     if args and args[0] in ACTIONS:
         action = args.pop(0)
     elif not args:
         action = pick(list(ACTIONS), "project action ❯ ")
     else:
-        fail("usage: project-task [run|test|lint|format] [project-directory]")
+        fail(f"unknown action or option: {args[0]}\nusage: project-task [run|test|lint|format] [project-directory]")
+    if args and args[0].startswith("-"):
+        fail(f"unknown option: {args[0]}\nusage: project-task [run|test|lint|format] [project-directory]")
+    if len(args) > 1:
+        fail(f"unexpected argument: {args[1]}\nusage: project-task [run|test|lint|format] [project-directory]")
     if action not in ACTIONS:
         fail("choose run, test, lint or format")
     project = select_project(Path.cwd().resolve(), args[0] if args else None, action)
