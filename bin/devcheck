@@ -1,160 +1,281 @@
 #!/usr/bin/env bash
 # devcheck — one verification command for the whole dev stack.
 #
-# WHY THIS EXISTS
-# ---------------
-# The stack is three separate git repos (nvim, wezterm, tmux) plus the ml4w
-# dotfiles and the wiki, each with its own ad-hoc gates. On 2026-10-06 a single
-# session hand-ran EIGHT separate commands just to verify changes: nvim's
-# test.sh, fmt-check, lint, keymaps and mutate harness; wezterm's cascade and
-# opacity mutation harness; a kitty config parse; and the wiki linter.
-#
-# Hand-running is the problem, not the solution. Two of the defects found that
-# day were only caught BECAUSE the right gate happened to be run by hand --
-# a lint target that skipped silently, and a mutation harness with no exit path.
-# Either could equally have been skipped, and nothing would have said so. A gate
-# nobody runs is not a gate.
-#
-# So: one command, every gate, non-zero exit if any fails. Two tiers, because
-# the mutation harnesses re-copy the tree per mutant and cost seconds each,
-# while the ordinary gates cost ~3s total.
-#
 #   devcheck          fast tier — run this after any change
-#   devcheck --all    adds the mutation harnesses and the wiki linter
+#   devcheck --all    adds mutation harnesses, clean-clone test, wiki lint, and /tmp leak check
 #
-# DESIGN RULES (learned the hard way here)
-# ---------------------------------------
-# * A gate that skips reports success. See nvim's `lint`: it printed "luacheck
-#   not installed - skipping" and exited 0, so `make check` went green having
-#   linted nothing. devcheck never converts a missing tool into a pass -- see
-#   SKIPPED below.
-# * Exit code is only evidence once you have confirmed something sets it. The
-#   wezterm mutation harness had no `exit` statement at all and still reported
-#   EXIT 0 all morning. That is why --all exists and why it is not optional
-#   decoration: it is the tier that proves the others can fail.
-# * Never report a gate as passing because it printed something. Assert on the
-#   exit code, and let the output speak for itself.
+# DESIGN RULES
+# * Resolve REPO_ROOT from this script (following ~/.local/bin symlink), never $HOME/mydotfiles.
+# * Never skip missing tools or missing repo scripts/configs — fail loudly instead.
+# * Assert at exit that every declared gate in EXPECTED_GATES actually executed (manifest check).
 set -uo pipefail
+
+SELF_PATH=$(readlink -f -- "${BASH_SOURCE[0]}")
+REPO_ROOT=$(cd -- "$(dirname -- "$SELF_PATH")/.." && pwd -P)
+
+for _extra_bin in \
+  "$HOME/.local/share/mise/shims" \
+  "$HOME/.local/share/nvim/mason/bin" \
+  "$HOME/.luarocks/bin"; do
+  if [ -d "$_extra_bin" ]; then
+    case ":$PATH:" in
+      *":$_extra_bin:"*) ;;
+      *) PATH="$PATH:$_extra_bin" ;;
+    esac
+  fi
+done
+export PATH
+
+RUN_ALL=0
+case "${1:-}" in
+  "") ;;
+  --all) RUN_ALL=1 ;;
+  *)
+    printf 'usage: devcheck [--all]\n' >&2
+    exit 2
+    ;;
+esac
 
 FAST_MS=0
 FAILED=0
 SKIPPED=0
 declare -a NAMES=() RESULTS=()
 
+DEVCHECK_LOG=$(mktemp "${TMPDIR:-/tmp}/devcheck-log.XXXXXX")
+DEVCHECK_LEAK_SELF=$(basename -- "$DEVCHECK_LOG")
+trap 'rm -f "$DEVCHECK_LOG"' EXIT
+
+# Snapshot user-owned entries in /tmp before gates execute (--all leak detector).
+TMP_BEFORE=""
+if [ "$RUN_ALL" -eq 1 ]; then
+  TMP_BEFORE=$(find /tmp -maxdepth 1 -mindepth 1 -user "$(id -u)" -printf '%f\n' | grep -vxF "$DEVCHECK_LEAK_SELF" | sort)
+fi
+
 # --- output helpers --------------------------------------------------------
-if [ -t 1 ]; then BOLD=$'\033[1m'; DIM=$'\033[2m'; R=$'\033[0m'
-                    GRN=$'\033[32m'; RED=$'\033[31m'; YLW=$'\033[33m'; CYN=$'\033[36m'
-else BOLD=''; DIM=''; R=''; GRN=''; RED=''; YLW=''; CYN=''; fi
+if [ -t 1 ]; then
+  BOLD=$'\033[1m'
+  DIM=$'\033[2m'
+  R=$'\033[0m'
+  GRN=$'\033[32m'
+  RED=$'\033[31m'
+  YLW=$'\033[33m'
+else
+  BOLD=''
+  DIM=''
+  R=''
+  GRN=''
+  RED=''
+  YLW=''
+fi
 
 # run <name> <dir> <cmd...>
-run () {
-  local name="$1" dir="$2"; shift 2
-  local start; start=$(date +%s%N)
-  ( cd "$dir" && "$@" ) > /tmp/devcheck.$$.log 2>&1
+run() {
+  local name="$1" dir="$2"
+  shift 2
+  local start
+  start=$(date +%s%N)
+  (cd "$dir" && "$@") >"$DEVCHECK_LOG" 2>&1
   local ec=$?
-  local ms=$(( ($(date +%s%N) - start) / 1000000 ))
+  local ms=$((($(date +%s%N) - start) / 1000000))
   FAST_MS=$((FAST_MS + ms))
 
   if [ "$ec" -eq 0 ]; then
-    NAMES+=("$name"); RESULTS+=("${GRN}pass${R}")
+    NAMES+=("$name")
+    RESULTS+=("${GRN}pass${R}")
     printf '  %s%s%s  %-28s %s\n' "$BOLD" "$name" "$R" "" "${DIM}${ms}ms${R}"
   else
     FAILED=$((FAILED + 1))
-    NAMES+=("$name"); RESULTS+=("${RED}FAIL${R}")
+    NAMES+=("$name")
+    RESULTS+=("${RED}FAIL${R}")
     printf '  %s%s%s  %-28s %sFAIL (exit %d)%s\n' "$BOLD" "$name" "$R" "" "$RED" "$ec" "$R"
-    # Show the tail only on failure -- that is when it is worth reading.
-    printf '%s\n' "$DIM" "$(tail -6 /tmp/devcheck.$$.log | sed 's/^/      /')" "$R"
+    printf '%s\n' "$DIM" "$(tail -8 "$DEVCHECK_LOG" | sed 's/^/      /')" "$R"
   fi
   return 0
 }
 
-# skip <name> <reason>
-skip () {
+# fail <name> <reason> — missing tool or missing repo gate is always a failure
+fail() {
+  local name="$1" reason="$2"
+  FAILED=$((FAILED + 1))
+  NAMES+=("$name")
+  RESULTS+=("${RED}FAIL${R}")
+  printf '  %s%s%s  %-28s %sFAIL (%s)%s\n' "$BOLD" "$name" "$R" "" "$RED" "$reason" "$R"
+  return 0
+}
+
+# skip <name> <reason> — only permitted for external private Atlas repo in clean-clone
+skip() {
   SKIPPED=$((SKIPPED + 1))
-  NAMES+=("$1"); RESULTS+=("${YLW}skip${R} ${DIM}($2)${R}")
+  NAMES+=("$1")
+  RESULTS+=("${YLW}skip${R} ${DIM}($2)${R}")
   printf '  %s%s%s  %-28s %s%s%s\n' "$BOLD" "$1" "$R" "" "$YLW" "$2" "$R"
+}
+
+require_cmd() {
+  command -v "$1" >/dev/null 2>&1
 }
 
 printf '%sdevcheck%s  %sfast tier%s\n\n' "$BOLD" "$R" "$DIM" "$R"
 
+# --- manifest ---------------------------------------------------------------
+EXPECTED_GATES=(
+  "nvim: specs"
+  "nvim: fmt"
+  "nvim: keymaps"
+  "nvim: lint"
+  "wezterm: cascade"
+  "wezterm: right-status"
+  "wezterm: tab-title"
+  "wezterm: border"
+  "wezterm: theme-source"
+  "wezterm: platform"
+  "wezterm: lint"
+  "wezterm: fmt"
+  "keys: wezterm vs tmux"
+  "tmux: colour prop"
+  "tmux: profiles"
+  "tmux: scripts syntax"
+  "kitty: config parse"
+  "kitty: full profile"
+  "kitty: collisions"
+  "kitty: tab_bar specs"
+  "zsh: syntax"
+  "zsh: startup <= 120ms"
+  "bin: python syntax"
+  "repo: shellcheck"
+  "tests: lua fmt"
+  "tests: lua lint"
+  "docs: vs config"
+)
+if [ "$RUN_ALL" -eq 1 ]; then
+  EXPECTED_GATES+=(
+    "wezterm: mutation"
+    "wiki: lint"
+    "nvim: mutation"
+  )
+  if [ "${DEVCHECK_IN_CLEAN_CLONE:-0}" != "1" ]; then
+    EXPECTED_GATES+=("clean: clone")
+  fi
+  EXPECTED_GATES+=("tmp: no leaks")
+fi
+
 # --- nvim -------------------------------------------------------------------
-NVIM="$HOME/.config/nvim"
-if [ -d "$NVIM" ]; then
-  run "nvim: specs"      "$NVIM" ./scripts/test.sh
-  run "nvim: fmt"        "$NVIM" make fmt-check
-  run "nvim: keymaps"    "$NVIM" make keymaps
-  # lint was skipped here because it exits 1 when luacheck is absent, by design
-  # (see the lint target's own comment) -- every devcheck would have been red
-  # for a reason unrelated to any change.
-  #
-  # luacheck is installed now (`luarocks --local --lua-version=5.1`), with a
-  # real .luacheckrc behind it, so the gate is worth running. It is still not
-  # on PATH for a non-interactive shell, hence the same ~/.luarocks/bin
-  # fallback the Makefile uses -- otherwise this would skip forever and a skip
-  # outliving its reason is just a green light that tests nothing.
-  if command -v luacheck >/dev/null 2>&1 || [ -x "$HOME/.luarocks/bin/luacheck" ]; then
+NVIM="$REPO_ROOT/.config/nvim"
+if [ -d "$NVIM" ] && require_cmd nvim; then
+  run "nvim: specs" "$NVIM" ./scripts/test.sh
+  if require_cmd stylua; then
+    run "nvim: fmt" "$NVIM" make fmt-check
+  else
+    fail "nvim: fmt" "stylua not installed"
+  fi
+  run "nvim: keymaps" "$NVIM" make keymaps
+  if require_cmd luacheck; then
     run "nvim: lint" "$NVIM" make lint
   else
-    skip "nvim: lint" "luacheck not installed (gate now fails loudly on its own)"
+    fail "nvim: lint" "luacheck not installed"
   fi
 else
-  skip "nvim" "not at $NVIM"
+  for g in "nvim: specs" "nvim: fmt" "nvim: keymaps" "nvim: lint"; do
+    fail "$g" "nvim or $NVIM missing"
+  done
 fi
 
 # --- wezterm ----------------------------------------------------------------
-WZ="$HOME/.config/wezterm"
-WZ_TESTS="$HOME/mydotfiles/tests/wezterm"
-if [ -d "$WZ" ]; then
-  run "wezterm: cascade" "$WZ" bash "$WZ_TESTS/check_wallpaper_cascade.sh"
-  run "wezterm: right-status" "$WZ" luajit "$WZ_TESTS/check-right-status.lua" "$WZ"
-  run "wezterm: tab-title" "$WZ" luajit "$WZ_TESTS/check-tab-title.lua" "$WZ"
-  if command -v luacheck >/dev/null 2>&1 || [ -x "$HOME/.luarocks/bin/luacheck" ]; then
-    LUACHECK_BIN=$(command -v luacheck 2>/dev/null || echo "$HOME/.luarocks/bin/luacheck")
-    run "wezterm: lint" "$WZ" "$LUACHECK_BIN" .
-  fi
-  # Cross-layer, not wezterm-internal: compares wezterm's effective bindings
-  # against tmux's ROOT table for silent steals. Belongs in the ordinary tier
-  # because it is ~200ms and catches a class of bug that has recurred 4 times.
-  run "keys: wezterm vs tmux" "$WZ" bash scripts/check-key-collisions.sh
-  if [ "${1:-}" = "--all" ]; then
-    run "wezterm: mutation" "$WZ" bash "$WZ_TESTS/mutate-check-opacity.sh"
+WZ="$REPO_ROOT/.config/wezterm"
+WZ_TESTS="$REPO_ROOT/tests/wezterm"
+if [ -d "$WZ" ] && require_cmd luajit; then
+  for pair in \
+    "wezterm: right-status|check-right-status.lua" \
+    "wezterm: tab-title|check-tab-title.lua" \
+    "wezterm: border|check_border.lua" \
+    "wezterm: theme-source|check_theme_source.lua" \
+    "wezterm: platform|check_platform.lua"; do
+    g_name="${pair%%|*}"
+    g_file="$WZ_TESTS/${pair##*|}"
+    if [ "$g_name" = "wezterm: right-status" ]; then
+      if [ -f "$WZ_TESTS/check_wallpaper_cascade.sh" ]; then
+        run "wezterm: cascade" "$WZ" bash "$WZ_TESTS/check_wallpaper_cascade.sh"
+      else
+        fail "wezterm: cascade" "missing $WZ_TESTS/check_wallpaper_cascade.sh"
+      fi
+    fi
+    if [ -f "$g_file" ]; then
+      run "$g_name" "$WZ" luajit "$g_file" "$WZ"
+    else
+      fail "$g_name" "missing $g_file"
+    fi
+  done
+
+  if require_cmd luacheck; then
+    run "wezterm: lint" "$WZ" luacheck .
   else
-    skip "wezterm: mutation" "use --all (re-copies tree per mutant)"
+    fail "wezterm: lint" "luacheck not installed"
+  fi
+
+  if require_cmd stylua; then
+    run "wezterm: fmt" "$WZ" stylua --check --config-path "$WZ/.stylua.toml" "$WZ"
+  else
+    fail "wezterm: fmt" "stylua not installed"
+  fi
+
+  if [ -f "$WZ/scripts/check-key-collisions.sh" ] && require_cmd wezterm && require_cmd tmux; then
+    run "keys: wezterm vs tmux" "$WZ" bash scripts/check-key-collisions.sh
+  else
+    fail "keys: wezterm vs tmux" "check-key-collisions.sh, wezterm, or tmux missing"
   fi
 else
-  skip "wezterm" "not at $WZ"
+  for g in \
+    "wezterm: cascade" "wezterm: right-status" "wezterm: tab-title" \
+    "wezterm: border" "wezterm: theme-source" "wezterm: platform" \
+    "wezterm: lint" "wezterm: fmt" "keys: wezterm vs tmux"; do
+    fail "$g" "luajit or $WZ missing"
+  done
 fi
 
 # --- tmux -------------------------------------------------------------------
-TMUX="$HOME/.config/tmux"
-TMUX_TESTS="$HOME/mydotfiles/tests/tmux"
-if [ -x "$TMUX_TESTS/check-colour-propagation.sh" ]; then
-  run "tmux: colour prop" "$TMUX" bash "$TMUX_TESTS/check-colour-propagation.sh"
-  run "tmux: profiles" "$TMUX" bash "$TMUX_TESTS/check-terminal-profiles.sh"
+TMUX_DIR="$REPO_ROOT/.config/tmux"
+TMUX_TESTS="$REPO_ROOT/tests/tmux"
+if [ -x "$TMUX_TESTS/check-colour-propagation.sh" ] && require_cmd tmux; then
+  run "tmux: colour prop" "$TMUX_DIR" bash "$TMUX_TESTS/check-colour-propagation.sh"
 else
-  skip "tmux: colour prop" "script missing"
-fi
-if [ -f "$HOME/.config/tmux/scripts/on-client-attached.sh" ] && [ -f "$HOME/.config/tmux/scripts/status-right.sh" ]; then
-  run "tmux: scripts syntax" "$TMUX" bash -n "$HOME/.config/tmux/scripts/on-client-attached.sh" "$HOME/.config/tmux/scripts/status-right.sh"
-else
-  skip "tmux: scripts syntax" "tmux scripts missing"
+  fail "tmux: colour prop" "missing check-colour-propagation.sh or tmux"
 fi
 
+if [ -x "$TMUX_TESTS/check-terminal-profiles.sh" ] && require_cmd tmux; then
+  run "tmux: profiles" "$TMUX_DIR" bash "$TMUX_TESTS/check-terminal-profiles.sh"
+else
+  fail "tmux: profiles" "missing check-terminal-profiles.sh or tmux"
+fi
+
+if [ -f "$TMUX_DIR/scripts/on-client-attached.sh" ] && [ -f "$TMUX_DIR/scripts/status-right.sh" ]; then
+  run "tmux: scripts syntax" "$TMUX_DIR" bash -n \
+    "$TMUX_DIR/scripts/on-client-attached.sh" \
+    "$TMUX_DIR/scripts/status-right.sh" \
+    "$TMUX_DIR/scripts/auto-save-session.sh" \
+    "$TMUX_DIR/colors-from-matugen.sh" \
+    "$TMUX_DIR/colors-from-kitty.sh" \
+    "$TMUX_DIR/keymap-dump.sh" \
+    "$TMUX_DIR/project-task.sh" \
+    "$TMUX_DIR/session-switcher.sh"
+else
+  fail "tmux: scripts syntax" "tmux scripts missing"
+fi
 
 # --- kitty ------------------------------------------------------------------
-KITTY="$HOME/.config/kitty/custom.conf"
-if [ -f "$KITTY" ]; then
-  run "kitty: config parse" "$HOME/.config/kitty" \
-    kitty --config NONE -o include="$KITTY" --help
+KITTY_DIR="$REPO_ROOT/.config/kitty"
+KITTY_CUSTOM="$KITTY_DIR/custom.conf"
+if [ -f "$KITTY_CUSTOM" ] && require_cmd kitty; then
+  run "kitty: config parse" "$KITTY_DIR" \
+    kitty --config NONE -o include="$KITTY_CUSTOM" --help
 else
-  skip "kitty: config parse" "no custom.conf"
+  fail "kitty: config parse" "missing custom.conf or kitty"
 fi
 
-KITTY_CONF="$HOME/.config/kitty/kitty.conf"
-if [ -f "$KITTY_CONF" ]; then
-  run "kitty: full profile" "$HOME/.config/kitty" \
+KITTY_CONF="$KITTY_DIR/kitty.conf"
+if [ -f "$KITTY_CONF" ] && require_cmd kitty && require_cmd python3; then
+  run "kitty: full profile" "$KITTY_DIR" \
     bash -c 'python3 -m py_compile tab_bar.py pass_keys.py && kitty --config kitty.conf --help >/dev/null'
-  run "kitty: collisions" "$HOME/.config/kitty" \
+  run "kitty: collisions" "$KITTY_DIR" \
     python3 -c '
 import re, subprocess, sys
 lines = open("custom.conf").read().splitlines()
@@ -178,19 +299,30 @@ if bad:
     sys.exit("Kitty config warnings:\n" + "\n".join(bad))
 '
 else
-  skip "kitty: full profile" "no kitty.conf"
+  fail "kitty: full profile" "missing kitty.conf, kitty, or python3"
+  fail "kitty: collisions" "missing kitty.conf, kitty, or python3"
 fi
 
-KITTY_TAB_TEST="$HOME/mydotfiles/tests/kitty/check-tab-bar.py"
-if [ -f "$KITTY_TAB_TEST" ]; then
-  run "kitty: tab_bar specs" "$HOME/.config/kitty" python3 "$KITTY_TAB_TEST"
+# Invoked indirectly via `run "kitty: tab_bar specs" ... run_kitty_tab_specs`.
+# shellcheck disable=SC2329
+run_kitty_tab_specs() {
+  local test_path="$1"
+  python3 "$test_path" && DOTFILES_KITTY_DIR="$PWD" kitty +runpy "$(cat "$test_path")"
+}
+
+KITTY_TAB_TEST="$REPO_ROOT/tests/kitty/check-tab-bar.py"
+if [ -f "$KITTY_TAB_TEST" ] && require_cmd kitty && require_cmd python3; then
+  run "kitty: tab_bar specs" "$KITTY_DIR" run_kitty_tab_specs "$KITTY_TAB_TEST"
+else
+  fail "kitty: tab_bar specs" "missing check-tab-bar.py, kitty, or python3"
 fi
 
 # --- zsh --------------------------------------------------------------------
-if command -v zsh >/dev/null 2>&1; then
+if require_cmd zsh && [ -f "$HOME/.zshrc" ] && [ -f "$HOME/.zshenv" ]; then
   run "zsh: syntax" "$HOME" zsh -n "$HOME/.zshrc" "$HOME/.zshenv"
-  run "zsh: startup <= 120ms" "$HOME" \
-    python3 -c '
+  if require_cmd python3; then
+    run "zsh: startup <= 120ms" "$HOME" \
+      python3 -c '
 import subprocess, time, sys
 t0 = time.perf_counter()
 subprocess.run(["zsh", "-i", "-c", "exit"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
@@ -198,70 +330,163 @@ ms = (time.perf_counter() - t0) * 1000
 if ms > 120:
     sys.exit(f"zsh startup too slow: {ms:.1f}ms > 120ms")
 '
+  else
+    fail "zsh: startup <= 120ms" "python3 not installed"
+  fi
+else
+  fail "zsh: syntax" "zsh, .zshrc, or .zshenv missing"
+  fail "zsh: startup <= 120ms" "zsh, .zshrc, or .zshenv missing"
 fi
 
-# --- bin --------------------------------------------------------------------
-if command -v python3 >/dev/null 2>&1; then
-  run "bin: python syntax" "$HOME/mydotfiles" \
-    python3 -m py_compile "$HOME/mydotfiles/bin/project-task" "$HOME/mydotfiles/bin/terminal-cheatsheet"
+# --- bin & repo lint/fmt gates ----------------------------------------------
+if require_cmd python3; then
+  run "bin: python syntax" "$REPO_ROOT" \
+    python3 -m py_compile "$REPO_ROOT/bin/project-task" "$REPO_ROOT/bin/terminal-cheatsheet"
 else
-  skip "bin: python syntax" "python3 not installed"
+  fail "bin: python syntax" "python3 not installed"
+fi
+
+# Invoked indirectly via `run "repo: shellcheck" ... run_repo_shellcheck`.
+# shellcheck disable=SC2329
+run_repo_shellcheck() {
+  local -a candidates=() scripts=()
+  local f first
+  mapfile -t candidates < <(git ls-files "*.sh" "install.sh" "bin/*")
+  for f in "${candidates[@]}"; do
+    [ -f "$f" ] || continue
+    first=$(head -n 1 "$f")
+    case "$f" in
+      *.sh) scripts+=("$f") ;;
+      *)
+        case "$first" in
+          *zsh*) ;;
+          *sh|*sh\ *|*bash*) scripts+=("$f") ;;
+        esac
+        ;;
+    esac
+  done
+  shellcheck "${scripts[@]}"
+}
+
+if require_cmd shellcheck && require_cmd git; then
+  run "repo: shellcheck" "$REPO_ROOT" run_repo_shellcheck
+else
+  fail "repo: shellcheck" "shellcheck or git not installed"
+fi
+
+if require_cmd stylua; then
+  run "tests: lua fmt" "$REPO_ROOT" bash -c '
+    set -euo pipefail
+    stylua --check --config-path .config/nvim/stylua.toml tests/nvim
+    stylua --check --config-path .config/wezterm/.stylua.toml tests/wezterm tests/.luacheckrc
+  '
+else
+  fail "tests: lua fmt" "stylua not installed"
+fi
+
+if require_cmd luacheck; then
+  run "tests: lua lint" "$REPO_ROOT/tests" luacheck .
+else
+  fail "tests: lua lint" "luacheck not installed"
 fi
 
 # --- docs vs live configs ---------------------------------------------------
-# The Terminal Stack notes are hand-maintained prose describing live configs.
-# Every claim a machine can check is checked here: documented bindings must
-# exist in `wezterm show-keys` / `tmux list-keys`, and zed task labels must
-# resolve in tasks.json. A doc that lies is a defect; this is the gate that says so.
-DOCS_DIR="$HOME/Documents/Notes/Atlas"
-if [ -f "$DOCS_DIR/scripts/check_docs_vs_config.py" ]; then
+DOCS_DIR="${ATLAS_DIR:-$HOME/Documents/Notes/Atlas}"
+if [ -f "$DOCS_DIR/scripts/check_docs_vs_config.py" ] && require_cmd python3; then
   run "docs: vs config" "$DOCS_DIR" python3 scripts/check_docs_vs_config.py
+elif [ "${DEVCHECK_IN_CLEAN_CLONE:-0}" = "1" ]; then
+  skip "docs: vs config" "external Atlas vault absent in clean-clone"
 else
-  skip "docs: vs config" "script missing"
+  fail "docs: vs config" "missing $DOCS_DIR/scripts/check_docs_vs_config.py"
 fi
 
 # --- slow tier --------------------------------------------------------------
-if [ "${1:-}" = "--all" ]; then
-  WIKI="$HOME/Documents/Notes/Atlas"
-  WLINT="$WIKI/11 - Sahil's Wiki/scripts/lint.py"
-  # The wiki linter exits 1 on any issue, and the vault currently carries 15
-  # pre-existing ones (6 files without frontmatter, orphans, one broken link)
-  # that have nothing to do with any code change. Wired in raw, devcheck --all
-  # would be permanently red -- and a gate that is always red stops being read,
-  # which is the exact failure this tool exists to prevent.
-  #
-  # So: fail only when the count EXCEEDS this baseline. That still catches new
-  # breakage (the useful signal) without crying wolf over known noise. Bump the
-  # number deliberately, after fixing the underlying issues -- never to silence
-  # a new one.
+if [ "$RUN_ALL" -eq 1 ]; then
+  if [ -f "$WZ_TESTS/mutate-check-opacity.sh" ]; then
+    run "wezterm: mutation" "$WZ" bash "$WZ_TESTS/mutate-check-opacity.sh"
+  else
+    fail "wezterm: mutation" "missing $WZ_TESTS/mutate-check-opacity.sh"
+  fi
+
+  WLINT="$DOCS_DIR/11 - Sahil's Wiki/scripts/lint.py"
   WIKI_BASELINE=15
-  if [ -f "$WLINT" ]; then
-    out=$( cd "$WIKI" && python3 "11 - Sahil's Wiki/scripts/lint.py" 2>&1 )
+  if [ -f "$WLINT" ] && require_cmd python3; then
+    out=$(cd "$DOCS_DIR" && python3 "11 - Sahil's Wiki/scripts/lint.py" 2>&1)
     n=$(printf '%s\n' "$out" | sed -n 's/^Lint found \([0-9]\+\) issue.*/\1/p')
     if [ -z "$n" ]; then
-      # No "found N" line means it either passed or crashed. A crash must not
-      # read as a pass.
-      printf '%s\n' "$out" | grep -qi 'clean' \
-        && { NAMES+=("wiki: lint"); printf '  %swiki: lint%s  %s\n' "$DIM" "$R" "clean"; } \
-        || { FAILED=$((FAILED+1)); printf '  %swiki: lint%s  %sFAIL (linter crashed)%s\n' "$DIM" "$R" "$RED" "$R"; }
+      if printf '%s\n' "$out" | grep -qi 'clean'; then
+        NAMES+=("wiki: lint")
+        printf '  %swiki: lint%s  %s\n' "$DIM" "$R" "clean"
+      else
+        FAILED=$((FAILED + 1))
+        NAMES+=("wiki: lint")
+        printf '  %swiki: lint%s  %sFAIL (linter crashed)%s\n' "$DIM" "$R" "$RED" "$R"
+      fi
     elif [ "$n" -gt "$WIKI_BASELINE" ]; then
-      FAILED=$((FAILED + 1)); NAMES+=("wiki: lint")
+      FAILED=$((FAILED + 1))
+      NAMES+=("wiki: lint")
       printf '  %swiki: lint%s  %sFAIL %d issues (baseline %d) -- %d NEW%s\n' \
         "$DIM" "$R" "$RED" "$n" "$WIKI_BASELINE" "$((n - WIKI_BASELINE))" "$R"
-      printf '%s\n' "$out" | grep '^  - ' | tail -5 | sed "s/^/      /"
+      printf '%s\n' "$out" | grep '^  - ' | tail -5 | sed 's/^/      /'
     else
       NAMES+=("wiki: lint")
       printf '  %swiki: lint%s  %s%d issues (baseline %d, unchanged)%s\n' \
         "$DIM" "$R" "$DIM" "$n" "$WIKI_BASELINE" "$R"
     fi
+  elif [ "${DEVCHECK_IN_CLEAN_CLONE:-0}" = "1" ]; then
+    skip "wiki: lint" "external Atlas vault absent in clean-clone"
+  else
+    fail "wiki: lint" "missing $WLINT"
   fi
-  NVMUT="$NVIM/tests/mutate-terminal-colors.sh"
-  if [ -f "$NVMUT" ]; then
-    run "nvim: mutation" "$NVIM" bash tests/mutate-terminal-colors.sh
+
+  NVMUT="$REPO_ROOT/tests/nvim/mutate-terminal-colors.sh"
+  if [ -f "$NVMUT" ] && require_cmd nvim; then
+    run "nvim: mutation" "$REPO_ROOT" bash "$NVMUT"
+  else
+    fail "nvim: mutation" "missing $NVMUT or nvim"
+  fi
+
+  if [ "${DEVCHECK_IN_CLEAN_CLONE:-0}" != "1" ]; then
+    CLEAN_TEST="$REPO_ROOT/tests/clean-clone.sh"
+    if [ -f "$CLEAN_TEST" ]; then
+      run "clean: clone" "$REPO_ROOT" bash "$CLEAN_TEST"
+    else
+      fail "clean: clone" "missing $CLEAN_TEST"
+    fi
+  fi
+
+  # Remove our own temp log BEFORE snapshotting /tmp for leaked entries.
+  rm -f "$DEVCHECK_LOG"
+  TMP_AFTER=$(find /tmp -maxdepth 1 -mindepth 1 -user "$(id -u)" -printf '%f\n' | grep -vxF "$DEVCHECK_LEAK_SELF" | sort)
+  TMP_LEAKED=$(comm -13 <(printf '%s\n' "$TMP_BEFORE") <(printf '%s\n' "$TMP_AFTER"))
+  if [ -z "$TMP_LEAKED" ]; then
+    NAMES+=("tmp: no leaks")
+    RESULTS+=("${GRN}pass${R}")
+    printf '  %stmp: no leaks%s  %-28s %s\n' "$BOLD" "$R" "" "${DIM}0 leaked${R}"
+  else
+    FAILED=$((FAILED + 1))
+    NAMES+=("tmp: no leaks")
+    RESULTS+=("${RED}FAIL${R}")
+    printf '  %stmp: no leaks%s  %-28s %sFAIL (leaked /tmp entries)%s\n' "$BOLD" "$R" "" "$RED" "$R"
+    printf '%s\n' "$TMP_LEAKED" | sed 's/^/      /'
   fi
 fi
 
-rm -f /tmp/devcheck.$$.log
+# --- manifest self-check ----------------------------------------------------
+manifest_err=""
+if [ "${#NAMES[@]}" -ne "${#EXPECTED_GATES[@]}" ]; then
+  manifest_err="gate count mismatch: ran ${#NAMES[@]}, expected ${#EXPECTED_GATES[@]}"
+fi
+exp_sorted=$(printf '%s\n' "${EXPECTED_GATES[@]}" | sort)
+ran_sorted=$(printf '%s\n' "${NAMES[@]}" | sort)
+if [ "$exp_sorted" != "$ran_sorted" ]; then
+  diff_out=$(diff -u <(printf '%s\n' "$exp_sorted") <(printf '%s\n' "$ran_sorted") || true)
+  manifest_err="${manifest_err:+$manifest_err; }manifest diff:\n$diff_out"
+fi
+if [ -n "$manifest_err" ]; then
+  FAILED=$((FAILED + 1))
+  printf '  %smanifest self-check%s %sFAIL%s\n%b\n' "$BOLD" "$R" "$RED" "$R" "$manifest_err"
+fi
 
 # --- verdict ----------------------------------------------------------------
 printf '\n'

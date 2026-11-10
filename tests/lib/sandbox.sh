@@ -13,8 +13,7 @@ sandbox_cleanup() {
     chmod -R u+w "$SB_ROOT" 2>/dev/null || true
     # Headless nvim specs can leave short-lived child processes (e.g. tree-sitter cache builds)
     # finishing in SB_HOME; retry briefly if a directory is still draining.
-    local i
-    for i in 1 2 3 4 5; do
+    for _ in 1 2 3 4 5; do
       if rm -rf "$SB_ROOT" 2>/dev/null; then
         return 0
       fi
