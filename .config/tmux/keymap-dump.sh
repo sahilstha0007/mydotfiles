@@ -1,67 +1,113 @@
 #!/usr/bin/env bash
-# Cross-layer keymap dump: tmux + nvim + wezterm in one fzf list.
+# Cross-layer keymap dump: tmux + nvim + wezterm + kitty in one fzf list.
 #
-# Bound to Prefix+k. Exists because the three layers each have their own
-# lookup (tmux `?`, nvim `Space+sk`, wezterm key tables) but nothing answers
+# Bound to Prefix+k. Exists because each layer has its own lookup (tmux `?`,
+# nvim `Space+sk`, `wezterm show-keys`, kitty custom.conf) but nothing answers
 # "what does EVERY layer bind for X" in one place.
-#
-# ponytail: the nvim half spawns a headless nvim, ~200ms. It re-reads the
-# same static config every invocation. Cache to a file keyed on the config
-# mtime if it ever shows up in a startup profile.
-#
-# Two non-obvious things this script has to get right:
-#   1. `verbose nmap` prints NOTHING to stdout under --headless (no UI to
-#      write to). It must be captured with `redir` to a file, then read.
-#      Piping it straight to grep silently yields an empty nvim section.
-#   2. tmux list-keys emits `bind-key -T <table> <key> <cmd...>` where the
-#      command can contain spaces, so the tail must be rejoined with awk —
-#      a `read ... _` swallows it.
-
 set -uo pipefail
 
-tmp=$(mktemp)
-trap 'rm -f "$tmp"' EXIT
+MODE="fzf"
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    -h|--help)
+      cat <<'EOF'
+Usage: keymap-dump.sh [--dump] [--help]
+
+  --dump   Print the complete cross-layer keymap table to stdout (no fzf)
+  --help   Show this help message and exit
+EOF
+      exit 0
+      ;;
+    --dump)
+      MODE="dump"
+      shift
+      ;;
+    *)
+      printf 'keymap-dump.sh: unknown option: %s\nUsage: keymap-dump.sh [--dump] [--help]\n' "$1" >&2
+      exit 2
+      ;;
+  esac
+done
+
+workdir=$(mktemp -d)
+trap 'rm -rf "$workdir"' EXIT
+
+dump_wezterm() {
+  local wz_cfg="$HOME/.config/wezterm/wezterm.lua"
+  local wz_bind="$HOME/.config/wezterm/config/bindings.lua"
+  if command -v wezterm >/dev/null 2>&1 && [ -f "$wz_cfg" ]; then
+    wezterm --config-file "$wz_cfg" show-keys 2>/dev/null | python3 -c '
+import re, sys
+
+section = ""
+for raw in sys.stdin:
+    s = raw.strip()
+    if s.startswith("Leader:"):
+        print("  " + s)
+    elif s == "Default key table":
+        section = "default"
+    elif s.startswith("Key Table:"):
+        section = s.split(":", 1)[1].strip()
+    elif s == "Mouse":
+        section = "mouse"
+    elif section and section != "mouse" and "->" in raw:
+        left, right = raw.split("->", 1)
+        left_norm = re.sub(r"\s{2,}", " ", left.strip())
+        right_norm = " ".join(right.strip().split())
+        print(f"  [{section}] {left_norm} -> {right_norm}")
+'
+  elif command -v luajit >/dev/null 2>&1 && [ -f "$wz_bind" ]; then
+    luajit -e '
+      local root = os.getenv("HOME") .. "/.config/wezterm"
+      package.path = root .. "/?.lua;" .. root .. "/?/init.lua;" .. package.path
+      _G.wezterm = setmetatable({
+        action = setmetatable({}, { __index = function(_, k) return function(...) return k end end }),
+        action_callback = function(f) return f end,
+        nerdfonts = setmetatable({}, { __index = function() return "" end }),
+        home_dir = os.getenv("HOME"), config_dir = root,
+      }, { __index = function() return function() return {} end end })
+      package.loaded["wezterm"] = _G.wezterm
+      local b = require("config.bindings")
+      if b.leader then
+        print(string.format("  Leader: %s %s", tostring(b.leader.key), tostring(b.leader.mods)))
+      end
+      for _, k in ipairs(b.keys or {}) do
+        print(string.format("  [default] %s %s -> %s", tostring(k.mods or "NONE"), tostring(k.key), tostring(k.action)))
+      end
+      for tname, rows in pairs(b.key_tables or {}) do
+        for _, k in ipairs(rows) do
+          print(string.format("  [%s] %s %s -> %s", tname, tostring(k.mods or "NONE"), tostring(k.key), tostring(k.action)))
+        end
+      end
+    ' 2>/dev/null
+  else
+    echo "  (wezterm config not found)"
+  fi
+}
 
 {
   # --- nvim -------------------------------------------------------------
-  # leader: Space. Keys are static config, so a second headless instance is
-  # a valid source — the popup may be open while some other pane runs nvim.
   echo "### nvim  (leader: Space)   — in-editor menu: Space+sk"
   nvim --headless \
-    -c 'redir! > '"$tmp"' | silent verbose nmap | redir END | qa!' 2>/dev/null
-  # Drop the "Last set from ..." trailer: 3x the size of the map, no lookup value.
-  grep -E '^[^ ].*<[^>]+>' "$tmp" | sed 's/[[:space:]]\+/ /g' | cut -c1-160
+    -c 'redir! > '"$workdir/nvim.out"' | silent verbose nmap | redir END | qa!' 2>/dev/null || true
+  if [ -s "$workdir/nvim.out" ]; then
+    grep -E '^[^ ].*<[^>]+>' "$workdir/nvim.out" | sed 's/[[:space:]]\+/ /g' | cut -c1-160 || true
+  fi
   echo
 
   # --- tmux -------------------------------------------------------------
   echo "### tmux  (prefix: C-a)     — in-tmux menu: C-a ?"
   tmux list-keys -T prefix 2>/dev/null |
     sed -E 's/^bind-key +-T +[^ ]+ +//' |
-    awk '{k=$1; $1=""; sub(/^ +/,""); printf "  %-10s %s\n", k, $0}'
+    awk '{k=$1; $1=""; sub(/^ +/,""); printf "  %-10s %s\n", k, $0}' || true
   tmux list-keys -T root 2>/dev/null |
     sed -E 's/^bind-key +-T +[^ ]+ +//' |
-    awk '{printf "  [no-prefix] %s\n", $0}'
+    awk '{printf "  [no-prefix] %s\n", $0}' || true
   echo
 
-  # --- wezterm ----------------------------------------------------------
-  # Parsed from the Lua source, not wezterm's own CLI: there is no
-  # `wezterm list-keys`, and the config is modular so the table lives in
-  # config/bindings.lua. mod.SUPER is 'ALT' in this config, not Windows
-  # Super — that is a deliberate choice documented in bindings.lua.
-  echo "### wezterm  (leader: Alt+Ctrl+Space)  — F1-F6 work with no prefix"
-  f=$HOME/.config/wezterm/config/bindings.lua
-  if [[ -f $f ]]; then
-    grep -E "\{ *key *= *'" "$f" |
-      sed -E "s/.*key *= *'([^']*)'.*mods *= *([^,]*),.*/\1|\2/" |
-      while IFS='|' read -r key mods; do
-        [[ -z $key || -z $mods ]] && continue
-        printf '  %-14s %s\n' "$key" "$mods"
-      done
-    echo "  key tables: Alt+Ctrl+Space f=resize_font  p=resize_pane"
-    echo "              (backdrops_panel / wallpaper_picker open via their own binds)"
-  else
-    echo "  (bindings.lua not found)"
-  fi
+  # --- wezterm (via `wezterm show-keys` / Lua source of truth — E3) ---
+  echo "### wezterm  (leader: Alt+Ctrl+Space)"
+  dump_wezterm
   echo
 
   # --- kitty ------------------------------------------------------------
@@ -76,10 +122,15 @@ trap 'rm -f "$tmp"' EXIT
   else
     echo "  (custom.conf not found)"
   fi
-} > "$tmp.out" 2>/dev/null
+} > "$workdir/all.out" 2>/dev/null
+
+if [ "$MODE" = "dump" ] || [ ! -t 1 ] || ! command -v fzf >/dev/null 2>&1; then
+  cat "$workdir/all.out"
+  exit 0
+fi
 
 fzf --ansi --no-sort \
   --header='tmux C-a · nvim Space · wezterm Alt+Ctrl+Space · kitty Ctrl+Shift — every layer, one list' \
   --prompt='keys> ' \
   --preview 'printf "%s\n" {} | fold -sw 100' \
-  < "$tmp.out"
+  < "$workdir/all.out"
