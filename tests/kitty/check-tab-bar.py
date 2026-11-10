@@ -677,6 +677,49 @@ class KittyTabBarTests(unittest.TestCase):
         self.assertEqual(len(win1.written_calls), 1)
         self.assertEqual(tab.navigated, [])
 
+    def test_pass_keys_exact_basename_matrix_and_1pane_readline_passthrough(self) -> None:
+        for direction, key in (("left", "ctrl+h"), ("bottom", "ctrl+j"), ("top", "ctrl+k"), ("right", "ctrl+l")):
+            solo = _FakeWindow([["zsh"]], window_id=1)
+            solo_tab = _FakeTab([solo], tab_id=1)
+            pass_keys.handle_result(["pass_keys.py", direction, key], None, 1, _FakeBoss([solo_tab]))
+            self.assertEqual(len(solo.written_calls), 1, f"1-pane {key} must pass through to shell")
+            self.assertEqual(solo_tab.navigated, [], f"1-pane {key} must not navigate")
+
+        should_pass_to_app = (
+            ["nvim", "a.lua"],
+            ["/usr/bin/nvim"],
+            ["vim"],
+            ["gvim"],
+            ["view"],
+            ["vimdiff"],
+            ["tmux"],
+            ["/mnt/c/tools/NVIM.EXE"],
+        )
+        for cmdline in should_pass_to_app:
+            w1 = _FakeWindow([cmdline], window_id=1)
+            w2 = _FakeWindow([["zsh"]], window_id=2)
+            t = _FakeTab([w1, w2], tab_id=1)
+            pass_keys.handle_result(["pass_keys.py", "left", "ctrl+h"], None, 1, _FakeBoss([t]))
+            self.assertEqual(len(w1.written_calls), 1, f"{cmdline} should receive ctrl+h")
+            self.assertEqual(t.navigated, [], f"{cmdline} should not switch kitty window")
+
+        should_navigate_kitty = (
+            ["vim-fake"],
+            ["notnvim"],
+            ["tmux-wrapper"],
+            ["/usr/local/bin/vim-fake"],
+            ["/opt/notnvim/bin/zsh"],
+            ["my-tmux"],
+            ["bash"],
+        )
+        for cmdline in should_navigate_kitty:
+            w1 = _FakeWindow([cmdline], window_id=1)
+            w2 = _FakeWindow([["zsh"]], window_id=2)
+            t = _FakeTab([w1, w2], tab_id=1)
+            pass_keys.handle_result(["pass_keys.py", "left", "ctrl+h"], None, 1, _FakeBoss([t]))
+            self.assertEqual(t.navigated, ["left"], f"{cmdline} falsely matched vim/tmux regex")
+            self.assertEqual(w1.written_calls, [], f"{cmdline} should navigate instead of writing child")
+
     def test_custom_conf_hud_and_remote_control(self) -> None:
         conf = (KITTY_DIR / "custom.conf").read_text()
         self.assertIn("tab_bar_min_tabs 1", conf)
