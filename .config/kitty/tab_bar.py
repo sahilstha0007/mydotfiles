@@ -32,6 +32,8 @@ from kitty.tab_bar import (
 _POWER_SUPPLY_DIR = "/sys/class/power_supply"
 
 # In-memory caches to eliminate redundant kernel/fs calls
+_bat_lock = threading.Lock()
+_bat_refreshing = False
 _last_bat_query = 0.0
 _cached_bat_str = ""
 _cached_bat_fg = None
@@ -80,6 +82,8 @@ _last_git_query = 0.0
 _last_git_cwd = ""
 _cached_git_str = ""
 
+_tmux_lock = threading.Lock()
+_tmux_refreshing = False
 _last_tmux_query = 0.0
 _cached_tmux_str = ""
 
@@ -103,50 +107,74 @@ def _extract_exe_name(cmd0: str) -> str:
     return exe
 
 
+def _refresh_battery() -> None:
+    """Refresh battery status from sysfs ACPI asynchronously without blocking draw_tab."""
+    global _last_bat_query, _cached_bat_str, _cached_bat_fg, _cached_bat_raw, _bat_refreshing
+    bat_str = ""
+    bat_fg = None
+    bat_raw = None
+    try:
+        for bat_dir in sorted(glob.glob(os.path.join(_POWER_SUPPLY_DIR, "BAT*"))):
+            try:
+                cap_file = os.path.join(bat_dir, "capacity")
+                stat_file = os.path.join(bat_dir, "status")
+                if not os.path.exists(cap_file):
+                    continue
+                with open(cap_file, "r") as f:
+                    cap = int(f.read().strip())
+                stat = ""
+                if os.path.exists(stat_file):
+                    with open(stat_file, "r") as f:
+                        stat = f.read().strip().lower()
+                raw_fg = None
+                if stat == "charging":
+                    icon = "󰂄"
+                    raw_fg = _BAT_CHARGING_RGB
+                elif stat == "full" or cap >= 98:
+                    continue
+                elif cap >= 80:
+                    icon = "󰁹"
+                elif cap >= 50:
+                    icon = "󰁿"
+                elif cap >= 20:
+                    icon = "󰁼"
+                else:
+                    icon = "󰁺"
+                    raw_fg = _BAT_LOW_RGB
+                bat_str = f"{icon} {cap}%"
+                bat_fg = as_rgb(raw_fg) if raw_fg is not None else None
+                bat_raw = raw_fg
+                break
+            except Exception:
+                continue
+    except Exception:
+        pass
+    finally:
+        with _bat_lock:
+            _cached_bat_str = bat_str
+            _cached_bat_fg = bat_fg
+            _cached_bat_raw = bat_raw
+            _last_bat_query = time.monotonic()
+            _bat_refreshing = False
+
+
 def get_battery() -> tuple[str, int | None]:
-    global _last_bat_query, _cached_bat_str, _cached_bat_fg, _cached_bat_raw
+    """Return cached battery label immediately; refresh sysfs in background on 20s TTL."""
+    global _bat_refreshing
     now = time.monotonic()
-    if _last_bat_query > 0.0 and now - _last_bat_query < 20.0:
-        return _cached_bat_str, _cached_bat_fg
-    _last_bat_query = now
-    for bat_dir in sorted(glob.glob(os.path.join(_POWER_SUPPLY_DIR, "BAT*"))):
-        try:
-            cap_file = os.path.join(bat_dir, "capacity")
-            stat_file = os.path.join(bat_dir, "status")
-            if not os.path.exists(cap_file):
-                continue
-            with open(cap_file, "r") as f:
-                cap = int(f.read().strip())
-            stat = ""
-            if os.path.exists(stat_file):
-                with open(stat_file, "r") as f:
-                    stat = f.read().strip().lower()
-            raw_fg = None
-            if stat == "charging":
-                icon = "󰂄"
-                raw_fg = _BAT_CHARGING_RGB
-            elif stat == "full" or cap >= 98:
-                continue
-            elif cap >= 80:
-                icon = "󰁹"
-            elif cap >= 50:
-                icon = "󰁿"
-            elif cap >= 20:
-                icon = "󰁼"
-            else:
-                icon = "󰁺"
-                raw_fg = _BAT_LOW_RGB
-            fg = as_rgb(raw_fg) if raw_fg is not None else None
-            _cached_bat_str = f"{icon} {cap}%"
-            _cached_bat_fg = fg
-            _cached_bat_raw = raw_fg
+    with _bat_lock:
+        if _last_bat_query > 0.0 and now - _last_bat_query < 20.0:
             return _cached_bat_str, _cached_bat_fg
-        except Exception:
-            continue
-    _cached_bat_str = ""
-    _cached_bat_fg = None
-    _cached_bat_raw = None
-    return _cached_bat_str, _cached_bat_fg
+        if _bat_refreshing:
+            return _cached_bat_str, _cached_bat_fg
+        _bat_refreshing = True
+        cached = (_cached_bat_str, _cached_bat_fg)
+    try:
+        threading.Thread(target=_refresh_battery, daemon=True).start()
+    except Exception:
+        with _bat_lock:
+            _bat_refreshing = False
+    return cached
 
 
 def get_clock() -> str:
@@ -229,15 +257,12 @@ def get_git_info(cwd: str) -> str:
     return _cached_git_str
 
 
-def get_tmux_session() -> str:
-    global _last_tmux_query, _cached_tmux_str
-    now = time.monotonic()
-    if _last_tmux_query > 0.0 and now - _last_tmux_query < 5.0:
-        return _cached_tmux_str
-    _last_tmux_query = now
+def _in_tmux_session() -> bool:
+    """Return True when inside TMUX or the active Kitty window runs tmux (pure local check)."""
+    if os.environ.get("TMUX"):
+        return True
     try:
         boss = get_boss()
-        is_tmux = False
         if boss and boss.active_tab and boss.active_tab.active_window:
             child = boss.active_tab.active_window.child
             if child and child.foreground_processes:
@@ -245,24 +270,59 @@ def get_tmux_session() -> str:
                     cmdline = p.get("cmdline") or []
                     exe = _extract_exe_name(cmdline[0]) if cmdline else ""
                     if exe == "tmux" or exe.startswith("tmux:"):
-                        is_tmux = True
-                        break
-        if is_tmux or os.environ.get("TMUX"):
+                        return True
+    except Exception:
+        pass
+    return False
+
+
+def _refresh_tmux_session() -> None:
+    """Refresh cached tmux session pill in background without blocking draw_tab."""
+    global _last_tmux_query, _cached_tmux_str, _tmux_refreshing
+    result = ""
+    try:
+        if shutil.which("tmux") is not None:
             res = subprocess.run(
                 ["tmux", "display-message", "-p", "#S"],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.DEVNULL,
                 text=True,
-                timeout=0.05,
+                timeout=0.08,
             )
             name = res.stdout.strip() if getattr(res, "returncode", 0) == 0 else ""
             if name:
-                _cached_tmux_str = f" {name}"
-                return _cached_tmux_str
+                result = f" {name}"
     except Exception:
         pass
-    _cached_tmux_str = ""
-    return _cached_tmux_str
+    finally:
+        with _tmux_lock:
+            _cached_tmux_str = result
+            _last_tmux_query = time.monotonic()
+            _tmux_refreshing = False
+
+
+def get_tmux_session() -> str:
+    """Return cached tmux session pill immediately; refresh asynchronously on 5s TTL."""
+    global _last_tmux_query, _cached_tmux_str, _tmux_refreshing
+    now = time.monotonic()
+    in_tmux = _in_tmux_session()
+    with _tmux_lock:
+        if not in_tmux:
+            _cached_tmux_str = ""
+            _last_tmux_query = now
+            return ""
+        if _last_tmux_query > 0.0 and now - _last_tmux_query < 5.0:
+            return _cached_tmux_str
+        if _tmux_refreshing:
+            return _cached_tmux_str
+        _tmux_refreshing = True
+        cached = _cached_tmux_str
+    try:
+        threading.Thread(target=_refresh_tmux_session, daemon=True).start()
+    except Exception:
+        with _tmux_lock:
+            _tmux_refreshing = False
+    return cached
 
 
 AGENT_NAMES = (
@@ -319,20 +379,21 @@ def _refresh_tmux_agents() -> None:
     global _last_agent_query, _cached_agent_str, _cached_tmux_agent_str, _agent_refreshing
     result = ""
     try:
-        res = subprocess.run(
-            ["tmux", "list-panes", "-a", "-F", "#{pane_current_command}"],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.DEVNULL,
-            text=True,
-            timeout=0.08,
-        )
-        if getattr(res, "returncode", 0) == 0:
-            agent_names: set[str] = set()
-            for line in res.stdout.strip().split("\n"):
-                matched = _match_agent_name(line)
-                if matched:
-                    agent_names.add(matched)
-            result = _format_agent_names(agent_names)
+        if shutil.which("tmux") is not None:
+            res = subprocess.run(
+                ["tmux", "list-panes", "-a", "-F", "#{pane_current_command}"],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.DEVNULL,
+                text=True,
+                timeout=0.08,
+            )
+            if getattr(res, "returncode", 0) == 0:
+                agent_names: set[str] = set()
+                for line in res.stdout.strip().split("\n"):
+                    matched = _match_agent_name(line)
+                    if matched:
+                        agent_names.add(matched)
+                result = _format_agent_names(agent_names)
     except Exception:
         pass
     finally:
@@ -358,7 +419,7 @@ def get_active_agents() -> str:
             _last_agent_query = now
         return result
 
-    if os.environ.get("TMUX_TMPDIR") and shutil.which("tmux"):
+    if os.environ.get("TMUX_TMPDIR"):
         with _agent_lock:
             if _last_agent_query > 0.0 and now - _last_agent_query < 5.0:
                 return _cached_agent_str
@@ -394,7 +455,7 @@ def _refresh_containers() -> None:
                 stdout=subprocess.PIPE,
                 stderr=subprocess.DEVNULL,
                 text=True,
-                timeout=0.3,
+                timeout=0.1,
             )
             if getattr(res, "returncode", 0) == 0:
                 lines = [l for l in res.stdout.strip().split("\n") if l]
@@ -420,10 +481,6 @@ def get_containers() -> str:
             return _cached_container_str
         if _container_refreshing:
             return _cached_container_str
-        if not any(shutil.which(r) for r in ("podman", "docker")):
-            _cached_container_str = ""
-            _last_container_query = now
-            return _cached_container_str
         _container_refreshing = True
         cached = _cached_container_str
 
@@ -435,11 +492,14 @@ def get_containers() -> str:
     return cached
 
 
+_pill_palette_cache: dict[tuple[int, ...], dict[str, int]] = {}
+
+
 def _resolve_pill_palette(draw_data: DrawData) -> dict[str, int]:
-    """Resolve and WCAG-repair raw 24-bit right-status pill colors."""
+    """Resolve and WCAG-repair raw 24-bit right-status pill colors (memoized)."""
     default_bg_raw = color_as_int(draw_data.default_bg) & 0xFFFFFF
     accent_bg_raw = color_as_int(draw_data.active_bg) & 0xFFFFFF
-    accent_fg_raw = _ensure_contrast_rgb(color_as_int(draw_data.active_fg), accent_bg_raw)
+    active_fg_raw = color_as_int(draw_data.active_fg) & 0xFFFFFF
     pill_bg_raw = color_as_int(draw_data.inactive_bg) & 0xFFFFFF
     try:
         opts = get_options()
@@ -452,10 +512,23 @@ def _resolve_pill_palette(draw_data: DrawData) -> dict[str, int]:
         git_raw = 0x8DB9A3
         agent_raw = 0xBDA5E3
         cont_raw = 0x63CDCF
-    return {
+    key = (
+        default_bg_raw,
+        accent_bg_raw,
+        active_fg_raw,
+        pill_bg_raw,
+        mid_raw,
+        git_raw,
+        agent_raw,
+        cont_raw,
+    )
+    cached = _pill_palette_cache.get(key)
+    if cached is not None:
+        return cached
+    pal = {
         "default_bg": default_bg_raw,
         "accent_bg": accent_bg_raw,
-        "accent_fg": accent_fg_raw,
+        "accent_fg": _ensure_contrast_rgb(active_fg_raw, accent_bg_raw),
         "pill_bg": pill_bg_raw,
         "mid_fg": _ensure_contrast_rgb(mid_raw, pill_bg_raw),
         "git_fg": _ensure_contrast_rgb(git_raw, pill_bg_raw),
@@ -465,6 +538,8 @@ def _resolve_pill_palette(draw_data: DrawData) -> dict[str, int]:
         "bat_charging_fg": _ensure_contrast_rgb(_BAT_CHARGING_RGB, pill_bg_raw),
         "bat_low_fg": _ensure_contrast_rgb(_BAT_LOW_RGB, pill_bg_raw),
     }
+    _pill_palette_cache[key] = pal
+    return pal
 
 
 def draw_right_status(draw_data: DrawData, screen: Screen) -> None:

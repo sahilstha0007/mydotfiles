@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Unit tests for Kitty tab_bar.py caching/matching, pass_keys.py, and custom.conf."""
 
+import ast
 import glob
 import os
 import subprocess
@@ -207,17 +208,22 @@ def _wait_until(predicate, timeout: float = 1.0) -> None:
 
 class KittyTabBarTests(unittest.TestCase):
     def setUp(self) -> None:
-        tab_bar._last_bat_query = 0.0
-        tab_bar._cached_bat_str = ""
-        tab_bar._cached_bat_fg = None
+        with tab_bar._bat_lock:
+            tab_bar._last_bat_query = 0.0
+            tab_bar._cached_bat_str = ""
+            tab_bar._cached_bat_fg = None
+            tab_bar._cached_bat_raw = None
+            tab_bar._bat_refreshing = False
         tab_bar._POWER_SUPPLY_DIR = "/sys/class/power_supply"
 
         tab_bar._last_git_query = 0.0
         tab_bar._last_git_cwd = ""
         tab_bar._cached_git_str = ""
 
-        tab_bar._last_tmux_query = 0.0
-        tab_bar._cached_tmux_str = ""
+        with tab_bar._tmux_lock:
+            tab_bar._last_tmux_query = 0.0
+            tab_bar._cached_tmux_str = ""
+            tab_bar._tmux_refreshing = False
 
         with tab_bar._agent_lock:
             tab_bar._last_agent_query = 0.0
@@ -312,20 +318,178 @@ class KittyTabBarTests(unittest.TestCase):
         def fake_run(cmd, **kwargs):
             nonlocal run_calls
             run_calls += 1
-            return subprocess.CompletedProcess(cmd, 0, stdout="")
+            time.sleep(0.08)
+            stdout = "" if run_calls == 1 else "dev-work\n"
+            return subprocess.CompletedProcess(cmd, 0, stdout=stdout)
 
         with (
             mock.patch.object(tab_bar.time, "monotonic", side_effect=clock),
             mock.patch.object(tab_bar, "get_boss", return_value=boss),
+            mock.patch.object(tab_bar.shutil, "which", return_value="/usr/bin/tmux"),
             mock.patch.object(tab_bar.subprocess, "run", side_effect=fake_run),
         ):
-            self.assertEqual(tab_bar.get_tmux_session(), "")
+            t0 = time.monotonic()
+            first = tab_bar.get_tmux_session()
+            elapsed = time.monotonic() - t0
+            self.assertEqual(first, "")
+            self.assertLess(elapsed, 0.04, "get_tmux_session() blocked the UI thread")
+
+            _wait_until(lambda: not tab_bar._tmux_refreshing)
             self.assertEqual(run_calls, 1)
+            self.assertGreater(tab_bar._last_tmux_query, 0.0)
 
             clock.now = 304.0
             self.assertEqual(tab_bar.get_tmux_session(), "")
             self.assertEqual(tab_bar.get_tmux_session(), "")
             self.assertEqual(run_calls, 1)
+
+            clock.now = 306.0
+            self.assertEqual(tab_bar.get_tmux_session(), "")
+            _wait_until(lambda: not tab_bar._tmux_refreshing)
+            self.assertEqual(run_calls, 2)
+            self.assertEqual(tab_bar.get_tmux_session(), " dev-work")
+
+    def test_draw_tab_no_synchronous_subprocess_ast(self) -> None:
+        src = (KITTY_DIR / "tab_bar.py").read_text(encoding="utf-8")
+        tree = ast.parse(src)
+        funcs = {
+            node.name: node
+            for node in tree.body
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+        }
+        self.assertIn("draw_tab", funcs)
+
+        visited: set[str] = set()
+        queue = ["draw_tab"]
+        sync_subprocess_hits: list[str] = []
+
+        while queue:
+            fn_name = queue.pop(0)
+            if fn_name in visited:
+                continue
+            visited.add(fn_name)
+            fn_node = funcs.get(fn_name)
+            if fn_node is None:
+                continue
+            for node in ast.walk(fn_node):
+                if isinstance(node, ast.Call):
+                    target = node.func
+                    if isinstance(target, ast.Attribute) and isinstance(target.value, ast.Name):
+                        mod = target.value.id
+                        attr = target.attr
+                        if mod == "subprocess" or (mod == "os" and attr in ("system", "popen", "spawnv", "spawnvp")):
+                            sync_subprocess_hits.append(f"{fn_name}->{mod}.{attr}")
+                    elif isinstance(target, ast.Name):
+                        callee = target.id
+                        if callee == "Popen":
+                            sync_subprocess_hits.append(f"{fn_name}->Popen")
+                        if callee in funcs and callee not in visited:
+                            queue.append(callee)
+
+        self.assertEqual(
+            sync_subprocess_hits,
+            [],
+            f"Synchronous subprocess calls reachable from draw_tab: {sync_subprocess_hits}",
+        )
+
+    def test_draw_tab_hung_stubs_under_5ms_both_modes(self) -> None:
+        class _FakeCursor:
+            def __init__(self) -> None:
+                self.x = 0
+                self.bg = 0
+                self.fg = 0
+
+            def reset_display_attrs(self) -> None:
+                self.bg = 0
+                self.fg = 0
+
+        class _FakeScreen:
+            def __init__(self, columns: int = 160) -> None:
+                self.columns = columns
+                self.cursor = _FakeCursor()
+                self.drawn: list[str] = []
+
+            def draw(self, text: str) -> None:
+                self.drawn.append(text)
+                self.cursor.x += tab_bar.wcswidth(text)
+
+        class _FakeDrawData:
+            leading_spaces = 0
+            sep = " "
+            trailing_spaces = 0
+            bell_on_tab = ""
+            alpha = (0.85, 0.85, 0.85, 0.85)
+            active_fg = 0x192330
+            active_bg = 0x719CD6
+            inactive_fg = 0xCDCECF
+            inactive_bg = 0x212E3F
+            default_bg = 0x192330
+            title_template = "{title}"
+            active_title_template = None
+            tab_activity_symbol = ""
+            powerline_style = "round"
+            tab_bar_edge = "top"
+            max_tab_title_length = 22
+            max_tab_title_lines = 1
+            wrap_width = 0
+            os_window_id = 0
+
+            def tab_fg(self, tab) -> int:
+                return self.active_fg if tab.is_active else self.inactive_fg
+
+            def tab_bg(self, tab) -> int:
+                return self.active_bg if tab.is_active else self.inactive_bg
+
+        class _FakeExtraData:
+            for_layout = False
+
+        with tempfile.TemporaryDirectory(prefix="kitty-hung-stubs-") as tmp:
+            stub_dir = Path(tmp)
+            for cmd in ("tmux", "docker", "podman"):
+                p = stub_dir / cmd
+                p.write_text("#!/bin/sh\nsleep 2\n", encoding="utf-8")
+                p.chmod(0o755)
+
+            path_with_stubs = f"{stub_dir}:{os.environ.get('PATH', '')}"
+            dd = _FakeDrawData()
+            ed = _FakeExtraData()
+
+            for mode, env_updates, boss in (
+                ("bare", {"PATH": path_with_stubs}, _FakeBoss([_FakeTab([_FakeWindow([["zsh"]])])])),
+                (
+                    "tmux",
+                    {"PATH": path_with_stubs, "TMUX": "/tmp/tmux-1000/default,1,0"},
+                    _FakeBoss([_FakeTab([_FakeWindow([["tmux"]])])]),
+                ),
+            ):
+                self.setUp()
+                env_patch = {**os.environ, **env_updates}
+                if mode == "bare":
+                    env_patch.pop("TMUX", None)
+                screen = _FakeScreen()
+                tab = TabBarData(title="zsh", is_active=True)
+                with (
+                    mock.patch.dict(os.environ, env_patch, clear=True),
+                    mock.patch.object(tab_bar, "get_boss", return_value=boss),
+                ):
+                    t0 = time.perf_counter()
+                    tab_bar.draw_tab(dd, screen, tab, 0, 40, 1, True, ed)
+                    elapsed_ms = (time.perf_counter() - t0) * 1000.0
+                self.assertLess(
+                    elapsed_ms,
+                    5.0,
+                    f"draw_tab took {elapsed_ms:.2f} ms in {mode} mode with hung stubs",
+                )
+                # Wait briefly for timed-out background workers so tempdir cleanup never races
+                _wait_until(
+                    lambda: (
+                        not tab_bar._tmux_refreshing
+                        and not tab_bar._container_refreshing
+                        and not tab_bar._agent_refreshing
+                        and not tab_bar._bat_refreshing
+                    ),
+                    timeout=1.0,
+                )
 
     def test_battery_empty_cached_within_ttl_and_scans_bat_glob(self) -> None:
         clock = _FakeClock(400.0)
@@ -344,6 +508,7 @@ class KittyTabBarTests(unittest.TestCase):
                 mock.patch.object(tab_bar.glob, "glob", side_effect=counting_glob),
             ):
                 self.assertEqual(tab_bar.get_battery(), ("", None))
+                _wait_until(lambda: not tab_bar._bat_refreshing)
                 self.assertEqual(glob_calls, 1)
 
                 clock.now = 415.0
@@ -358,11 +523,15 @@ class KittyTabBarTests(unittest.TestCase):
 
             clock.now = 425.0
             with mock.patch.object(tab_bar.time, "monotonic", side_effect=clock):
+                tab_bar.get_battery()
+                _wait_until(lambda: not tab_bar._bat_refreshing)
                 self.assertEqual(tab_bar.get_battery(), ("󰁿 64%", None))
 
             (bat1 / "status").write_text("Charging\n")
             clock.now = 450.0
             with mock.patch.object(tab_bar.time, "monotonic", side_effect=clock):
+                tab_bar.get_battery()
+                _wait_until(lambda: not tab_bar._bat_refreshing)
                 bat_str, bat_fg = tab_bar.get_battery()
                 self.assertEqual(bat_str, "󰂄 64%")
                 self.assertIsNotNone(bat_fg)
