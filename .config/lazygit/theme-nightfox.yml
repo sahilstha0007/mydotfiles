@@ -10,10 +10,10 @@ gui:
       - '#719cd6'
       - bold
     inactiveBorderColor:
-      - '#575860'
+      - '#8e9099'
     selectedLineBgColor:
       - '#212e3f'
     selectedRangeBgColor:
       - '#212e3f'
     optionsTextColor:
-      - '#719cd6'
+      - '#90b2df'

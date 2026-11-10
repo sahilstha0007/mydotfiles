@@ -6,7 +6,7 @@ gui:
       - '#719cd6'
       - bold
     inactiveBorderColor:
-      - '#575860'
+      - '#8e9099'
     selectedLineBgColor:
       - reverse
 reporting: local

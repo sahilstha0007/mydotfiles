@@ -773,7 +773,7 @@ def audit_tools(aud: Auditor) -> None:
         if key in btop_ignore:
             continue
         req = MIN_UI if key in btop_ui_borders else MIN_TEXT
-        aud.check("btop", "nightfox", f"theme[{key}] on bg", hexval, btop_bg, req)
+        aud.check_against_effective("btop", "nightfox", f"theme[{key}] on bg", hexval, btop_bg, req)
     if "selected_fg" in btop_vals and "selected_bg" in btop_vals:
         aud.check("btop", "nightfox", "selected_fg on selected_bg", btop_vals["selected_fg"], btop_vals["selected_bg"])
 
@@ -784,11 +784,11 @@ def audit_tools(aud: Auditor) -> None:
     m_sel_bg = re.search(r"selectedLineBgColor:\s*\n\s*-\s*'(#[0-9a-fA-F]{6})'", lg_txt)
     m_opt = re.search(r"optionsTextColor:\s*\n\s*-\s*'(#[0-9a-fA-F]{6})'", lg_txt)
     if m_active:
-        aud.check("lazygit", "nightfox", "activeBorderColor on bg", m_active.group(1), nf_bg, MIN_UI)
+        aud.check_against_effective("lazygit", "nightfox", "activeBorderColor on bg", m_active.group(1), nf_bg, MIN_UI)
     if m_inactive:
-        aud.check("lazygit", "nightfox", "inactiveBorderColor on bg", m_inactive.group(1), nf_bg, MIN_UI)
+        aud.check_against_effective("lazygit", "nightfox", "inactiveBorderColor on bg", m_inactive.group(1), nf_bg, MIN_UI)
     if m_opt:
-        aud.check("lazygit", "nightfox", "optionsTextColor on bg", m_opt.group(1), nf_bg, MIN_TEXT)
+        aud.check_against_effective("lazygit", "nightfox", "optionsTextColor on bg", m_opt.group(1), nf_bg, MIN_TEXT)
     if m_sel_bg:
         aud.check("lazygit", "nightfox", "main_fg on selectedLineBgColor", "#cdcecf", m_sel_bg.group(1), MIN_TEXT)
 
@@ -797,19 +797,19 @@ def audit_tools(aud: Auditor) -> None:
     m_ld_act = re.search(r"activeBorderColor:\s*\n\s*-\s*'(#[0-9a-fA-F]{6})'", ld_txt)
     m_ld_ina = re.search(r"inactiveBorderColor:\s*\n\s*-\s*'(#[0-9a-fA-F]{6})'", ld_txt)
     if m_ld_act:
-        aud.check("lazydocker", "nightfox", "activeBorderColor on bg", m_ld_act.group(1), nf_bg, MIN_UI)
+        aud.check_against_effective("lazydocker", "nightfox", "activeBorderColor on bg", m_ld_act.group(1), nf_bg, MIN_UI)
     if m_ld_ina:
-        aud.check("lazydocker", "nightfox", "inactiveBorderColor on bg", m_ld_ina.group(1), nf_bg, MIN_UI)
+        aud.check_against_effective("lazydocker", "nightfox", "inactiveBorderColor on bg", m_ld_ina.group(1), nf_bg, MIN_UI)
 
     # bat/themes/nightfox.tmTheme
     plist = plistlib.loads((CONFIG_ROOT / "bat" / "themes" / "nightfox.tmTheme").read_bytes())
     gset = plist["settings"][0]["settings"]
     bat_bg = gset["background"]
-    aud.check("bat", "nightfox", "foreground on background", gset["foreground"], bat_bg)
+    aud.check_against_effective("bat", "nightfox", "foreground on background", gset["foreground"], bat_bg)
     if "gutterForeground" in gset:
-        aud.check("bat", "nightfox", "gutterForeground on background", gset["gutterForeground"], bat_bg)
+        aud.check_against_effective("bat", "nightfox", "gutterForeground on background", gset["gutterForeground"], bat_bg)
     if "misspelling" in gset:
-        aud.check("bat", "nightfox", "misspelling on background", gset["misspelling"], bat_bg)
+        aud.check_against_effective("bat", "nightfox", "misspelling on background", gset["misspelling"], bat_bg)
     seen_fgs: set[str] = set()
     for item in plist["settings"][1:]:
         st = item.get("settings", {})
@@ -817,7 +817,7 @@ def audit_tools(aud: Auditor) -> None:
         if fg and fg.lower() not in seen_fgs and re.match(r"^#[0-9a-fA-F]{6}$", fg):
             seen_fgs.add(fg.lower())
             name = item.get("name") or item.get("scope", "scope")[:30]
-            aud.check("bat", "nightfox", f"scope {fg} ({name})", fg, bat_bg)
+            aud.check_against_effective("bat", "nightfox", f"scope {fg} ({name})", fg, bat_bg)
 
 
 def main(argv: list[str]) -> int:
