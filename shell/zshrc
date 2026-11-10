@@ -8,6 +8,12 @@
 # ---------------------------------------------------------------------------
 export EDITOR="nvim"
 export VISUAL="nvim"
+# Ensure TMUX_TMPDIR exists in interactive shells without spawning external mkdir/chmod (D5).
+if [[ -n "$TMUX_TMPDIR" && ! -d "$TMUX_TMPDIR" ]]; then
+  zmodload -F zsh/files b:zf_mkdir b:zf_chmod 2>/dev/null && {
+    zf_mkdir -p "$TMUX_TMPDIR" 2>/dev/null && zf_chmod 700 "$TMUX_TMPDIR" 2>/dev/null
+  }
+fi
 # Detect first available browser (fallback to xdg-open if present)
 for _browser in helium-browser brave chromium google-chrome firefox xdg-open; do
   if (( $+commands[$_browser] )); then
@@ -63,9 +69,14 @@ if [ -d "$ZSH" ]; then
   # Add custom completions to fpath BEFORE compinit
   [ -d "$ZSH_CUSTOM/plugins/zsh-completions/src" ] && fpath=("$ZSH_CUSTOM/plugins/zsh-completions/src" $fpath)
 
-  # Fast cached compinit (-C skips checking newer completion definitions on every boot)
+  # Fast cached compinit (-C skips checking newer completion definitions on every boot).
+  # Wrap missing external `mv` with zsh/files `zf_mv` so minimal-PATH startup never fails in compdump:138 (D4).
   autoload -Uz compinit
+  if (( ! $+commands[mv] )); then
+    zmodload -F zsh/files b:zf_mv 2>/dev/null && mv() { zf_mv "$@"; }
+  fi
   compinit -C -d "${ZSH_COMPDUMP:-$HOME/.zcompdump-${HOST}-${ZSH_VERSION}}"
+  (( $+functions[mv] )) && unfunction mv
 
   # Load core plugins directly
   [ -f "$ZSH/plugins/git/git.plugin.zsh" ]   && source "$ZSH/plugins/git/git.plugin.zsh"
@@ -118,7 +129,7 @@ _zsh_cached_init() {
   shift 3
   [[ -n "$bin" ]] || return 0
   if [[ ! -s "$cache" || ! "$bin" -ot "$cache" || ( -n "$dep" && -e "$dep" && ! "$dep" -ot "$cache" ) ]]; then
-    mkdir -p "${cache:h}"
+    zmodload -F zsh/files b:zf_mkdir 2>/dev/null && zf_mkdir -p "${cache:h}" 2>/dev/null || mkdir -p "${cache:h}"
     "$@" >| "$cache" 2>/dev/null || { eval "$("$@")"; return; }
   fi
   source "$cache"
@@ -361,27 +372,6 @@ if command -v tmux >/dev/null 2>&1; then
     fi
   }
   alias td='tmux detach-client'
-fi
-
-# jcode: claude-code-style /model shortcut (routes through omniroute profile when installed)
-if (( $+commands[jcode] )); then
-  jcode() {
-    if [ "$1" = "/model" ]; then
-      shift
-      if [ $# -eq 0 ]; then
-        command jcode --provider-profile omniroute
-      else
-        local m="$1"; shift
-        if [ $# -gt 0 ]; then
-          command jcode run --provider-profile omniroute -m "$m" "$@"
-        else
-          command jcode --provider-profile omniroute -m "$m"
-        fi
-      fi
-      return
-    fi
-    command jcode "$@"
-  }
 fi
 
 # OmniRoute user-service aliases (loaded in interactive shells only, not ~/.zshenv)

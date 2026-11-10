@@ -4,7 +4,10 @@
 # =============================================================================
 
 # Tabitoken / Anthropic-compatible endpoint
-[ -f "$HOME/.config/secrets/anthropic.env" ] && . "$HOME/.config/secrets/anthropic.env"
+if [ -f "$HOME/.config/secrets/anthropic.env" ]; then
+  # shellcheck source=/dev/null
+  . "$HOME/.config/secrets/anthropic.env"
+fi
 
 # --- pager + ls --------------------------------------------------------------
 # git pipes into less by default. Without these, `git log` in a non-tty (or

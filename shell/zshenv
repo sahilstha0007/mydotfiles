@@ -1,5 +1,5 @@
 
-# Added by jcode installer (prepend once; nested shells must not duplicate PATH)
+# PATH setup (prepend once; nested shells must not duplicate PATH)
 case ":$PATH:" in
     *:$HOME/.local/bin:*) ;;
     *) export PATH="$HOME/.local/bin:$PATH" ;;
@@ -13,14 +13,25 @@ esac
 # -----------------------------------------------------
 # TMUX — one shared socket dir so kitty & wezterm share
 # the same tmux server (and therefore the same sessions).
-# ~/.zshenv is sourced by every zsh, so both terminals
-# agree on where tmux sockets live.
+# Directory creation lives in install.sh & interactive zshrc
+# so non-interactive `zsh -c true` performs zero extra forks.
 # -----------------------------------------------------
 export TMUX_TMPDIR="${TMUX_TMPDIR:-$HOME/.cache/tmux}"
-[ -d "$TMUX_TMPDIR" ] || { mkdir -p "$TMUX_TMPDIR" 2>/dev/null && chmod 700 "$TMUX_TMPDIR" 2>/dev/null; }
 
 # Truecolor advertisement for tools that sniff COLORTERM instead of TERM.
-export COLORTERM=truecolor
+# Never force over SSH unless TERM explicitly indicates 24-bit color (D3).
+if [ -z "${COLORTERM:-}" ]; then
+    case "${TERM:-}" in
+        *kitty*|*wezterm*|*-direct)
+            export COLORTERM=truecolor
+            ;;
+        *)
+            if [ -z "${SSH_CONNECTION:-}${SSH_TTY:-}${SSH_CLIENT:-}" ]; then
+                export COLORTERM=truecolor
+            fi
+            ;;
+    esac
+fi
 
 # Keep Neovim log files out of working directories (e.g. .config/wezterm/nvim.log).
 export NVIM_LOG_FILE="${XDG_STATE_HOME:-$HOME/.local/state}/nvim/nvim.log"
