@@ -480,10 +480,7 @@ def _parse_kitty_theme(path: Path) -> dict[str, str]:
 
 def audit_kitty(aud: Auditor) -> None:
     nf_path = CONFIG_ROOT / "kitty" / "themes" / "nightfox.conf"
-    mat_path = CONFIG_ROOT / "kitty" / "colors-matugen.conf"
     files = [("nightfox", nf_path)]
-    if mat_path.exists():
-        files.append(("colors_matugen", mat_path))
 
     for vname, tpath in files:
         c = _parse_kitty_theme(tpath)
@@ -508,15 +505,52 @@ def audit_kitty(aud: Auditor) -> None:
             if key in c:
                 aud.check_against_effective("kitty", vname, key, c[key], bg)
 
-    # Also measure tab_bar.py hardcoded hexes against nightfox inactive_tab_bg and simulated light pill_bg
-    tab_bar_src = (CONFIG_ROOT / "kitty" / "tab_bar.py").read_text(encoding="utf-8")
-    nf = _parse_kitty_theme(nf_path)
-    hardcoded = [(m.start(), f"0x{m.group(1)}") for m in re.finditer(r"0x([0-9a-fA-F]{6})\b", tab_bar_src)]
-    for pos, hx_raw in hardcoded:
-        line_no = tab_bar_src[:pos].count("\n") + 1
-        hx = "#" + hx_raw[2:].lower()
-        aud.check("kitty", "tab_bar.py", f"hardcoded line {line_no} ({hx}) on nightfox pill_bg", hx, nf["inactive_tab_background"])
-        aud.check("kitty", "tab_bar.py", f"hardcoded line {line_no} ({hx}) on light pill_bg", hx, LIGHT_MATUGEN["surface0"])
+    # Probe real tab_bar.py _resolve_pill_palette across Nightfox, Dark, and Light opts
+    kitty_probe = """
+    import importlib.util, sys, types
+    from pathlib import Path
+    kdir = Path(sys.argv[1])
+    fake_opts = {"inactive_bg": 0x212e3f, "active_bg": 0x719cd6, "active_fg": 0x131a24,
+                 "fg": 0xcdcecf, "c2": 0x8db9a3, "c5": 0xbda5e3, "c6": 0x63cdcf}
+    fk = types.ModuleType("kitty")
+    ff = types.ModuleType("kitty.fast_data_types")
+    ff.Screen = type("Screen", (), {})
+    ff.get_options = lambda: types.SimpleNamespace(
+        foreground=fake_opts["fg"], color2=fake_opts["c2"],
+        color5=fake_opts["c5"], color6=fake_opts["c6"],
+    )
+    ft = types.ModuleType("kitty.tab_bar")
+    ft.DrawData = object; ft.ExtraData = object; ft.TabBarData = object
+    ft.as_rgb = lambda x: x; ft.color_as_int = lambda x: x
+    ft.draw_title = lambda *a: None; ft.get_boss = lambda: None; ft.wcswidth = lambda s: len(s)
+    sys.modules.update({"kitty": fk, "kitty.fast_data_types": ff, "kitty.tab_bar": ft})
+    spec = importlib.util.spec_from_file_location("tab_bar", str(kdir / "tab_bar.py"))
+    tb = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(tb)
+    scenarios = [
+        ("nightfox", 0x212e3f, 0x719cd6, 0x131a24, 0xcdcecf, 0x8db9a3, 0xbda5e3, 0x63cdcf),
+        ("light",    0xccd0da, 0x1e66f5, 0xeff1f5, 0x4c4f69, 0x40a02b, 0x8839ef, 0x179299),
+        ("dark",     0x1f2019, 0xbfce7f, 0x13140d, 0xe4e3d7, 0x576421, 0xa1d0c4, 0x94e2d5),
+    ]
+    for name, ibg, abg, afg, fg, c2, c5, c6 in scenarios:
+        fake_opts.update({"inactive_bg": ibg, "active_bg": abg, "active_fg": afg, "fg": fg, "c2": c2, "c5": c5, "c6": c6})
+        dd = types.SimpleNamespace(default_bg=0x192330, inactive_bg=ibg, active_bg=abg, active_fg=afg)
+        pal = tb._resolve_pill_palette(dd)
+        for role in ("mid_fg", "git_fg", "agent_fg", "container_fg", "tmux_fg", "bat_charging_fg", "bat_low_fg"):
+            print(f"{name}:{role}=#{pal[role]:06x}:#{pal['pill_bg']:06x}")
+        print(f"{name}:accent_fg=#{pal['accent_fg']:06x}:#{pal['accent_bg']:06x}")
+    """
+    import textwrap
+    proc = subprocess.run(
+        ["python3", "-c", textwrap.dedent(kitty_probe), str(CONFIG_ROOT / "kitty")],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    for line in proc.stdout.strip().splitlines():
+        k, pair = line.split("=", 1)
+        fg_hx, bg_hx = pair.split(":")
+        aud.check("kitty", f"tab_bar_{k.split(':')[0]}", k.split(":", 1)[1], fg_hx, bg_hx)
 
 
 # ---------------------------------------------------------------------------

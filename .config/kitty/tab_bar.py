@@ -8,6 +8,7 @@
 #   - Zero performance overhead: event-driven rendering + cached sysfs queries
 # =============================================================================
 
+import colorsys
 import datetime
 import glob
 import os
@@ -34,6 +35,46 @@ _POWER_SUPPLY_DIR = "/sys/class/power_supply"
 _last_bat_query = 0.0
 _cached_bat_str = ""
 _cached_bat_fg = None
+_cached_bat_raw = None
+
+_BAT_CHARGING_RGB = 0xE0AF68
+_BAT_LOW_RGB = 0xE0C989
+
+
+def _chan_lum(c: float) -> float:
+    return c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4
+
+
+def _rel_lum_rgb(rgb_int: int) -> float:
+    r = ((rgb_int >> 16) & 0xFF) / 255.0
+    g = ((rgb_int >> 8) & 0xFF) / 255.0
+    b = (rgb_int & 0xFF) / 255.0
+    return 0.2126 * _chan_lum(r) + 0.7152 * _chan_lum(g) + 0.0722 * _chan_lum(b)
+
+
+def _contrast_rgb(fg_int: int, bg_int: int) -> float:
+    la, lb = _rel_lum_rgb(fg_int), _rel_lum_rgb(bg_int)
+    hi, lo = (la, lb) if la >= lb else (lb, la)
+    return (hi + 0.05) / (lo + 0.05)
+
+
+def _ensure_contrast_rgb(fg_int: int, bg_int: int, min_ratio: float = 4.5) -> int:
+    """Repair fg_int lightness away from bg_int until WCAG contrast >= min_ratio."""
+    fg_int &= 0xFFFFFF
+    bg_int &= 0xFFFFFF
+    if _contrast_rgb(fg_int, bg_int) >= min_ratio:
+        return fg_int
+    r = ((fg_int >> 16) & 0xFF) / 255.0
+    g = ((fg_int >> 8) & 0xFF) / 255.0
+    b = (fg_int & 0xFF) / 255.0
+    h, l, s = colorsys.rgb_to_hls(r, g, b)
+    target = 0.0 if _rel_lum_rgb(bg_int) >= 0.1791 else 1.0
+    for step in range(1, 65):
+        nr, ng, nb = colorsys.hls_to_rgb(h, l + (target - l) * step / 64.0, s)
+        cand = (int(round(nr * 255)) << 16) | (int(round(ng * 255)) << 8) | int(round(nb * 255))
+        if _contrast_rgb(cand, bg_int) >= min_ratio:
+            return cand
+    return 0x000000 if target == 0.0 else 0xFFFFFF
 
 _last_git_query = 0.0
 _last_git_cwd = ""
@@ -63,7 +104,7 @@ def _extract_exe_name(cmd0: str) -> str:
 
 
 def get_battery() -> tuple[str, int | None]:
-    global _last_bat_query, _cached_bat_str, _cached_bat_fg
+    global _last_bat_query, _cached_bat_str, _cached_bat_fg, _cached_bat_raw
     now = time.monotonic()
     if _last_bat_query > 0.0 and now - _last_bat_query < 20.0:
         return _cached_bat_str, _cached_bat_fg
@@ -80,30 +121,31 @@ def get_battery() -> tuple[str, int | None]:
             if os.path.exists(stat_file):
                 with open(stat_file, "r") as f:
                     stat = f.read().strip().lower()
+            raw_fg = None
             if stat == "charging":
                 icon = "󰂄"
-                fg = as_rgb(0xe0af68)
+                raw_fg = _BAT_CHARGING_RGB
             elif stat == "full" or cap >= 98:
                 continue
             elif cap >= 80:
                 icon = "󰁹"
-                fg = None
             elif cap >= 50:
                 icon = "󰁿"
-                fg = None
             elif cap >= 20:
                 icon = "󰁼"
-                fg = None
             else:
                 icon = "󰁺"
-                fg = as_rgb(0xe0c989)
+                raw_fg = _BAT_LOW_RGB
+            fg = as_rgb(raw_fg) if raw_fg is not None else None
             _cached_bat_str = f"{icon} {cap}%"
             _cached_bat_fg = fg
+            _cached_bat_raw = raw_fg
             return _cached_bat_str, _cached_bat_fg
         except Exception:
             continue
     _cached_bat_str = ""
     _cached_bat_fg = None
+    _cached_bat_raw = None
     return _cached_bat_str, _cached_bat_fg
 
 
@@ -393,29 +435,59 @@ def get_containers() -> str:
     return cached
 
 
+def _resolve_pill_palette(draw_data: DrawData) -> dict[str, int]:
+    """Resolve and WCAG-repair raw 24-bit right-status pill colors."""
+    default_bg_raw = color_as_int(draw_data.default_bg) & 0xFFFFFF
+    accent_bg_raw = color_as_int(draw_data.active_bg) & 0xFFFFFF
+    accent_fg_raw = _ensure_contrast_rgb(color_as_int(draw_data.active_fg), accent_bg_raw)
+    pill_bg_raw = color_as_int(draw_data.inactive_bg) & 0xFFFFFF
+    try:
+        opts = get_options()
+        mid_raw = color_as_int(opts.foreground) & 0xFFFFFF
+        git_raw = color_as_int(opts.color2) & 0xFFFFFF
+        agent_raw = color_as_int(opts.color5) & 0xFFFFFF
+        cont_raw = color_as_int(opts.color6) & 0xFFFFFF
+    except Exception:
+        mid_raw = 0xCDCECF
+        git_raw = 0x8DB9A3
+        agent_raw = 0xBDA5E3
+        cont_raw = 0x63CDCF
+    return {
+        "default_bg": default_bg_raw,
+        "accent_bg": accent_bg_raw,
+        "accent_fg": accent_fg_raw,
+        "pill_bg": pill_bg_raw,
+        "mid_fg": _ensure_contrast_rgb(mid_raw, pill_bg_raw),
+        "git_fg": _ensure_contrast_rgb(git_raw, pill_bg_raw),
+        "agent_fg": _ensure_contrast_rgb(agent_raw, pill_bg_raw),
+        "container_fg": _ensure_contrast_rgb(cont_raw, pill_bg_raw),
+        "tmux_fg": _ensure_contrast_rgb(accent_bg_raw, pill_bg_raw),
+        "bat_charging_fg": _ensure_contrast_rgb(_BAT_CHARGING_RGB, pill_bg_raw),
+        "bat_low_fg": _ensure_contrast_rgb(_BAT_LOW_RGB, pill_bg_raw),
+    }
+
+
 def draw_right_status(draw_data: DrawData, screen: Screen) -> None:
     clock = get_clock()
     battery, bat_fg_custom = get_battery()
     tmux_sess = get_tmux_session()
 
-    default_bg = as_rgb(color_as_int(draw_data.default_bg))
-    accent_bg = as_rgb(color_as_int(draw_data.active_bg))
-    accent_fg = as_rgb(color_as_int(draw_data.active_fg))
-    pill_bg = as_rgb(color_as_int(draw_data.inactive_bg))
-    # Derive semantic pill foregrounds from active Kitty palette (Nightfox fallback if unavailable)
-    try:
-        opts = get_options()
-        mid_fg = as_rgb(color_as_int(opts.foreground))
-        git_fg = as_rgb(color_as_int(opts.color2))
-        agent_fg = as_rgb(color_as_int(opts.color5))
-        container_fg = as_rgb(color_as_int(opts.color6))
-    except Exception:
-        mid_fg = as_rgb(0xcdcecf)
-        git_fg = as_rgb(0x81b29a)
-        agent_fg = as_rgb(0x9d79d6)
-        container_fg = as_rgb(0x63cdcf)
-    tmux_fg = accent_bg
-    bat_fg = bat_fg_custom if bat_fg_custom is not None else mid_fg
+    pal = _resolve_pill_palette(draw_data)
+    default_bg = as_rgb(pal["default_bg"])
+    accent_bg = as_rgb(pal["accent_bg"])
+    accent_fg = as_rgb(pal["accent_fg"])
+    pill_bg = as_rgb(pal["pill_bg"])
+    mid_fg = as_rgb(pal["mid_fg"])
+    git_fg = as_rgb(pal["git_fg"])
+    agent_fg = as_rgb(pal["agent_fg"])
+    container_fg = as_rgb(pal["container_fg"])
+    tmux_fg = as_rgb(pal["tmux_fg"])
+    if bat_fg_custom is None:
+        bat_fg = mid_fg
+    elif _cached_bat_raw is not None:
+        bat_fg = as_rgb(_ensure_contrast_rgb(_cached_bat_raw, pal["pill_bg"]))
+    else:
+        bat_fg = bat_fg_custom
 
     # Strict "one-owner-per-signal" contract:
     # - Inside tmux: tmux already renders cwd, git, agents & containers; Kitty shows
