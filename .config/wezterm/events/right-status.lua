@@ -85,7 +85,8 @@ cells
    :add_segment('separator', ' ' .. ICON_SEPARATOR .. '  ', colors.separator)
    :add_segment('cpu_icon', ICON_CPU .. '  ', colors.cpu, attr(attr.intensity('Bold')))
    :add_segment('cpu_text', '', colors.cpu, attr(attr.intensity('Bold')))
-   :add_segment('mem_icon', '   ' .. ICON_MEM .. '  ', colors.mem, attr(attr.intensity('Bold')))
+   :add_segment('sep_cpu_mem', '   ', colors.cpu)
+   :add_segment('mem_icon', ICON_MEM .. '  ', colors.mem, attr(attr.intensity('Bold')))
    :add_segment('mem_text', '', colors.mem, attr(attr.intensity('Bold')))
    :add_segment('sep_cpu_bat', ' ' .. ICON_SEPARATOR .. '  ', colors.separator)
    :add_segment('battery_icon', '', colors.battery)
@@ -157,6 +158,55 @@ local function cpu_mem()
    return sys.cpu, sys.mem
 end
 
+---Build the ordered list of cell IDs to render, omitting icons and separators
+---whose optional signal text is empty (e.g., CPU on tick 1 before first delta).
+---@param cpu_text string?
+---@param mem_text string?
+---@param battery_text string?
+---@return string[]
+local function build_render_ids(cpu_text, mem_text, battery_text)
+   local has_cpu = cpu_text ~= nil and cpu_text ~= ''
+   local has_mem = mem_text ~= nil and mem_text ~= ''
+   local has_bat = battery_text ~= nil and battery_text ~= ''
+
+   local render_ids = {
+      'date_icon',
+      'date_text',
+   }
+
+   if has_cpu or has_mem then
+      table.insert(render_ids, 'separator')
+      if has_cpu then
+         table.insert(render_ids, 'cpu_icon')
+         table.insert(render_ids, 'cpu_text')
+      end
+      if has_cpu and has_mem then
+         table.insert(render_ids, 'sep_cpu_mem')
+      end
+      if has_mem then
+         table.insert(render_ids, 'mem_icon')
+         table.insert(render_ids, 'mem_text')
+      end
+      table.insert(render_ids, 'sep_cpu_bat')
+   elseif has_bat then
+      table.insert(render_ids, 'sep_cpu_bat')
+   else
+      table.insert(render_ids, 'separator')
+   end
+
+   if has_bat then
+      table.insert(render_ids, 'battery_icon')
+      table.insert(render_ids, 'battery_text')
+      table.insert(render_ids, 'sep_bat_clock')
+   end
+
+   table.insert(render_ids, 'clock_icon')
+   table.insert(render_ids, 'clock_text')
+   return render_ids
+end
+
+M.build_render_ids = build_render_ids
+
 ---@param opts? Event.RightStatusOptionsInput Default: {date_format = '%a %H:%M:%S'}
 M.setup = function(opts)
    local valid_opts, err = EVENT_OPTS:validate(opts or {})
@@ -190,26 +240,7 @@ M.setup = function(opts)
          :update_segment_text('battery_text', battery_text)
          :update_segment_text('clock_text', clock)
 
-      -- Build the render list: persistent slab only. Intelligent signals
-      -- (key table, remote, pane command, disk, sync) are owned by hud.lua
-      -- and rendered via hud_items() which is called below.
-      local render_ids = {
-         'date_icon',
-         'date_text',
-         'separator',
-         'cpu_icon',
-         'cpu_text',
-         'mem_icon',
-         'mem_text',
-         'sep_cpu_bat',
-      }
-      if battery_text ~= '' then
-         table.insert(render_ids, 'battery_icon')
-         table.insert(render_ids, 'battery_text')
-         table.insert(render_ids, 'sep_bat_clock')
-      end
-      table.insert(render_ids, 'clock_icon')
-      table.insert(render_ids, 'clock_text')
+      local render_ids = build_render_ids(cpu_text, mem_text, battery_text)
 
       -- One wezterm.format over ONE combined FormatItem list: the HUD pills,
       -- then the right-side readout. Formatted separately and joined with

@@ -167,6 +167,108 @@ for _, name in ipairs(SEGMENTS) do
    end
 end
 
+-- Optional-signal rendering gate: empty values must emit neither icons nor
+-- duplicate/adjacent separators (e.g., cpu_text == '' on tick 1).
+local build_ids = right_status and right_status.build_render_ids
+check('build_render_ids exported', type(build_ids) == 'function')
+
+if type(build_ids) == 'function' then
+   local function join_ids(list)
+      return table.concat(list, ',')
+   end
+   local function has_id(list, target)
+      for _, v in ipairs(list) do
+         if v == target then
+            return true
+         end
+      end
+      return false
+   end
+   local function is_sep(id)
+      return id == 'separator' or id == 'sep_cpu_bat' or id == 'sep_bat_clock'
+   end
+   local function has_adjacent_sep(list)
+      for i = 1, #list - 1 do
+         if is_sep(list[i]) and is_sep(list[i + 1]) then
+            return true
+         end
+      end
+      return is_sep(list[1]) or is_sep(list[#list])
+   end
+
+   local none = build_ids('', '', '')
+   check(
+      'render_ids(all empty): omits cpu/mem/battery and has single separator',
+      join_ids(none) == 'date_icon,date_text,separator,clock_icon,clock_text',
+      join_ids(none)
+   )
+   check(
+      'render_ids(all empty): no adjacent/edge separators',
+      not has_adjacent_sep(none),
+      join_ids(none)
+   )
+
+   local tick1_mem = build_ids('', '4.2G', '')
+   check(
+      'render_ids(tick1 mem only): omits cpu_icon',
+      not has_id(tick1_mem, 'cpu_icon'),
+      join_ids(tick1_mem)
+   )
+   check(
+      'render_ids(tick1 mem only): includes mem_icon & mem_text',
+      has_id(tick1_mem, 'mem_icon') and has_id(tick1_mem, 'mem_text'),
+      join_ids(tick1_mem)
+   )
+   check(
+      'render_ids(tick1 mem only): no adjacent/edge separators',
+      not has_adjacent_sep(tick1_mem),
+      join_ids(tick1_mem)
+   )
+
+   local only_cpu = build_ids('12%', '', '')
+   check(
+      'render_ids(cpu only): includes cpu_icon/text and omits mem/bat',
+      has_id(only_cpu, 'cpu_icon')
+         and not has_id(only_cpu, 'mem_icon')
+         and not has_id(only_cpu, 'battery_icon'),
+      join_ids(only_cpu)
+   )
+   check(
+      'render_ids(cpu only): no adjacent/edge separators',
+      not has_adjacent_sep(only_cpu),
+      join_ids(only_cpu)
+   )
+
+   local only_bat = build_ids('', '', '80%')
+   check(
+      'render_ids(bat only): omits cpu/mem and includes battery_icon',
+      not has_id(only_bat, 'cpu_icon')
+         and not has_id(only_bat, 'mem_icon')
+         and has_id(only_bat, 'battery_icon'),
+      join_ids(only_bat)
+   )
+   check(
+      'render_ids(bat only): no adjacent/edge separators',
+      not has_adjacent_sep(only_bat),
+      join_ids(only_bat)
+   )
+
+   local all_pop = build_ids('12%', '4.2G', '80%')
+   local want_all = 'date_icon,date_text,separator,cpu_icon,cpu_text,'
+      .. 'sep_cpu_mem,mem_icon,mem_text,sep_cpu_bat,'
+      .. 'battery_icon,battery_text,sep_bat_clock,clock_icon,clock_text'
+   check(
+      'render_ids(all populated): renders full order with separators',
+      join_ids(all_pop) == want_all,
+      join_ids(all_pop)
+   )
+   check(
+      'render_ids(all populated): no adjacent/edge separators',
+      not has_adjacent_sep(all_pop),
+      join_ids(all_pop)
+   )
+end
+
 print(
    string.format(
       'right-status segments: %d pass, %d fail (bg %s, glass alpha %s)',
