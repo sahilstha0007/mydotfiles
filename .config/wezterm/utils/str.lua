@@ -1,5 +1,3 @@
-local bit = require('bit')
-
 local M = {}
 
 ---@param str string
@@ -16,7 +14,7 @@ M.ends_with = function(str, suffix)
    return str:sub(-#suffix) == suffix
 end
 
----Decode next UTF-8 codepoint starting at byte index `i`.
+---Decode next UTF-8 codepoint starting at byte index `i` (pure Lua: compatible with LuaJIT & WezTerm Lua 5.4).
 ---@param s string
 ---@param i integer
 ---@return integer cp
@@ -31,17 +29,12 @@ local function next_codepoint(s, i)
    elseif b1 >= 0xC2 and b1 <= 0xDF then
       local b2 = s:byte(i + 1)
       if b2 and b2 >= 0x80 and b2 <= 0xBF then
-         return bit.bor(bit.lshift(bit.band(b1, 0x1F), 6), bit.band(b2, 0x3F)), i + 2
+         return (b1 - 0xC0) * 64 + (b2 - 0x80), i + 2
       end
    elseif b1 >= 0xE0 and b1 <= 0xEF then
       local b2, b3 = s:byte(i + 1, i + 2)
       if b2 and b3 and b2 >= 0x80 and b2 <= 0xBF and b3 >= 0x80 and b3 <= 0xBF then
-         return bit.bor(
-            bit.lshift(bit.band(b1, 0x0F), 12),
-            bit.lshift(bit.band(b2, 0x3F), 6),
-            bit.band(b3, 0x3F)
-         ),
-            i + 3
+         return ((b1 - 0xE0) * 64 + (b2 - 0x80)) * 64 + (b3 - 0x80), i + 3
       end
    elseif b1 >= 0xF0 and b1 <= 0xF4 then
       local b2, b3, b4 = s:byte(i + 1, i + 3)
@@ -56,13 +49,7 @@ local function next_codepoint(s, i)
          and b4 >= 0x80
          and b4 <= 0xBF
       then
-         return bit.bor(
-            bit.lshift(bit.band(b1, 0x07), 18),
-            bit.lshift(bit.band(b2, 0x3F), 12),
-            bit.lshift(bit.band(b3, 0x3F), 6),
-            bit.band(b4, 0x3F)
-         ),
-            i + 4
+         return (((b1 - 0xF0) * 64 + (b2 - 0x80)) * 64 + (b3 - 0x80)) * 64 + (b4 - 0x80), i + 4
       end
    end
    return b1, i + 1
