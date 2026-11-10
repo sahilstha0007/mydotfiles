@@ -146,6 +146,7 @@ EXPECTED_GATES=(
   "tests: lua fmt"
   "tests: lua lint"
   "contrast: wcag"
+  "signals: ownership"
   "docs: vs config"
 )
 if [ "$RUN_ALL" -eq 1 ]; then
@@ -396,6 +397,13 @@ if [ -f "$CONTRAST_CHECK" ] && require_cmd python3; then
   run "contrast: wcag" "$REPO_ROOT" python3 "$CONTRAST_CHECK"
 else
   fail "contrast: wcag" "missing $CONTRAST_CHECK or python3"
+fi
+
+OWNERSHIP_CHECK="$REPO_ROOT/tests/signals/check-ownership.py"
+if [ -f "$OWNERSHIP_CHECK" ] && require_cmd python3; then
+  run "signals: ownership" "$REPO_ROOT" python3 "$OWNERSHIP_CHECK"
+else
+  fail "signals: ownership" "missing $OWNERSHIP_CHECK or python3"
 fi
 
 # --- docs vs live configs ---------------------------------------------------

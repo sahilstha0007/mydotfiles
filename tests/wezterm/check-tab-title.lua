@@ -82,38 +82,39 @@ local compose = tab_title.compose_title
 check('compose_title exposed for this check', type(compose) == 'function')
 
 -- ---- cases -----------------------------------------------------------------
--- cwd URL -> basename leads, process dropped (it lives in the hud badge)
+-- Signal ownership (C4): cwd belongs to OMP prompt, so reported OSC 7 cwd
+-- keeps base_title without prepending a directory basename.
 check(
-   'cwd url: basename leads',
+   'cwd url: omits cwd prefix (owned by OMP)',
    compose('nvim', 'file://e810e2b3f0b4/home/sahil/Documents/Notes/Atlas', 'Terminal Stack Home.md')
-      == 'Atlas ~ Terminal Stack Home.md'
+      == 'Terminal Stack Home.md'
 )
 
--- $HOME collapses
+-- $HOME does not prepend a directory prefix either
 check(
-   'home-relative dir shows its basename',
-   compose('zsh', 'file://host' .. HOME_DIR .. '/docs', 'readme.md') == 'docs ~ readme.md',
+   'home-relative dir omits cwd prefix',
+   compose('zsh', 'file://host' .. HOME_DIR .. '/docs', 'readme.md') == 'readme.md',
    compose('zsh', 'file://host' .. HOME_DIR .. '/docs', 'readme.md')
 )
 
 -- the exact HOME path (not a child of it)
 check(
-   'exact home dir -> "~"',
-   compose('zsh', 'file://host' .. HOME_DIR, 'init.lua') == '~ ~ init.lua',
+   'exact home dir -> base_title only',
+   compose('zsh', 'file://host' .. HOME_DIR, 'init.lua') == 'init.lua',
    compose('zsh', 'file://host' .. HOME_DIR, 'init.lua')
 )
 
--- no cwd -> old process-prefixed form
+-- no OSC 7 cwd -> minimal fallback keeps "process ~ base_title"
 check('nil cwd falls back to process', compose('nvim', nil, 'main.rs') == 'nvim ~ main.rs')
 check('empty cwd falls back to process', compose('nvim', '', 'main.rs') == 'nvim ~ main.rs')
 
 -- no process and no cwd -> bare title (locked-title path)
 check('no process, no cwd -> bare title', compose('', nil, 'my session') == 'my session')
 
--- a cwd with a trailing slash keeps a usable base
+-- a cwd with a trailing slash (valid OSC 7 path) still omits directory prefix
 check(
-   'trailing-slash cwd',
-   compose('zsh', 'file://host/home/sahil/work/', 'x') == 'work ~ x',
+   'trailing-slash cwd omits directory prefix',
+   compose('zsh', 'file://host/home/sahil/work/', 'x') == 'x',
    compose('zsh', 'file://host/home/sahil/work/', 'x')
 )
 

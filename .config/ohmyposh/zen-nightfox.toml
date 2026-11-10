@@ -29,18 +29,6 @@ final_space = true
       cache_duration = 'none'
       style = 'folder'
 
-  [[blocks.segments]]
-    template = ' {{ .HEAD }}{{ if or (.Working.Changed) (.Staging.Changed) }}*{{ end }} <#90b2df>{{ if gt .Behind 0 }}⇣{{ end }}{{ if gt .Ahead 0 }}⇡{{ end }}</>'
-    foreground = '#8db9a3'
-    background = 'transparent'
-    type = 'git'
-    style = 'plain'
-
-    [blocks.segments.properties]
-      cache_duration = 'none'
-      branch_icon = ' '
-      fetch_status = true
-
 [[blocks]]
   type = 'rprompt'
   overflow = 'hidden'

@@ -315,37 +315,22 @@ local function attention_icon(is_active, bell, unseen, glyph)
 end
 M.attention_icon = attention_icon
 
----Basename of wezterm's cwd report ("file://host/home/sahil/work" -> "work";
----$HOME -> "~"). Returns nil when there is nothing to show — a pane that has
----never reported OSC 7 (or an unparseable URL) must fall back to the old
----title form, not render an empty segment.
+---Return true when WezTerm reported a non-empty OSC 7 cwd URL path.
 ---@param cwd string?
----@return string?
-local function cwd_basename(cwd)
+---@return boolean
+local function has_osc7_cwd(cwd)
    if not cwd or cwd == '' then
-      return nil
+      return false
    end
    local path = cwd:gsub('^file://[^/]+', ''):gsub('/+$', '')
-   if path == '' then
-      return nil
-   end
-   local home = (wezterm.home_dir or ''):gsub('/+$', '')
-   if home ~= '' and path == home then
-      return '~'
-   end
-   local base = path:gsub('.*/', '')
-   if base == '' then
-      return path
-   end
-   return base
+   return path ~= ''
 end
 
----Compose the tab title text before padding. With a reported cwd the project
----basename LEADS ("Atlas ~ Terminal Stack Home.md") — when every tab runs
----nvim, the directory is the differentiator, and the process name is not
----lost: it already lives in the right-status pane-command badge (hud.lua),
----which hides shells and shows the rest. Without a cwd (no OSC 7 yet) the
----original "process ~ title" form stands.
+---Compose the tab title text before padding.
+---Signal ownership (C4): Oh-My-Posh owns `cwd`, so when OSC 7 has reported a
+---working directory the tab keeps only `base_title` (never repeating `cwd`).
+---Exception: a pane that has not reported OSC 7 yet (or pathless URL) retains
+---the minimal `"process ~ title"` fallback so blank/generic titles stay identifiable.
 ---
 ---Exposed as M.compose_title so tests/check-tab-title.lua can assert the
 ---parsing/composition without a live window.
@@ -354,9 +339,8 @@ end
 ---@param base_title string
 ---@return string
 local function compose_title(process_name, cwd, base_title)
-   local dir = cwd_basename(cwd)
-   if dir then
-      return dir .. ' ~ ' .. base_title
+   if has_osc7_cwd(cwd) then
+      return base_title
    end
    if process_name:len() > 0 then
       return process_name .. ' ~ ' .. base_title

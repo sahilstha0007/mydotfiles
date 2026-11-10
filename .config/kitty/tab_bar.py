@@ -199,19 +199,6 @@ def get_active_cwd() -> str:
     return cwd
 
 
-def format_breadcrumb(cwd: str) -> str:
-    home = os.path.expanduser("~")
-    if cwd == home:
-        return " ~"
-    if cwd.startswith(home):
-        rel = cwd[len(home):].lstrip("/")
-        parts = rel.split("/")
-        if len(parts) <= 2:
-            return " " + " › ".join(parts)
-        return f" {parts[-2]} › {parts[-1]}"
-    return f" {os.path.basename(cwd) or cwd}"
-
-
 def get_git_info(cwd: str) -> str:
     global _last_git_query, _last_git_cwd, _cached_git_str
     now = time.monotonic()
@@ -564,12 +551,11 @@ def draw_right_status(draw_data: DrawData, screen: Screen) -> None:
     else:
         bat_fg = bat_fg_custom
 
-    # Strict "one-owner-per-signal" contract:
-    # - Inside tmux: tmux already renders cwd, git, agents & containers; Kitty shows
-    #   the attached session pill + machine battery + clock.
-    # - Bare Kitty: Kitty owns git, agents, containers, breadcrumb, battery & clock.
+    # Strict "one-owner-per-signal" contract (C4):
+    # - Inside tmux: tmux status-right owns git, agents & containers; OMP owns cwd.
+    #   Kitty shows the attached session pill + machine battery + clock.
+    # - Bare Kitty: Kitty owns git, agents, containers, battery & clock; OMP owns cwd.
     all_segments = []
-    breadcrumb = ""
     git_info = ""
     agents = ""
     containers = ""
@@ -578,7 +564,6 @@ def draw_right_status(draw_data: DrawData, screen: Screen) -> None:
         all_segments.append((tmux_sess, tmux_fg, pill_bg))
     else:
         cwd = get_active_cwd()
-        breadcrumb = format_breadcrumb(cwd)
         git_info = get_git_info(cwd)
         agents = get_active_agents()
         containers = get_containers()
@@ -588,8 +573,6 @@ def draw_right_status(draw_data: DrawData, screen: Screen) -> None:
             all_segments.append((agents, agent_fg, pill_bg))
         if containers:
             all_segments.append((containers, container_fg, pill_bg))
-        if breadcrumb:
-            all_segments.append((breadcrumb, mid_fg, pill_bg))
     if battery:
         all_segments.append((battery, bat_fg, pill_bg))
     # Clock is the right anchor accent pill
@@ -597,7 +580,7 @@ def draw_right_status(draw_data: DrawData, screen: Screen) -> None:
 
     # Adaptive width fallback: gracefully drop pills from lowest priority to highest if tight
     chosen = list(all_segments)
-    drop_order = [breadcrumb, battery, containers, agents, git_info, tmux_sess]
+    drop_order = [battery, containers, agents, git_info, tmux_sess]
     for drop_item in drop_order:
         if not drop_item:
             continue

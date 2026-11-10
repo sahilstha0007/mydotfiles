@@ -35,19 +35,6 @@ shell_integration = true
       cache_duration = 'none'
       style = 'folder'
 
-  [[blocks.segments]]
-    template = ' {{ .HEAD }}{{ if or (.Working.Changed) (.Staging.Changed) }}*{{ end }} <#ffb4ac>{{ if gt .Behind 0 }}⇣{{ end }}{{ if gt .Ahead 0 }}⇡{{ end }}</>'
-    foreground = '#ad9c9a'
-    background = 'transparent'
-    type = 'git'
-    style = 'plain'
-
-    [blocks.segments.properties]
-      branch_icon = ' '
-      cache_duration = 'none'
-      commit_icon = '@'
-      fetch_status = true
-
 [[blocks]]
   type = 'rprompt'
   overflow = 'hidden'
