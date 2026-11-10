@@ -1,6 +1,6 @@
 # Neovim Config — Documentation
 
-This folder is the reference for the Neovim config living at `~/config/nvim`.
+This folder is the reference for the Neovim config living at `~/.config/nvim`.
 If you're editing a file and don't remember what it's for, start here.
 
 ## What's where

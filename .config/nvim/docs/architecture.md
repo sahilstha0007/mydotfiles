@@ -21,7 +21,7 @@ duplicate) means it never gets missed, even if someone reorders later.
 ## File layout
 
 ```
-~/config/nvim/
+~/.config/nvim/
 ├── init.lua                  # entry point
 ├── lazy-lock.json            # pinned plugin versions
 ├── lazyvim.json              # lazy.nvim settings

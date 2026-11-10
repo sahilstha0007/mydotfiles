@@ -147,6 +147,7 @@ EXPECTED_GATES=(
   "tests: lua lint"
   "contrast: wcag"
   "signals: ownership"
+  "docs: dead refs"
   "docs: vs config"
 )
 if [ "$RUN_ALL" -eq 1 ]; then
@@ -154,6 +155,7 @@ if [ "$RUN_ALL" -eq 1 ]; then
     "wezterm: mutation"
     "wiki: lint"
     "nvim: mutation"
+    "zsh: runtime matrix"
   )
   if [ "${DEVCHECK_IN_CLEAN_CLONE:-0}" != "1" ]; then
     EXPECTED_GATES+=("clean: clone")
@@ -406,6 +408,13 @@ else
   fail "signals: ownership" "missing $OWNERSHIP_CHECK or python3"
 fi
 
+DEAD_REFS_CHECK="$REPO_ROOT/tests/docs/check-dead-refs.py"
+if [ -f "$DEAD_REFS_CHECK" ] && require_cmd python3; then
+  run "docs: dead refs" "$REPO_ROOT" python3 "$DEAD_REFS_CHECK"
+else
+  fail "docs: dead refs" "missing $DEAD_REFS_CHECK or python3"
+fi
+
 # --- docs vs live configs ---------------------------------------------------
 DOCS_DIR="${ATLAS_DIR:-$HOME/Documents/Notes/Atlas}"
 if [ -f "$DOCS_DIR/scripts/check_docs_vs_config.py" ] && require_cmd python3; then
@@ -460,6 +469,13 @@ if [ "$RUN_ALL" -eq 1 ]; then
     run "nvim: mutation" "$REPO_ROOT" bash "$NVMUT"
   else
     fail "nvim: mutation" "missing $NVMUT or nvim"
+  fi
+
+  ZSH_RT="$REPO_ROOT/tests/shell/check-zsh-runtime.sh"
+  if [ -f "$ZSH_RT" ] && require_cmd zsh; then
+    run "zsh: runtime matrix" "$REPO_ROOT" bash "$ZSH_RT"
+  else
+    fail "zsh: runtime matrix" "missing $ZSH_RT or zsh"
   fi
 
   if [ "${DEVCHECK_IN_CLEAN_CLONE:-0}" != "1" ]; then
