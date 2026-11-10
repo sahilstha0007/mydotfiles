@@ -120,14 +120,14 @@ def js(project: Path, action: str) -> None:
             (
                 m
                 for m, locks in (
-                    ("pnpm", ("pnpm-lock.yaml",)),
                     ("bun", ("bun.lock", "bun.lockb")),
+                    ("pnpm", ("pnpm-lock.yaml",)),
                     ("yarn", ("yarn.lock",)),
                     ("npm", ("package-lock.json", "npm-shrinkwrap.json")),
                 )
                 if any((project / lock).exists() for lock in locks)
             ),
-            "npm",
+            "bun",
         )
     if not shutil.which(manager_name):
         fail(f"{manager_name} is not installed or on PATH")
