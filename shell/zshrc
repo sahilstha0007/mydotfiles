@@ -397,4 +397,6 @@ if [ -d "$HOME/.config/ml4w" ]; then
 fi
 
 # Optional local overrides (machine-specific credentials or environment)
-[ -f "$HOME/.zshrc.local" ] && source "$HOME/.zshrc.local"
+if [ -f "$HOME/.zshrc.local" ]; then
+  source "$HOME/.zshrc.local"
+fi
