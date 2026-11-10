@@ -393,6 +393,62 @@ local function derive_accents(chosen, primary_hex, D)
   return chosen
 end
 
+local BG_OPACITY = 0.85
+local MIN_UI_CONTRAST = 3.0 -- WCAG AA for UI components and separators
+
+---Compute flat + translucent terminal background extremes (WezTerm/Kitty 0.85 opacity).
+---@param bg string
+---@return string[]
+local function translucent_bgs(bg)
+  return {
+    bg,
+    mix('#000000', bg, BG_OPACITY),
+    mix('#ffffff', bg, BG_OPACITY),
+  }
+end
+
+---Minimum WCAG contrast ratio of hex against every background in bgs.
+---@param hex string
+---@param bgs string[]
+---@return number
+local function contrast_all(hex, bgs)
+  local worst = math.huge
+  for _, b in ipairs(bgs) do
+    local c = contrast(hex, b)
+    if c < worst then
+      worst = c
+    end
+  end
+  return worst
+end
+
+---Shift hex lightness along HSLuv toward light/dark pole until it clears min_c on all bgs.
+---@param hex string
+---@param bgs string[]
+---@param min_c number
+---@return string
+local function ensure_contrast(hex, bgs, min_c)
+  if contrast_all(hex, bgs) >= min_c then
+    return hex
+  end
+  local h, s, l = unpack(hsluv.hex_to_hsluv(hex))
+  local best, best_c = hex, contrast_all(hex, bgs)
+  local dir = is_light_bg() and -1 or 1
+  for step = 1, 64 do
+    local cand_l = dir > 0 and (l + (98 - l) * step / 64)
+      or (l - (l - 4) * step / 64)
+    local cand = hsluv.hsluv_to_hex { h, s, math.max(0, math.min(100, cand_l)) }
+    local c = contrast_all(cand, bgs)
+    if c >= min_c then
+      return cand
+    end
+    if c > best_c then
+      best, best_c = cand, c
+    end
+  end
+  return best
+end
+
 local function build_overrides()
   local D = is_light_bg() and LATTE_DEFAULTS or MOCHA_DEFAULTS
   local A = pick_accents()
@@ -414,7 +470,8 @@ local function build_overrides()
     end
   end
   local base = pal.bg or D.base
-  local text = pal.fg or D.text
+  local bgs = translucent_bgs(base)
+  local text = ensure_contrast(pal.fg or D.text, bgs, MIN_CONTRAST)
   -- Surfaces are derived from bg/fg blends, never from ANSI slots: ml4w puts a
   -- light gray (#e0e2e8) in slot 8, which made menus/popups look like washed-
   -- out gray boxes when adopted as surface0.
@@ -429,19 +486,29 @@ local function build_overrides()
   -- claimed otherwise.
   --
   -- Fix in the ramp itself, not at each call site: keep the demote intent by
-  -- taking the SMALLEST lift off `base` that clears MIN_CONTRAST, so a healthy
-  -- wallpaper is bit-for-bit unchanged and only a failing one moves.
-  local function readable(t)
-    if contrast(mix(text, base, t), base) >= MIN_CONTRAST then
-      return mix(text, base, t)
+  -- taking the SMALLEST lift off `base` that clears MIN_CONTRAST across flat and
+  -- 0.85 translucent backgrounds, so a healthy wallpaper stays minimal and
+  -- failing ones still pass everywhere.
+  local function readable_against(t, min_c)
+    local start = mix(text, base, t)
+    if contrast_all(start, bgs) >= min_c then
+      return start
     end
-    for lift = t - 0.05, 0, -0.05 do
+    for lift = t - 0.02, 0, -0.02 do
       local c = mix(text, base, lift)
-      if contrast(c, base) >= MIN_CONTRAST then
+      if contrast_all(c, bgs) >= min_c then
         return c
       end
     end
-    return text -- nothing in the ramp passes; full-contrast text is the floor
+    return ensure_contrast(text, bgs, min_c)
+  end
+
+  local function readable(t)
+    return readable_against(t, MIN_CONTRAST)
+  end
+
+  local function accent(slot)
+    return ensure_contrast(A[slot] or D[slot], bgs, MIN_CONTRAST)
   end
 
   return {
@@ -450,7 +517,7 @@ local function build_overrides()
     crust = mix(base, '#000000', 0.3),
     surface0 = surface0,
     surface1 = mix(surface0, text, 0.12),
-    surface2 = mix(surface0, text, 0.25),
+    surface2 = readable_against(0.75, MIN_UI_CONTRAST),
     overlay0 = readable(0.68),
     overlay1 = readable(0.55),
     overlay2 = readable(0.4),
@@ -461,20 +528,20 @@ local function build_overrides()
     -- every other accent is adopted only when hue-distinct (pick_accents), so
     -- monochromatic wallpapers fall back to catppuccin's spread-out syntax
     -- palette — code never collapses into one color.
-    blue = A.blue or D.blue,
-    lavender = A.lavender or D.lavender,
-    sapphire = A.sapphire or D.sapphire,
-    sky = A.sky or D.sky,
-    teal = A.teal or D.teal,
-    green = A.green or D.green,
-    yellow = A.yellow or D.yellow,
-    peach = A.peach or D.peach,
-    red = A.red or D.red,
-    maroon = A.maroon or D.maroon,
-    mauve = A.mauve or D.mauve,
-    pink = A.pink or D.pink,
-    flamingo = A.flamingo or D.flamingo,
-    rosewater = D.rosewater,
+    blue = accent 'blue',
+    lavender = accent 'lavender',
+    sapphire = accent 'sapphire',
+    sky = accent 'sky',
+    teal = accent 'teal',
+    green = accent 'green',
+    yellow = accent 'yellow',
+    peach = accent 'peach',
+    red = accent 'red',
+    maroon = accent 'maroon',
+    mauve = accent 'mauve',
+    pink = accent 'pink',
+    flamingo = accent 'flamingo',
+    rosewater = accent 'rosewater',
   }
 end
 
@@ -536,7 +603,7 @@ local function catppuccin_opts()
           NvimTreeNormal = { bg = 'NONE', fg = c.text },
           NvimTreeNormalNC = { bg = 'NONE' },
           NvimTreeEndOfBuffer = { bg = 'NONE' },
-          NvimTreeWinSeparator = { fg = c.surface1, bg = 'NONE' },
+          NvimTreeWinSeparator = { fg = c.surface2, bg = 'NONE' },
 
           -- Completion popup: FULL TRANSPARENCY (user preference) — body is
           -- NONE like every other float; active row = blue bold underline.
@@ -602,7 +669,7 @@ local function catppuccin_opts()
             bold = true,
             underline = true,
           },
-          WinSeparator = { fg = c.surface1 },
+          WinSeparator = { fg = c.surface2 },
 
           -- Active line: NO bg (full transparency) — the cursor row is
           -- marked by the blue bold line number alone.
@@ -624,7 +691,7 @@ local function catppuccin_opts()
             bold = true,
             bg = 'NONE',
           },
-          TreesitterContextSeparator = { fg = c.surface1, bg = 'NONE' },
+          TreesitterContextSeparator = { fg = c.surface2, bg = 'NONE' },
 
           -- Diagnostics: undercurl with live palette colors
           DiagnosticUnderlineError = { undercurl = true, sp = c.red },

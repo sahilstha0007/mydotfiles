@@ -60,8 +60,8 @@ local function highlights_from(c)
     modified = { fg = c.yellow, bg = 'NONE' },
     modified_selected = { fg = c.yellow, bg = pill },
     modified_visible = { fg = c.yellow, bg = 'NONE' },
-    -- Explorer offset area: transparent, subtle separator
-    offset_separator = { bg = 'NONE', fg = c.surface1 },
+    -- Explorer offset area: transparent, visible UI separator
+    offset_separator = { bg = 'NONE', fg = c.surface2 },
     -- Tab diagnostics (error/warn/info icons): bufferline derives these
     -- from the Normal bg, which is transparent here — so pin the fg to
     -- the palette or they'd render in the terminal's default colors.
