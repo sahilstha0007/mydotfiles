@@ -37,24 +37,28 @@ set -u
 FAILED=0
 note_fail () { FAILED=$((FAILED + 1)); }
 
-SRC="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
-W=/tmp/nvim-mut
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
+SRC="$REPO_ROOT/.config/nvim"
+TESTS_NVIM="$REPO_ROOT/tests/nvim"
+W="$(mktemp -d "${TMPDIR:-/tmp}/nvim-mut.XXXXXX")"
+trap 'rm -rf "$W"' EXIT
 FILE=lua/plugins/ui/terminal-colors.lua
 
-# The live config is a symlink into the dotfiles repo. `cp -r "$SRC" "$W"`
-# copies the LINK when SRC is a symlink, so every sed below rewrote the live
-# tree and the harness ran against the file it was mutating. SRC is resolved
-# with pwd -P; this guard refuses to continue if W is still a link.
+# The live config is a symlink into the dotfiles repo. `cp -r "$SRC/." "$W/"`
+# copies contents rather than symlinks, so every sed below rewrites only the
+# throwaway staging dir. SRC is resolved with pwd -P; this guard refuses to
+# continue if W is still a link or resolves outside itself.
 stage () {
   rm -rf "$W"
-  cp -r "$SRC" "$W"
+  mkdir -p "$W"
+  cp -r "$SRC/." "$W/"
   [[ ! -L "$W" && -d "$W" ]] || { echo "FATAL: $W is not a real copy of $SRC" >&2; exit 2; }
   [[ "$(readlink -f "$W")" == "$W" ]] || { echo "FATAL: $W resolves outside itself" >&2; exit 2; }
 }
 
 run () {  # runs the spec inside the staged copy, via the copy's own init
-  ( cd "$W" && nvim --headless -u tests/minimal_init.lua \
-      -c "lua dofile('tests/terminal_colors_spec.lua')" -c "qa!" 2>&1 | tail -1 )
+  ( cd "$W" && NVIM_CONFIG_ROOT="$W" nvim --headless -u "$TESTS_NVIM/minimal_init.lua" \
+      -c "lua dofile('$TESTS_NVIM/terminal_colors_spec.lua')" -c "qa!" 2>&1 | tail -1 )
 }
 
 mutate () {  # name, expected_fail_count, sed-expr (applied to $W/$FILE)

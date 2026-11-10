@@ -31,7 +31,11 @@ end
 
 local _src = debug.getinfo(1, 'S').source:sub(2)
 local _cand = vim.fn.fnamemodify(_src, ':p:h:h')
-local root = vim.env.NVIM_CONFIG_ROOT or (vim.fn.isdirectory(_cand .. '/lua') == 1 and _cand or (vim.fn.fnamemodify(_cand, ':h') .. '/.config/nvim'))
+local root = vim.env.NVIM_CONFIG_ROOT
+  or (
+    vim.fn.isdirectory(_cand .. '/lua') == 1 and _cand
+    or (vim.fn.fnamemodify(_cand, ':h') .. '/.config/nvim')
+  )
 
 -- ---------------------------------------------------------------- the keys
 
@@ -70,12 +74,28 @@ end
 -- "2026-MM-08". Verified against a copy of the repo. Both sides now require
 -- utils.templater, so a regression in one fails the other.
 local Templater = require 'utils.templater'
+local FIXTURE_VAULT = vim.fn.fnamemodify(_src, ':p:h')
+  .. '/fixtures/atlas-vault'
+
+local function resolve_vault()
+  local vault = Templater.vault_root()
+  if vault then
+    return vault
+  end
+  if
+    not os.getenv 'ATLAS_VAULT'
+    and vim.fn.isdirectory(FIXTURE_VAULT .. '/.obsidian') == 1
+  then
+    return FIXTURE_VAULT
+  end
+  return nil
+end
 
 -- The literal, non-date lines the daily note must contain: the frontmatter
 -- keys and the body headings. Templater expressions are substituted away
 -- first, so what is left is exactly what the note would show.
 local function daily_template()
-  local vault = Templater.vault_root()
+  local vault = resolve_vault()
   check(vault, 'vault not found; set ATLAS_VAULT to run this spec')
 
   -- Templater.template_path owns the vault-relative-path resolution. The spec
@@ -463,7 +483,7 @@ end)
 -- such mapping exists in this config, so the note went nowhere while looking
 -- written. These assert the destination, which is the whole point of the key.
 test('the daily note is written into the vault, not scratch', function()
-  local vault = Templater.vault_root()
+  local vault = resolve_vault()
   check(vault, 'vault not found; set ATLAS_VAULT to run this spec')
 
   local folder = Templater.daily_folder(vault)

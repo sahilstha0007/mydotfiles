@@ -494,18 +494,33 @@ do
     return src:match(pattern) ~= nil
   end
 
+  local function dotfiles_config_root()
+    if vim.env.DOTFILES_CONFIG_ROOT then
+      return vim.env.DOTFILES_CONFIG_ROOT
+    end
+    local sibling = vim.fn.fnamemodify(ROOT, ':h')
+    if vim.uv.fs_stat(sibling .. '/wezterm/colors/custom.lua') then
+      return sibling
+    end
+    local spec_src = debug.getinfo(1, 'S').source:sub(2)
+    local repo_cfg = vim.fn.fnamemodify(spec_src, ':p:h:h:h') .. '/.config'
+    if vim.uv.fs_stat(repo_cfg .. '/wezterm/colors/custom.lua') then
+      return repo_cfg
+    end
+    return (vim.env.HOME or '') .. '/.config'
+  end
+
+  local cfg_root = dotfiles_config_root()
+
   check(
     has_const(
-      (vim.env.HOME or '') .. '/.config/wezterm/colors/custom.lua',
+      cfg_root .. '/wezterm/colors/custom.lua',
       'local MIN_CONTRAST = 4%.5'
     ),
     'wezterm colors/custom.lua uses the same MIN_CONTRAST'
   )
   check(
-    has_const(
-      (vim.env.HOME or '') .. '/.config/tmux/colors-from-matugen.sh',
-      'MIN_CONTRAST=4%.5'
-    ),
+    has_const(cfg_root .. '/tmux/colors-from-matugen.sh', 'MIN_CONTRAST=4%.5'),
     'tmux colors-from-matugen.sh uses the same MIN_CONTRAST'
   )
   check(
