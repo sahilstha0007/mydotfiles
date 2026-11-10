@@ -24,6 +24,154 @@
 set -euo pipefail
 
 repo="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+run_doctor() {
+  local strict=0
+  [ "${1:-}" = "--strict" ] && strict=1
+
+  local repo_fail=0 unmanaged_warn=0
+  local canonical_repo
+  canonical_repo="$(readlink -f "$repo")"
+
+  echo "==> Running dotfiles symlink and permission doctor..."
+
+  # 1. Verify every repo-managed symlink target exists and resolves into $repo
+  for name in nvim tmux wezterm kitty ohmyposh bat yazi lazygit lazydocker btop fastfetch atuin; do
+    local src="$repo/.config/$name" dst="$HOME/.config/$name"
+    [ -d "$src" ] || continue
+    if [ ! -L "$dst" ] || [ ! -e "$dst" ] || [ "$(readlink -f "$dst" 2>/dev/null || true)" != "$(readlink -f "$src")" ]; then
+      echo "  [FAIL]   broken or unlinked repo config: $dst -> $(readlink "$dst" 2>/dev/null || echo 'missing')" >&2
+      repo_fail=1
+    fi
+  done
+
+  for pair in "zshrc:.zshrc" "bashrc_custom:.bashrc_custom" "omni-aliases.zsh:.omni-aliases.zsh" "zshenv:.zshenv"; do
+    local src="$repo/shell/${pair%%:*}" dst="$HOME/${pair##*:}"
+    [ -f "$src" ] || continue
+    if [ ! -L "$dst" ] || [ ! -e "$dst" ] || [ "$(readlink -f "$dst" 2>/dev/null || true)" != "$(readlink -f "$src")" ]; then
+      echo "  [FAIL]   broken or unlinked shell file: $dst -> $(readlink "$dst" 2>/dev/null || echo 'missing')" >&2
+      repo_fail=1
+    fi
+  done
+
+  if [ -d "$repo/bin" ]; then
+    for src_file in "$repo/bin"/*; do
+      [ -f "$src_file" ] || continue
+      local bname dst_file
+      bname="$(basename "$src_file")"
+      dst_file="$HOME/.local/bin/$bname"
+      if [ ! -L "$dst_file" ] || [ ! -e "$dst_file" ] || [ "$(readlink -f "$dst_file" 2>/dev/null || true)" != "$(readlink -f "$src_file")" ]; then
+        echo "  [FAIL]   broken or unlinked repo bin: $dst_file -> $(readlink "$dst_file" 2>/dev/null || echo 'missing')" >&2
+        repo_fail=1
+      elif [ ! -x "$src_file" ]; then
+        echo "  [FAIL]   repo bin lacks +x: $src_file" >&2
+        repo_fail=1
+      fi
+    done
+  fi
+
+  # Check repo script permissions inside .config/
+  while IFS= read -r -d '' rscript; do
+    if [ ! -x "$rscript" ]; then
+      echo "  [FAIL]   repo script lacks +x: $rscript" >&2
+      repo_fail=1
+    fi
+  done < <(find "$repo/.config" -type f \( -name "*.sh" -o -name "*.py" \) -print0 2>/dev/null || true)
+
+  # 2. Scan ~/.config and ~/.local/bin for real dangling symlinks.
+  # Browser/Electron/Mozilla runtime lock symlinks intentionally encode host/PID tokens as dangling targets:
+  # SingletonLock, SingletonCookie, SingletonSocket, lock, lockfile, .parentlock are runtime artifacts, not defects.
+  for scan_dir in "$HOME/.config" "$HOME/.local/bin"; do
+    [ -d "$scan_dir" ] || continue
+    while IFS= read -r -d '' link; do
+      local base target resolved
+      base="$(basename "$link")"
+      case "$base" in
+        SingletonLock|SingletonCookie|SingletonSocket|lock|lockfile|.parentlock)
+          continue
+          ;;
+      esac
+      target="$(readlink "$link" 2>/dev/null || true)"
+      resolved="$(readlink -m "$link" 2>/dev/null || true)"
+      if [[ "$target" == "$canonical_repo"* ]] || [[ "$resolved" == "$canonical_repo"* ]] || [[ "$target" == *"/mydotfiles/"* ]]; then
+        echo "  [FAIL]   repo-managed dangling link: $link -> $target" >&2
+        repo_fail=1
+      elif [ "$scan_dir" = "$HOME/.local/bin" ] && [ -f "$repo/bin/$base" ]; then
+        # Already reported in check 1 as broken repo bin
+        continue
+      elif [ "$scan_dir" = "$HOME/.config" ] && [ -d "$repo/.config/$base" ]; then
+        # Already reported in check 1 as broken repo config
+        continue
+      else
+        echo "  [WARN]   unmanaged dangling symlink: $link -> $target  (ask before: rm '$link')"
+        unmanaged_warn=1
+      fi
+    done < <(find "$scan_dir" -xtype l -print0 2>/dev/null || true)
+  done
+
+  # 3. Report unmanaged non-executable files/scripts in ~/.local/bin (excluding *.env data files)
+  if [ -d "$HOME/.local/bin" ]; then
+    while IFS= read -r -d '' f; do
+      [ -L "$f" ] && [ ! -e "$f" ] && continue # already reported as broken symlink above
+      local fname resolved_f
+      fname="$(basename "$f")"
+      case "$fname" in
+        *.env|*.txt|*.md|*.json) continue ;;
+      esac
+      resolved_f="$(readlink -f "$f" 2>/dev/null || printf '%s' "$f")"
+      if [[ "$resolved_f" == "$canonical_repo/"* ]]; then
+        echo "  [FAIL]   repo-owned bin lacks +x: $f -> $resolved_f" >&2
+        repo_fail=1
+      else
+        echo "  [WARN]   unmanaged non-executable in ~/.local/bin: $f  (ask before: chmod +x '$f')"
+        unmanaged_warn=1
+      fi
+    done < <(find "$HOME/.local/bin" -maxdepth 1 \( -type f -o -type l \) ! -executable -print0 2>/dev/null || true)
+  fi
+
+  if [ "$repo_fail" -ne 0 ]; then
+    echo "==> Doctor FAILED: repo symlink or permission defect(s) detected." >&2
+    return 1
+  fi
+  if [ "$strict" -eq 1 ] && [ "$unmanaged_warn" -ne 0 ]; then
+    echo "==> Doctor FAILED (--strict): unmanaged dangling symlink(s) or non-executable file(s) found." >&2
+    return 1
+  fi
+  echo "==> Doctor OK: repo symlinks intact (unmanaged warnings: $unmanaged_warn)"
+  return 0
+}
+
+case "${1:-}" in
+  -h|--help)
+    cat <<'EOF'
+Usage: install.sh [--doctor [--strict]] [--help]
+
+  (default)        Link tracked dotfiles/bins, pre-warm shell/bat caches, backup collisions
+  --doctor         Verify repo symlinks/exec bits and report unmanaged broken links (non-destructive)
+  --doctor --strict  Exit non-zero if unmanaged broken symlinks or non-exec scripts remain
+EOF
+    exit 0
+    ;;
+  --doctor)
+    shift
+    if [ "${1:-}" = "--strict" ] && [ "$#" -eq 1 ]; then
+      run_doctor --strict
+      exit $?
+    elif [ "$#" -eq 0 ]; then
+      run_doctor
+      exit $?
+    else
+      printf 'install.sh: unknown option for --doctor: %s\n' "$*" >&2
+      exit 2
+    fi
+    ;;
+  "") ;;
+  *)
+    printf 'install.sh: unknown option: %s\nUsage: install.sh [--doctor [--strict]] [--help]\n' "$1" >&2
+    exit 2
+    ;;
+esac
+
 backup="$HOME/.config-backup-$(date +%Y%m%d-%H%M%S)"
 backed_up=0
 
