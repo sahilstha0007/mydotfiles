@@ -398,6 +398,14 @@ def audit_ohmyposh(aud: Auditor) -> None:
     for label, hx in _extract_omp_hexes(nf_toml):
         aud.check_against_effective("ohmyposh", "nightfox", label, hx, nf_bg)
 
+    live_mat_p = CONFIG_ROOT / "wezterm" / "colors" / "matugen.lua"
+    zen_toml_p = CONFIG_ROOT / "ohmyposh" / "zen.toml"
+    if live_mat_p.exists() and zen_toml_p.exists():
+        m_bg = re.search(r'^\s*background\s*=\s*"(#[0-9A-Fa-f]{6})"', live_mat_p.read_text(encoding="utf-8"), re.M)
+        if m_bg:
+            for label, hx in _extract_omp_hexes(zen_toml_p.read_text(encoding="utf-8")):
+                aud.check_against_effective("ohmyposh", "zen_toml", label, hx, m_bg.group(1))
+
     gen = CONFIG_ROOT / "ohmyposh" / "omp-palette.sh"
     tpl = CONFIG_ROOT / "ohmyposh" / "zen.template.toml"
     with tempfile.TemporaryDirectory(prefix="contrast-omp-") as tmp:

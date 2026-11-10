@@ -5,13 +5,13 @@ final_space = true
 
 [secondary_prompt]
   template = '❯❯ '
-  foreground = '#81b29a'
+  foreground = '#8db9a3'
   background = 'transparent'
 
 [transient_prompt]
   template = '❯ '
   background = 'transparent'
-  foreground_templates = ['{{if gt .Code 0}}#c94f6d{{end}}', '{{if eq .Code 0}}#81b29a{{end}}']
+  foreground_templates = ['{{if gt .Code 0}}#e19dae{{end}}', '{{if eq .Code 0}}#8db9a3{{end}}']
 
 [[blocks]]
   type = 'prompt'
@@ -20,7 +20,7 @@ final_space = true
 
   [[blocks.segments]]
     template = '{{ .Path }}'
-    foreground = '#719cd6'
+    foreground = '#90b2df'
     background = 'transparent'
     type = 'path'
     style = 'plain'
@@ -30,8 +30,8 @@ final_space = true
       style = 'folder'
 
   [[blocks.segments]]
-    template = ' {{ .HEAD }}{{ if or (.Working.Changed) (.Staging.Changed) }}*{{ end }} <#719cd6>{{ if gt .Behind 0 }}⇣{{ end }}{{ if gt .Ahead 0 }}⇡{{ end }}</>'
-    foreground = '#81b29a'
+    template = ' {{ .HEAD }}{{ if or (.Working.Changed) (.Staging.Changed) }}*{{ end }} <#90b2df>{{ if gt .Behind 0 }}⇣{{ end }}{{ if gt .Ahead 0 }}⇡{{ end }}</>'
+    foreground = '#8db9a3'
     background = 'transparent'
     type = 'git'
     style = 'plain'
@@ -66,7 +66,7 @@ final_space = true
     background = 'transparent'
     type = 'text'
     style = 'plain'
-    foreground_templates = ['{{if gt .Code 0}}#c94f6d{{end}}', '{{if eq .Code 0}}#81b29a{{end}}']
+    foreground_templates = ['{{if gt .Code 0}}#e19dae{{end}}', '{{if eq .Code 0}}#8db9a3{{end}}']
 
     [blocks.segments.properties]
       cache_duration = 'none'

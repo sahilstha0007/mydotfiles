@@ -31,6 +31,7 @@ if [ -f "$palette" ]; then
    p=$(val primary);      [ -n "$p" ] && accent="$p"
    e=$(val error);        [ -n "$e" ] && err="$e"
    o=$(val outline);      [ -n "$o" ] && muted="$o"
+   t=$(val tertiary);     [ -n "$t" ] && soft="$t"
    succ=$(val success)
    if [ -n "$succ" ]; then
       succ_nohash=${succ#\#}
@@ -66,44 +67,30 @@ bghex=$(grep -m1 "^\s*background =" "$palette" 2>/dev/null | sed -E 's/.*"(#[0-9
 # theme on every failed sync. Same rule as herdr-palette.sh: leave the last
 # good zen.toml alone rather than overwrite it with a guess.
 [ -n "$bghex" ] || exit 0
-bghex_nohash=${bghex#\#} # strtonum wants bare RRGGBB
 
-contrast() { awk -v a="$1" -v b="$2" -v min="$MIN_CONTRAST" '
-  function chan(c) { return (c <= 0.04045) ? c/12.92 : exp(2.4 * log((c + 0.055)/1.055)) }
-  function rl(h,   r, g, bl) {
-    r = strtonum("0x" substr(h,1,2)); g = strtonum("0x" substr(h,3,2)); bl = strtonum("0x" substr(h,5,2))
-    return 0.2126*chan(r/255) + 0.7152*chan(g/255) + 0.0722*chan(bl/255)
-  }
-  BEGIN {
-    la = rl(a); lb = rl(b)
-    hi = (la >= lb) ? la : lb; lo = (la >= lb) ? lb : la
-    print (((hi + 0.05) / (lo + 0.05)) >= min) ? "ok" : "low"
-  }'
-}
+if [ -f "$LEGIBLE_PY" ] && command -v python3 >/dev/null 2>&1; then
+   LEGIBLE_DIR="$(dirname "$LEGIBLE_PY")"
+   repaired=$(PYTHONPATH="$LEGIBLE_DIR" python3 - "$bghex" "$accent" "$ok" "$soft" "$err" "$muted" "$MIN_CONTRAST" <<'PY' 2>/dev/null
+import sys
+import legible
 
-guard() { # guard <hex-with-#> <fallback-hex-with-#>
-  h="${1#\#}"
-  # Both args go into strtonum as "0xRRGGBB", so the '#' must be stripped from
-  # the background too — leaving it there made strtonum("0x#1a1111") return 0,
-  # which read as "every token is low" and forced all five to their fallbacks.
-  if [ -z "$h" ] || [ "$(contrast "$h" "$bghex_nohash")" = "low" ]; then
-    # Plain substitution is not enough on a light wallpaper: BOTH catppuccin
-    # bases fail there (latte green #40a02b is 2.96:1 on #eff1f5, mocha's
-    # #a6e3a1 is 1.31:1), so the fallback can be as unreadable as the token it
-    # replaced. Repair the FALLBACK's lightness toward the background's
-    # opposite end — same role hue, clears the gate. Shared rule in
-    # utils/legible.py so omp cannot drift from wezterm/tmux/nvim/herdr.
-    python3 "$LEGIBLE_PY" "$2" "#$bghex_nohash" 2>/dev/null || echo "$2"
-  else
-    echo "$1"
-  fi
-}
-
-accent=$(guard "$accent" '#89b4fa')
-ok=$(guard "$ok" '#a6e3a1')
-soft=$(guard "$soft" '#f9e2af')
-err=$(guard "$err" '#f38ba8')
-muted=$(guard "$muted" '#a6adc8')
+bg, accent, ok, soft, err, muted, min_c = sys.argv[1:8]
+bgs = legible.translucent_bgs(bg)
+min_contrast = float(min_c)
+pairs = (
+    (accent, "#89b4fa"),
+    (ok, "#a6e3a1"),
+    (soft, "#f9e2af"),
+    (err, "#f38ba8"),
+    (muted, "#a6adc8"),
+)
+print(" ".join(legible.legible(c, bgs, fb, min_contrast=min_contrast) for c, fb in pairs))
+PY
+)
+   if [ -n "$repaired" ]; then
+      read -r accent ok soft err muted <<< "$repaired"
+   fi
+fi
 
 sed -e "s|@@ACCENT@@|$accent|g" \
     -e "s|@@OK@@|$ok|g" \

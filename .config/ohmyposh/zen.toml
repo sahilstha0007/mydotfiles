@@ -37,7 +37,7 @@ shell_integration = true
 
   [[blocks.segments]]
     template = ' {{ .HEAD }}{{ if or (.Working.Changed) (.Staging.Changed) }}*{{ end }} <#ffb4ac>{{ if gt .Behind 0 }}⇣{{ end }}{{ if gt .Ahead 0 }}⇡{{ end }}</>'
-    foreground = '#a08c8a'
+    foreground = '#ad9c9a'
     background = 'transparent'
     type = 'git'
     style = 'plain'
@@ -54,7 +54,7 @@ shell_integration = true
 
   [[blocks.segments]]
     template = '{{ .FormattedMs }}'
-    foreground = '#f9e2af'
+    foreground = '#e0c38c'
     background = 'transparent'
     type = 'executiontime'
     style = 'plain'
