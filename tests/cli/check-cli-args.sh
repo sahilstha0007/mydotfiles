@@ -24,9 +24,15 @@ check_case() {
   else
     rc=$?
   fi
-  local stderr_txt stdout_txt
+  local stderr_txt stdout_txt pat_ok=0 tb_found=0
   stderr_txt=$(cat "$out_file.stderr")
   stdout_txt=$(cat "$out_file.stdout")
+  if [ -z "$err_pattern" ] || grep -qiE "$err_pattern" "$out_file.stderr" "$out_file.stdout"; then
+    pat_ok=1
+  fi
+  if grep -q 'Traceback (most recent call last)' "$out_file.stderr"; then
+    tb_found=1
+  fi
   rm -f "$out_file" "$out_file.stdout" "$out_file.stderr"
 
   if [ "$rc" -eq 124 ]; then
@@ -37,11 +43,11 @@ check_case() {
     echo "FAIL [$label]: expected exit $want_rc, got $rc (stderr: $stderr_txt)" >&2
     exit 1
   fi
-  if [ -n "$err_pattern" ] && ! printf '%s\n%s\n' "$stderr_txt" "$stdout_txt" | grep -qiE "$err_pattern"; then
+  if [ "$pat_ok" -ne 1 ]; then
     echo "FAIL [$label]: expected pattern '$err_pattern', got stdout='$stdout_txt' stderr='$stderr_txt'" >&2
     exit 1
   fi
-  if printf '%s\n' "$stderr_txt" | grep -q 'Traceback (most recent call last)'; then
+  if [ "$tb_found" -eq 1 ]; then
     echo "FAIL [$label]: leaked Python traceback on stderr" >&2
     exit 1
   fi
