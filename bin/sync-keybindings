@@ -16,6 +16,7 @@ import pprint
 import re
 import subprocess
 import sys
+import tempfile
 
 TMUX_KEY_ALIASES = {
     "PageUp": "PPage",
@@ -259,24 +260,27 @@ def collect_kitty(repo_root: pathlib.Path) -> list[dict[str, str]]:
 
 def collect_tmux(repo_root: pathlib.Path) -> list[dict[str, str]]:
     conf = repo_root / ".config" / "tmux" / "tmux.conf"
-    sock = f"devcheck-kbd-sync-{os.getpid()}"
-    subprocess.run(["tmux", "-L", sock, "kill-server"], capture_output=True)
-    try:
-        start = subprocess.run(
-            ["tmux", "-L", sock, "-f", str(conf), "start-server"],
-            capture_output=True,
-            text=True,
-        )
-        if start.returncode != 0:
-            raise RuntimeError(f"tmux start-server failed: {start.stderr.strip()}")
-        live_proc = subprocess.run(
-            ["tmux", "-L", sock, "list-keys"],
-            capture_output=True,
-            text=True,
-            check=True,
-        )
-    finally:
-        subprocess.run(["tmux", "-L", sock, "kill-server"], capture_output=True)
+    with tempfile.TemporaryDirectory(prefix="sync-kbd-tmux-") as tmp_sock_dir:
+        sock_env = {**os.environ, "TMUX_TMPDIR": tmp_sock_dir}
+        sock = f"devcheck-kbd-sync-{os.getpid()}"
+        try:
+            start = subprocess.run(
+                ["tmux", "-L", sock, "-f", str(conf), "start-server"],
+                capture_output=True,
+                text=True,
+                env=sock_env,
+            )
+            if start.returncode != 0:
+                raise RuntimeError(f"tmux start-server failed: {start.stderr.strip()}")
+            live_proc = subprocess.run(
+                ["tmux", "-L", sock, "list-keys"],
+                capture_output=True,
+                text=True,
+                env=sock_env,
+                check=True,
+            )
+        finally:
+            subprocess.run(["tmux", "-L", sock, "kill-server"], capture_output=True, env=sock_env)
 
     live_map: dict[tuple[str, str], str] = {}
     for line in live_proc.stdout.splitlines():
