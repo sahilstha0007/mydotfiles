@@ -11,6 +11,8 @@ CLI_TASK="$REPO_ROOT/bin/project-task"
 CLI_CHEAT="$REPO_ROOT/bin/terminal-cheatsheet"
 CLI_DUMP="$REPO_ROOT/.config/tmux/keymap-dump.sh"
 CLI_SYNC="$REPO_ROOT/bin/sync-keybindings"
+CLI_RELOAD="$REPO_ROOT/bin/stack-reload"
+CLI_INSTALL="$REPO_ROOT/install.sh"
 
 check_case() {
   local label="$1" want_rc="$2" err_pattern="$3"
@@ -63,3 +65,9 @@ check_case "keymap-dump --bad-flag"     2 "unknown"    bash "$CLI_DUMP" --bad-fl
 
 check_case "sync-keybindings --help"    0 "usage:"     python3 "$CLI_SYNC" --help
 check_case "sync-keybindings --bad"     2 "unknown"    python3 "$CLI_SYNC" --bad-flag
+
+check_case "stack-reload --help"        0 "usage:"     bash "$CLI_RELOAD" --help
+check_case "stack-reload --bad-flag"    2 "unknown"    bash "$CLI_RELOAD" --bad-flag
+
+check_case "install.sh --help"          0 "usage:"     bash "$CLI_INSTALL" --help
+check_case "install.sh --bad-flag"      2 "unknown"    bash "$CLI_INSTALL" --bad-flag

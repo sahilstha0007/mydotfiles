@@ -83,6 +83,9 @@ run() {
     NAMES+=("$name")
     RESULTS+=("${GRN}pass${R}")
     printf '  %s%s%s  %-28s %s\n' "$BOLD" "$name" "$R" "" "${DIM}${ms}ms${R}"
+    if grep -qE '^(\s*\[WARN\]|STALE \[)' "$DEVCHECK_LOG"; then
+      grep -E '^(\s*\[WARN\]|STALE \[)' "$DEVCHECK_LOG" | sed "s/^/      ${YLW}/; s/\$/${R}/"
+    fi
   else
     FAILED=$((FAILED + 1))
     NAMES+=("$name")
@@ -137,6 +140,7 @@ EXPECTED_GATES=(
   "tmux: profiles"
   "tmux: scripts syntax"
   "tmux: keymap dump"
+  "tmux: reload idempotency"
   "cli: args & help"
   "kitty: config parse"
   "kitty: full profile"
@@ -153,6 +157,8 @@ EXPECTED_GATES=(
   "docs: dead refs"
   "docs: keybindings parity"
   "docs: vs config"
+  "install: doctor"
+  "live: freshness"
 )
 if [ "$RUN_ALL" -eq 1 ]; then
   EXPECTED_GATES+=(
@@ -160,6 +166,7 @@ if [ "$RUN_ALL" -eq 1 ]; then
     "wiki: lint"
     "nvim: mutation"
     "zsh: runtime matrix"
+    "install: idempotency & backup"
   )
   if [ "${DEVCHECK_IN_CLEAN_CLONE:-0}" != "1" ]; then
     EXPECTED_GATES+=("clean: clone")
@@ -274,6 +281,12 @@ if [ -f "$TMUX_TESTS/check-keymap-dump.sh" ] && require_cmd wezterm && require_c
   run "tmux: keymap dump" "$REPO_ROOT" bash "$TMUX_TESTS/check-keymap-dump.sh"
 else
   fail "tmux: keymap dump" "missing check-keymap-dump.sh, wezterm, or python3"
+fi
+
+if [ -f "$TMUX_TESTS/check-reload-idempotency.sh" ] && require_cmd tmux && require_cmd python3; then
+  run "tmux: reload idempotency" "$REPO_ROOT" bash "$TMUX_TESTS/check-reload-idempotency.sh"
+else
+  fail "tmux: reload idempotency" "missing check-reload-idempotency.sh, tmux, or python3"
 fi
 
 CLI_ARGS_CHECK="$REPO_ROOT/tests/cli/check-cli-args.sh"
@@ -450,6 +463,23 @@ else
   fail "docs: vs config" "missing $DOCS_DIR/scripts/check_docs_vs_config.py"
 fi
 
+if [ -f "$REPO_ROOT/install.sh" ]; then
+  if [ "${DEVCHECK_IN_CLEAN_CLONE:-0}" = "1" ]; then
+    run "install: doctor" "$REPO_ROOT" bash "$REPO_ROOT/install.sh" --doctor --strict
+  else
+    run "install: doctor" "$REPO_ROOT" bash "$REPO_ROOT/install.sh" --doctor
+  fi
+else
+  fail "install: doctor" "missing $REPO_ROOT/install.sh"
+fi
+
+LIVE_FRESH="$REPO_ROOT/tests/live/check-freshness.sh"
+if [ -f "$LIVE_FRESH" ] && require_cmd python3; then
+  run "live: freshness" "$REPO_ROOT" bash "$LIVE_FRESH"
+else
+  fail "live: freshness" "missing $LIVE_FRESH or python3"
+fi
+
 # --- slow tier --------------------------------------------------------------
 if [ "$RUN_ALL" -eq 1 ]; then
   if [ -f "$WZ_TESTS/mutate-check-opacity.sh" ]; then
@@ -501,6 +531,13 @@ if [ "$RUN_ALL" -eq 1 ]; then
     run "zsh: runtime matrix" "$REPO_ROOT" bash "$ZSH_RT"
   else
     fail "zsh: runtime matrix" "missing $ZSH_RT or zsh"
+  fi
+
+  INST_TEST="$REPO_ROOT/tests/install/check-install.sh"
+  if [ -f "$INST_TEST" ]; then
+    run "install: idempotency & backup" "$REPO_ROOT" bash "$INST_TEST"
+  else
+    fail "install: idempotency & backup" "missing $INST_TEST"
   fi
 
   if [ "${DEVCHECK_IN_CLEAN_CLONE:-0}" != "1" ]; then
