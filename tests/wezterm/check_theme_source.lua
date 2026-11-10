@@ -21,7 +21,8 @@
 --
 -- Run: luajit tests/check_theme_source.lua <config-root>
 
-local root = assert(arg[1], 'usage: check_theme_source.lua <config-root>')
+local _script_dir = (arg and arg[0] and arg[0]:match('^(.*)[/\\][^/\\]+$')) or '.'
+local root = dofile(_script_dir .. '/lib/resolve_root.lua')('check_theme_source.lua', arg)
 
 local pass, fail = 0, 0
 local function check(name, ok, detail)
@@ -62,8 +63,31 @@ local DECOY = {
 -- os.tmpname() is no use here: LuaJIT's creates a plain FILE, so mkdir -p
 -- under it fails and the decoy palette below lands nowhere.
 math.randomseed(os.time())
-local decoy_dir = ('/tmp/wezterm-theme-decoy-%d-%d'):format(os.time(), math.random(1e6))
-assert(os.execute('mkdir -p ' .. decoy_dir .. '/colors'))
+local function mktemp_dir(prefix)
+   local ph = assert(io.popen(string.format('mktemp -d "${TMPDIR:-/tmp}/%s.XXXXXX"', prefix)))
+   local dir = ph:read('*l')
+   ph:close()
+   assert(dir and dir ~= '', 'mktemp failed')
+   return dir
+end
+local temp_dirs = {}
+local function cleanup_temps()
+   for i = #temp_dirs, 1, -1 do
+      local d = temp_dirs[i]
+      if d and d ~= '' then
+         os.execute('rm -rf ' .. string.format('%q', d))
+      end
+      temp_dirs[i] = nil
+   end
+end
+local _cleanup_gc
+if newproxy then
+   _cleanup_gc = newproxy(true)
+   getmetatable(_cleanup_gc).__gc = cleanup_temps
+end
+local decoy_dir = mktemp_dir('wezterm-theme-decoy')
+temp_dirs[#temp_dirs + 1] = decoy_dir
+assert(os.execute('mkdir -p ' .. string.format('%q', decoy_dir .. '/colors')))
 local decoy_palette = assert(io.open(decoy_dir .. '/colors/matugen.lua', 'w'))
 decoy_palette:write('return {\n')
 for k, v in pairs(DECOY) do
@@ -416,5 +440,6 @@ do
    end
 end
 
+cleanup_temps()
 print(('\n%d passed, %d failed'):format(pass, fail))
 os.exit(fail == 0 and 0 or 1)

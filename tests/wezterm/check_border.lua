@@ -15,7 +15,8 @@
 --
 -- Run: luajit tests/check_border.lua <config-root>
 
-local root = assert(arg[1], 'usage: check_border.lua <config-root>')
+local _script_dir = (arg and arg[0] and arg[0]:match('^(.*)[/\\][^/\\]+$')) or '.'
+local root = dofile(_script_dir .. '/lib/resolve_root.lua')('check_border.lua', arg)
 
 local pass, fail = 0, 0
 local function check(name, ok, detail)

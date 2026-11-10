@@ -18,8 +18,18 @@ set -u
 SRC=${WEZTERM_CONFIG_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.config/wezterm" && pwd -P)}
 SRC=$(readlink -f "$SRC")
 TEST_SCRIPT=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)/check_opacity.lua
-W=${WEZTERM_MUTANT_DIR:-/tmp/wzmut}
-FAKE=${WEZTERM_FAKE_HOME:-/tmp/opcheck_home}
+_TMP_BASE=""
+if [[ -z "${WEZTERM_MUTANT_DIR:-}" || -z "${WEZTERM_FAKE_HOME:-}" ]]; then
+  _TMP_BASE="$(mktemp -d "${TMPDIR:-/tmp}/wezterm-opacity.XXXXXX")"
+fi
+cleanup() {
+  if [[ -n "$_TMP_BASE" && -d "$_TMP_BASE" ]]; then
+    rm -rf "$_TMP_BASE"
+  fi
+}
+trap cleanup EXIT
+W=${WEZTERM_MUTANT_DIR:-$_TMP_BASE/wzmut}
+FAKE=${WEZTERM_FAKE_HOME:-$_TMP_BASE/opcheck_home}
 
 # The live config is a symlink into the dotfiles repo. `cp -r "$SRC" "$W"`
 # copies the LINK when SRC is a symlink, so every sed below rewrote the live

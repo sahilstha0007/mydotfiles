@@ -13,8 +13,34 @@ from dataclasses import dataclass
 from pathlib import Path
 from unittest import mock
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
-KITTY_DIR = REPO_ROOT / ".config" / "kitty"
+# kitty +runpy executes source inside a function's locals() while nested defs resolve globals().
+globals().update(locals())
+
+
+def _resolve_kitty_dir() -> Path:
+    for env_key in ("DOTFILES_KITTY_DIR", "KITTY_CONFIG_DIRECTORY"):
+        val = os.environ.get(env_key)
+        if val:
+            cand = Path(val).expanduser().resolve()
+            if (cand / "tab_bar.py").is_file():
+                return cand
+    this_file = globals().get("__file__", "")
+    if this_file and Path(this_file).name == "check-tab-bar.py":
+        cand = Path(this_file).resolve().parents[2] / ".config" / "kitty"
+        if (cand / "tab_bar.py").is_file():
+            return cand
+    for base in (Path.cwd(), Path.cwd().parent, Path.cwd().parent.parent, Path.home()):
+        cand = (base / ".config" / "kitty").resolve()
+        if (cand / "tab_bar.py").is_file():
+            return cand
+    raise FileNotFoundError(
+        "Could not locate kitty config directory (set DOTFILES_KITTY_DIR or KITTY_CONFIG_DIRECTORY)"
+    )
+
+
+KITTY_DIR = _resolve_kitty_dir()
+REPO_ROOT = KITTY_DIR.parents[1]
+globals().update(locals())
 
 
 def _install_kitty_stubs_if_needed() -> None:
@@ -491,5 +517,9 @@ class KittyTabBarTests(unittest.TestCase):
         self.assertNotIn("title.split()", conf)
 
 
+globals().update(locals())
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
+elif __name__ == "kitty.entry_points":
+    unittest.main(module=__name__, argv=["check-tab-bar.py"], verbosity=2)

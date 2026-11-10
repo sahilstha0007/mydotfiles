@@ -21,9 +21,13 @@
 --   (FAKE_HOME must point at a throwaway dir — the opacity cache is written
 --    under it, and this test must never write to the user's real ~/.cache)
 
-local root = assert(arg[1], 'usage: check_opacity.lua <config-root>')
+local _script_dir = (arg and arg[0] and arg[0]:match('^(.*)[/\\][^/\\]+$')) or '.'
+local root = dofile(_script_dir .. '/lib/resolve_root.lua')('check_opacity.lua', arg)
 local home = os.getenv('FAKE_HOME')
-assert(home, 'FAKE_HOME must be set to a throwaway dir')
+if not home or home == '' then
+   io.stderr:write('check_opacity.lua: FAKE_HOME must be set to a throwaway dir\n')
+   os.exit(2)
+end
 -- persist() writes home .. '/.cache/<name>' with a plain io.open — no mkdir. It
 -- worked before only because the directory already existed, which made the
 -- suite silently depend on a pre-made sandbox. Create it here so the suite is

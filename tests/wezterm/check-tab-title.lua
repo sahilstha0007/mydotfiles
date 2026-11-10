@@ -12,7 +12,8 @@
 -- Run: luajit tests/check-tab-title.lua <config-root>
 -- Exit: 0 = composition behaves, 1 = a case failed
 
-local root = assert(arg[1], 'usage: check-tab-title.lua <config-root>')
+local _script_dir = (arg and arg[0] and arg[0]:match('^(.*)[/\\][^/\\]+$')) or '.'
+local root = dofile(_script_dir .. '/lib/resolve_root.lua')('check-tab-title.lua', arg)
 
 local pass, fail = 0, 0
 local function check(name, ok, detail)

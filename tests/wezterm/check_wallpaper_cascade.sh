@@ -23,8 +23,9 @@
 # same assertions to prove the test actually catches the regression.
 set -u
 
-REAL_HOME=${HOME:?HOME must be set}
-SRC_DIR=$(CDPATH= cd -- "$(dirname -- "$0")/../../.config/wezterm" && pwd)
+TESTS_WEZTERM_DIR=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
+FIXTURES="$TESTS_WEZTERM_DIR/fixtures"
+SRC_DIR=$(CDPATH='' cd -- "$TESTS_WEZTERM_DIR/../../.config/wezterm" && pwd)
 SYNC=${1:-$SRC_DIR/utils/sync-wallpaper.sh}
 TMP=$(mktemp -d)
 trap 'chmod -R u+w "$TMP" 2>/dev/null; rm -rf "$TMP"' EXIT
@@ -43,7 +44,7 @@ PAL="$H/wezterm/colors/matugen.lua"
 mkdir -p "$H/wezterm/colors" "$H/matugen" "$H/tmux" "$H/ohmyposh" \
          "$H/herdr" "$H/opencode" "$H/wezterm/utils" "$TMP/bin" "$CACHE"
 
-cp "$REAL_HOME/.config/matugen/templates/wezterm-colors.lua" "$H/wezterm-colors.lua"
+cp "$FIXTURES/wezterm-colors.lua" "$H/wezterm-colors.lua"
 cat > "$H/matugen/wezterm.toml" <<EOF
 [config]
 
@@ -93,8 +94,8 @@ run() {
    ran=$(tr '\n' ' ' < "$TMP/cascade.log" | sed 's/ *$//')
 }
 
-IMG_A=${WEZCASCADE_IMAGE_A:-$REAL_HOME/Pictures/wallpaper/background1.png}
-IMG_B=${WEZCASCADE_IMAGE_B:-$REAL_HOME/Pictures/wallpaper/wallhaven-6llxkw_1920x1080.jpg}
+IMG_A=${WEZCASCADE_IMAGE_A:-$FIXTURES/wall-a.png}
+IMG_B=${WEZCASCADE_IMAGE_B:-$FIXTURES/wall-b.png}
 
 if [ ! -f "$IMG_A" ]; then
    printf 'fixture image missing: %s (set WEZCASCADE_IMAGE_A)\n\n' "$IMG_A" >&2

@@ -19,7 +19,8 @@
 -- Run: luajit tests/check-right-status.lua <config-root>
 -- Exit: 0 = all segments legible, 1 = one or more failed
 
-local root = assert(arg[1], 'usage: check-right-status.lua <config-root>')
+local _script_dir = (arg and arg[0] and arg[0]:match('^(.*)[/\\][^/\\]+$')) or '.'
+local root = dofile(_script_dir .. '/lib/resolve_root.lua')('check-right-status.lua', arg)
 
 local pass, fail = 0, 0
 local function check(name, ok, detail)
