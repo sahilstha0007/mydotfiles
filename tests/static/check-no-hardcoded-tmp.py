@@ -24,7 +24,7 @@ SKIP_DIRS = {".git", "plugins", "fixtures", "__pycache__", ".cache"}
 # Every entry MUST match at least once on disk (stale entries fail verification).
 _TMP_LIT = "/" + "tmp"
 ALLOWLIST: dict[tuple[str, str], str] = {
-    ("bin/devcheck", f"{_TMP_LIT}/devcheck-"): "devcheck allocates its outer log and private TMPDIR root in system tmp",
+    ("bin/devcheck", f"{_TMP_LIT}/dc-"): "devcheck allocates its outer log and private TMPDIR root in system tmp",
 }
 
 PAT_TMP_SUBPATH = re.compile(r"(?<!:-)/tmp/")

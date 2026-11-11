@@ -320,13 +320,13 @@ def main(argv: list[str] | None = None) -> int:
     real_home = os.environ["HOME"]
     sb_path = build_sandbox_path(real_home)
 
-    with tempfile.TemporaryDirectory(prefix="state-matrix-") as td:
+    with tempfile.TemporaryDirectory(prefix="sm-") as td:
         work = pathlib.Path(td)
         base_repo, base_home = seed_base_state(repo_root, work, real_home, sb_path)
         matrix: dict[str, dict[str, tuple[bool, str]]] = {}
 
-        for state in STATES:
-            st_dir = work / f"st_{state}"
+        for idx, state in enumerate(STATES):
+            st_dir = work / f"s{idx}"
             st_repo, st_home, env = clone_state(base_repo, base_home, st_dir, sb_path, real_home)
             pre_tmp = prepare_state(state, st_repo, st_home, st_dir, env)
             matrix[state] = run_state_checks(state, st_repo, st_home, st_dir, env, pre_tmp)

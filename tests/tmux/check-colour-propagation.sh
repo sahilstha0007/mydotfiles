@@ -34,14 +34,14 @@
 set -uo pipefail
 
 conf_dir=${TMUX_TEST_CONF_DIR:-$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../../.config/tmux" && pwd)}
-sock=${TMUX_TEST_SOCK:-cp-$$}
+sock=${TMUX_TEST_SOCK:-c$$}
 # Under $HOME rather than /tmp: a stray TMPDIR=/tmp would otherwise place the
 # scratch dir inside the directory being copied, and `cp -r` would recurse into
 # itself (it tries to copy all of /tmp, fails on unreadable systemd dirs, and
 # leaves no config behind).
-scratch_root=${TMUX_TEST_TMPDIR:-$HOME/.cache/tmux-tests}
+scratch_root=${TMUX_TEST_TMPDIR:-$HOME/.cache/tx}
 mkdir -p "$scratch_root"
-work=$(mktemp -d "$scratch_root/probe.XXXXXX")
+work=$(mktemp -d "$scratch_root/c.XXXXXX")
 export TMUX_TMPDIR="$work"
 
 trap '

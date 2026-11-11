@@ -300,8 +300,13 @@ for layer, cfg_paths, reload_cmd in targets:
         continue
     matching = []
     for pid, pstart, comm, args in procs:
-        if layer == "tmux" and (comm.startswith("tmux") or "tmux: server" in args):
-            matching.append((pid, pstart, comm))
+        if layer == "tmux":
+            try:
+                pcomm = pathlib.Path(f"/proc/{pid}/comm").read_text(encoding="utf-8").strip()
+            except OSError:
+                pcomm = comm
+            if pcomm == "tmux: server" or (comm in ("tmux", "tmux:") and "tmux: client" not in args):
+                matching.append((pid, pstart, pcomm))
         elif layer == "kitty" and comm == "kitty":
             matching.append((pid, pstart, comm))
             kt_live_pids.append(pid)

@@ -41,9 +41,9 @@ FAILED=0
 SKIPPED=0
 declare -a NAMES=() RESULTS=()
 
-DEVCHECK_LOG=$(mktemp /tmp/devcheck-log.XXXXXX)
+DEVCHECK_LOG=$(mktemp /tmp/dc-l.XXXXXX)
 DEVCHECK_LEAK_SELF=$(basename -- "$DEVCHECK_LOG")
-DEVCHECK_PRIV_TMP=$(mktemp -d /tmp/devcheck-tmp.XXXXXX)
+DEVCHECK_PRIV_TMP=$(mktemp -d /tmp/dc-t.XXXXXX)
 DEVCHECK_TMP_SELF=$(basename -- "$DEVCHECK_PRIV_TMP")
 export TMPDIR="$DEVCHECK_PRIV_TMP"
 trap 'rm -f "$DEVCHECK_LOG"; rm -rf "$DEVCHECK_PRIV_TMP"' EXIT

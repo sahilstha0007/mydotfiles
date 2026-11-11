@@ -2,19 +2,19 @@
 set -euo pipefail
 
 conf_dir=${TMUX_TEST_CONF_DIR:-$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../../.config/tmux" && pwd)}
-scratch_root=${TMUX_TEST_TMPDIR:-$HOME/.cache/tmux-tests}
+scratch_root=${TMUX_TEST_TMPDIR:-$HOME/.cache/tx}
 mkdir -p "$scratch_root"
-work=$(mktemp -d "$scratch_root/profiles.XXXXXX")
+work=$(mktemp -d "$scratch_root/p.XXXXXX")
 conf="$work/tmux.conf"
 
 cleanup() {
-  TMUX_TMPDIR="$work/wezterm" tmux kill-server >/dev/null 2>&1 || true
-  TMUX_TMPDIR="$work/kitty" tmux kill-server >/dev/null 2>&1 || true
+  TMUX_TMPDIR="$work/w" tmux -L p kill-server >/dev/null 2>&1 || true
+  TMUX_TMPDIR="$work/k" tmux -L p kill-server >/dev/null 2>&1 || true
   rm -rf "$work"
 }
 trap cleanup EXIT
 
-mkdir -p "$work/wezterm" "$work/kitty"
+mkdir -p "$work/w" "$work/k"
 cp "$conf_dir/tmux.conf" "$conf"
 sed -i \
   -e "s|^if-shell '.*plugins/tpm/tpm.*|run 'true'|" \
@@ -22,13 +22,13 @@ sed -i \
   "$conf"
 
 # 1. Start WezTerm profile
-env -u TMUX -u TMUX_PANE -u KITTY_WINDOW_ID TMUX_TMPDIR="$work/wezterm" \
+env -u TMUX -u TMUX_PANE -u KITTY_WINDOW_ID TMUX_TMPDIR="$work/w" \
   TERMINAL_STACK_PROFILE="wezterm" WEZTERM_PANE="1" \
-  tmux -f "$conf" new-session -d -s "wezterm-probe"
+  tmux -L p -f "$conf" new-session -d -s "wezterm-probe"
 
 wezterm_blue=""
 for _ in {1..30}; do
-  wezterm_blue=$(TMUX_TMPDIR="$work/wezterm" tmux show-option -gv @thm_blue 2>/dev/null || true)
+  wezterm_blue=$(TMUX_TMPDIR="$work/w" tmux -L p show-option -gv @thm_blue 2>/dev/null || true)
   [[ -n "$wezterm_blue" ]] && break
   sleep 0.1
 done
@@ -43,20 +43,20 @@ expected_wezterm_blue=$(grep '^set -g @thm_blue ' "$conf_dir/colors-matugen.conf
   exit 1
 }
 
-wezterm_env=$(TMUX_TMPDIR="$work/wezterm" tmux show-environment -g TERMINAL_STACK_PROFILE)
+wezterm_env=$(TMUX_TMPDIR="$work/w" tmux -L p show-environment -g TERMINAL_STACK_PROFILE)
 [[ "$wezterm_env" == 'TERMINAL_STACK_PROFILE=wezterm' ]] || {
   echo "FAIL: profile environment mismatch (got '$wezterm_env')" >&2
   exit 1
 }
 
 # 2. Start Kitty Nightfox profile and verify pane-border-status auto-toggle
-env -u TMUX -u TMUX_PANE -u WEZTERM_PANE TMUX_TMPDIR="$work/kitty" \
+env -u TMUX -u TMUX_PANE -u WEZTERM_PANE TMUX_TMPDIR="$work/k" \
   TERMINAL_STACK_PROFILE="kitty" KITTY_WINDOW_ID="1" \
-  tmux -f "$conf" new-session -d -s "kitty-probe"
+  tmux -L p -f "$conf" new-session -d -s "kitty-probe"
 
 kitty_blue=""
 for _ in {1..30}; do
-  kitty_blue=$(TMUX_TMPDIR="$work/kitty" tmux show-option -gv @thm_blue 2>/dev/null || true)
+  kitty_blue=$(TMUX_TMPDIR="$work/k" tmux -L p show-option -gv @thm_blue 2>/dev/null || true)
   [[ -n "$kitty_blue" ]] && break
   sleep 0.1
 done
@@ -66,23 +66,23 @@ expected_kitty_blue=$(grep '^set -g @thm_blue ' "$conf_dir/colors-nightfox.conf"
   exit 1
 }
 
-border_single=$(TMUX_TMPDIR="$work/kitty" tmux display-message -p -t kitty-probe:1 '#{pane-border-status}')
+border_single=$(TMUX_TMPDIR="$work/k" tmux -L p display-message -p -t kitty-probe:1 '#{pane-border-status}')
 [[ "$border_single" == "off" ]] || {
   echo "FAIL: single-pane window should hide pane-border-status, got '$border_single'" >&2
   exit 1
 }
 
-TMUX_TMPDIR="$work/kitty" tmux split-window -t kitty-probe:1 -h
+TMUX_TMPDIR="$work/k" tmux -L p split-window -t kitty-probe:1 -h
 sleep 0.1
-border_split=$(TMUX_TMPDIR="$work/kitty" tmux display-message -p -t kitty-probe:1 '#{pane-border-status}')
+border_split=$(TMUX_TMPDIR="$work/k" tmux -L p display-message -p -t kitty-probe:1 '#{pane-border-status}')
 [[ "$border_split" == "top" ]] || {
   echo "FAIL: split window should enable pane-border-status top, got '$border_split'" >&2
   exit 1
 }
 
-TMUX_TMPDIR="$work/kitty" tmux kill-pane -t kitty-probe:1.2
+TMUX_TMPDIR="$work/k" tmux -L p kill-pane -t kitty-probe:1.2
 sleep 0.1
-border_after=$(TMUX_TMPDIR="$work/kitty" tmux display-message -p -t kitty-probe:1 '#{pane-border-status}')
+border_after=$(TMUX_TMPDIR="$work/k" tmux -L p display-message -p -t kitty-probe:1 '#{pane-border-status}')
 [[ "$border_after" == "off" ]] || {
   echo "FAIL: returning to 1 pane should hide pane-border-status, got '$border_after'" >&2
   exit 1

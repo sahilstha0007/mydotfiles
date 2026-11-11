@@ -27,7 +27,7 @@ sandbox_cleanup() {
 sandbox_init() {
   local src_repo="${1:-${REPO_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)}}"
   SB_REAL_HOME="${HOME:?HOME must be set}"
-  SB_ROOT="$(mktemp -d "${TMPDIR:-/tmp}/dotfiles-sandbox.XXXXXX")"
+  SB_ROOT="$(mktemp -d "${TMPDIR:-/tmp}/sb.XXXXXX")"
   SB_HOME="$SB_ROOT/home"
   SB_REPO="$SB_ROOT/repo"
   mkdir -p "$SB_HOME"

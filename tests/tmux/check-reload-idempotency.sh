@@ -11,8 +11,8 @@ if ! command -v tmux >/dev/null 2>&1; then
   exit 1
 fi
 
-tmpdir=$(mktemp -d)
-sock="devcheck-reload-$$"
+tmpdir=$(mktemp -d "${TMPDIR:-/tmp}/r.XXXXXX")
+sock="r$$"
 cleanup() {
   TMUX_TMPDIR="$tmpdir" tmux -L "$sock" kill-server >/dev/null 2>&1 || true
   rm -rf "$tmpdir"
