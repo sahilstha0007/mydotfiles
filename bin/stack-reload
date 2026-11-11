@@ -92,8 +92,17 @@ else
   echo "  [SKIP] no active tmux server under current TMUX_TMPDIR"
 fi
 
-# 2. Kitty live instances (socket-only RC + SIGUSR1 fallback)
+SELF_PATH=$(readlink -f -- "${BASH_SOURCE[0]}")
+REPO_ROOT=$(cd -- "$(dirname -- "$SELF_PATH")/.." && pwd -P)
+
+# 2. Kitty live instances (sanitize matugen output before reload + socket-only RC + SIGUSR1 fallback)
 if command -v kitty >/dev/null 2>&1; then
+  SANITIZER=$(command -v kitty-colors-sanitize 2>/dev/null || printf '%s' "$REPO_ROOT/bin/kitty-colors-sanitize")
+  if [ -x "$SANITIZER" ] && [ -f "$HOME/.config/kitty/colors-matugen.conf" ]; then
+    run_or_echo "$SANITIZER" --sync-in \
+      --in "$HOME/.config/kitty/colors-matugen.conf" \
+      --out "$HOME/.config/kitty/colors-matugen.validated.conf" >/dev/null || true
+  fi
   kitty_reloaded=0
   kitty_reloaded_pids=()
   if [ -r /proc/net/unix ]; then

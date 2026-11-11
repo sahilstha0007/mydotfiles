@@ -145,6 +145,7 @@ EXPECTED_GATES=(
   "kitty: config parse"
   "kitty: full profile"
   "kitty: collisions"
+  "kitty: sanitize"
   "kitty: tab_bar specs"
   "zsh: syntax"
   "zsh: startup <= 120ms"
@@ -299,17 +300,49 @@ fi
 # --- kitty ------------------------------------------------------------------
 KITTY_DIR="$REPO_ROOT/.config/kitty"
 KITTY_CUSTOM="$KITTY_DIR/custom.conf"
-if [ -f "$KITTY_CUSTOM" ] && require_cmd kitty; then
+if [ -f "$KITTY_CUSTOM" ] && require_cmd kitty && require_cmd python3; then
   run "kitty: config parse" "$KITTY_DIR" \
-    kitty --config NONE -o include="$KITTY_CUSTOM" --help
+    python3 -c '
+import pathlib, subprocess, sys
+kitty_dir = pathlib.Path(".")
+targets = [kitty_dir / "custom.conf", kitty_dir / "themes" / "nightfox.conf"]
+for extra in ("colors-matugen.validated.conf", "colors-matugen.conf"):
+    p = kitty_dir / extra
+    if p.is_file():
+        targets.append(p)
+script = (
+    "import sys; from kitty.config import load_config; "
+    "bad=[]; load_config(sys.argv[1], accumulate_bad_lines=bad); "
+    "sys.stderr.write(\"\\n\".join(f\"{b.number}:{b.line}:{b.exception}\" for b in bad)+\"\\n\") if bad else None; "
+    "sys.exit(1 if bad else 0)"
+)
+for target in targets:
+    res = subprocess.run(["kitty", "+runpy", script, str(target)], capture_output=True, text=True)
+    diag = (res.stderr + "\n" + res.stdout).strip()
+    if res.returncode != 0 or diag:
+        sys.exit(f"{target}: parse error/warning (rc={res.returncode}):\n{diag}")
+'
 else
-  fail "kitty: config parse" "missing custom.conf or kitty"
+  fail "kitty: config parse" "missing custom.conf, kitty, or python3"
 fi
 
 KITTY_CONF="$KITTY_DIR/kitty.conf"
 if [ -f "$KITTY_CONF" ] && require_cmd kitty && require_cmd python3; then
   run "kitty: full profile" "$KITTY_DIR" \
-    bash -c 'python3 -m py_compile tab_bar.py pass_keys.py && kitty --config kitty.conf --help >/dev/null'
+    python3 -c '
+import subprocess, sys
+subprocess.run(["python3", "-m", "py_compile", "tab_bar.py", "pass_keys.py"], check=True)
+script = (
+    "from kitty.config import load_config; "
+    "bad=[]; load_config(\"kitty.conf\", accumulate_bad_lines=bad); "
+    "sys.stderr.write(\"\\n\".join(f\"{b.number}:{b.line}:{b.exception}\" for b in bad)+\"\\n\") if bad else None; "
+    "sys.exit(1 if bad else 0)"
+)
+res = subprocess.run(["kitty", "+runpy", "import sys; " + script], capture_output=True, text=True)
+diag = (res.stderr + "\n" + res.stdout).strip()
+if res.returncode != 0 or diag:
+    sys.exit(f"kitty.conf parse error/warning (rc={res.returncode}):\n{diag}")
+'
   run "kitty: collisions" "$KITTY_DIR" \
     python3 -c '
 import re, subprocess, sys
@@ -328,14 +361,31 @@ if tmux_root.returncode == 0:
     steals = sorted(tmux_m & kitty_alt)
     if steals:
         sys.exit("Kitty bare alt+ steals tmux root M-: " + ", ".join(steals))
-out = subprocess.run(["kitty", "+runpy", "from kitty.config import load_config; load_config(\"kitty.conf\")"], capture_output=True, text=True)
-bad = [l for l in (out.stdout + out.stderr).splitlines() if "Ignoring invalid config line" in l]
-if bad:
-    sys.exit("Kitty config warnings:\n" + "\n".join(bad))
+for target in ("kitty.conf", "themes/nightfox.conf", "colors-matugen.conf", "colors-matugen.validated.conf"):
+    import pathlib
+    if not pathlib.Path(target).is_file():
+        continue
+    script = (
+        "import sys; from kitty.config import load_config; "
+        "bad=[]; load_config(sys.argv[1], accumulate_bad_lines=bad); "
+        "sys.stderr.write(\"\\n\".join(f\"{b.number}:{b.line}:{b.exception}\" for b in bad)+\"\\n\") if bad else None; "
+        "sys.exit(1 if bad else 0)"
+    )
+    out = subprocess.run(["kitty", "+runpy", script, target], capture_output=True, text=True)
+    diag = (out.stdout + "\n" + out.stderr).strip()
+    if out.returncode != 0 or diag:
+        sys.exit(f"Kitty config warnings in {target}:\n{diag}")
 '
 else
   fail "kitty: full profile" "missing kitty.conf, kitty, or python3"
   fail "kitty: collisions" "missing kitty.conf, kitty, or python3"
+fi
+
+KITTY_SAN_TEST="$REPO_ROOT/tests/kitty/check-colors-sanitize.sh"
+if [ -x "$KITTY_SAN_TEST" ] && require_cmd kitty && require_cmd python3; then
+  run "kitty: sanitize" "$KITTY_DIR" bash "$KITTY_SAN_TEST"
+else
+  fail "kitty: sanitize" "missing executable check-colors-sanitize.sh, kitty, or python3"
 fi
 
 # Invoked indirectly via `run "kitty: tab_bar specs" ... run_kitty_tab_specs`.

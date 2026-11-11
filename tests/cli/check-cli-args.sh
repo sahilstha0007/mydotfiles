@@ -13,6 +13,7 @@ CLI_DUMP="$REPO_ROOT/.config/tmux/keymap-dump.sh"
 CLI_SYNC="$REPO_ROOT/bin/sync-keybindings"
 CLI_RELOAD="$REPO_ROOT/bin/stack-reload"
 CLI_INSTALL="$REPO_ROOT/install.sh"
+CLI_KITTY_SAN="$REPO_ROOT/bin/kitty-colors-sanitize"
 
 check_case() {
   local label="$1" want_rc="$2" err_pattern="$3"
@@ -75,5 +76,8 @@ check_case "sync-keybindings --bad"     2 "unknown"    python3 "$CLI_SYNC" --bad
 check_case "stack-reload --help"        0 "usage:"     bash "$CLI_RELOAD" --help
 check_case "stack-reload --bad-flag"    2 "unknown"    bash "$CLI_RELOAD" --bad-flag
 
-check_case "install.sh --help"          0 "usage:"     bash "$CLI_INSTALL" --help
-check_case "install.sh --bad-flag"      2 "unknown"    bash "$CLI_INSTALL" --bad-flag
+check_case "install.sh --help"            0 "usage:"     bash "$CLI_INSTALL" --help
+check_case "install.sh --bad-flag"        2 "unknown"    bash "$CLI_INSTALL" --bad-flag
+
+check_case "kitty-colors-sanitize --help" 0 "usage:"     python3 "$CLI_KITTY_SAN" --help
+check_case "kitty-colors-sanitize --bad"  2 "unknown"    python3 "$CLI_KITTY_SAN" --bad-flag

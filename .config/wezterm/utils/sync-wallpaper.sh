@@ -142,6 +142,13 @@ printf '%s' "$t" > "$cache"
 # opencode lives in this cascade (it's a TUI app of the dev stack).
 [ -x "$HOME/.config/opencode/opencode-palette.sh" ] && "$HOME/.config/opencode/opencode-palette.sh"
 
+# Ensure any externally-generated kitty matugen include is sanitized & promoted before reload.
+if command -v kitty-colors-sanitize >/dev/null 2>&1 && [ -f "$HOME/.config/kitty/colors-matugen.conf" ]; then
+   kitty-colors-sanitize --sync-in \
+      --in "$HOME/.config/kitty/colors-matugen.conf" \
+      --out "$HOME/.config/kitty/colors-matugen.validated.conf" >/dev/null 2>&1 || true
+fi
+
 # The Atlas vault's Obsidian snippet is the only non-TUI consumer left; Zed
 # keeps its own theme and is deliberately out of this cascade.
 [ -x "$HOME/.config/wezterm/utils/obsidian-palette.sh" ] && "$HOME/.config/wezterm/utils/obsidian-palette.sh"

@@ -1,0 +1,314 @@
+#!/usr/bin/env python3
+"""Sanitize and validate Matugen-generated Kitty color includes (Defect 1).
+
+Usage:
+    kitty-colors-sanitize [--in PATH] [--out PATH] [--sync-in] [--check] [--help]
+
+Reads a raw Kitty include file (default: ~/.config/kitty/colors-matugen.conf),
+rewrites CSS/JS comments (`/* ... */`, `// ...`) to `# ...`, filters out any
+line rejected by Kitty's own parser, validates a staged copy via
+`kitty +runpy` `load_config`, and atomically promotes to `--out`
+(default: ~/.config/kitty/colors-matugen.validated.conf) only if validation
+succeeds with zero warnings or errors.
+"""
+
+from __future__ import annotations
+
+import os
+import pathlib
+import re
+import shutil
+import subprocess
+import sys
+import tempfile
+
+
+DEFAULT_REL_IN = pathlib.Path(".config/kitty/colors-matugen.conf")
+DEFAULT_REL_OUT = pathlib.Path(".config/kitty/colors-matugen.validated.conf")
+
+
+def _find_kitty() -> str:
+    found = shutil.which("kitty")
+    if not found:
+        raise RuntimeError("kitty binary is required for config validation")
+    return found
+
+
+def rewrite_comments(text: str) -> list[str]:
+    """Convert /* ... */ (single/multi-line) and leading // comments to # comments."""
+    out_lines: list[str] = []
+    in_block = False
+    for raw_line in text.splitlines():
+        line = raw_line.rstrip("\r\n")
+        if in_block:
+            end_idx = line.find("*/")
+            if end_idx >= 0:
+                comment_part = line[:end_idx].strip()
+                trailing = line[end_idx + 2 :].strip()
+                in_block = False
+                if comment_part:
+                    out_lines.append(f"# {comment_part}")
+                if trailing:
+                    out_lines.append(trailing)
+                elif not comment_part:
+                    out_lines.append("#")
+            else:
+                stripped = line.strip()
+                out_lines.append(f"# {stripped}" if stripped else "#")
+            continue
+
+        # Leading // comment
+        if re.match(r"^\s*//", line):
+            out_lines.append(re.sub(r"^(\s*)//\s?", r"\1# ", line))
+            continue
+
+        # Handle /* ... */ starting on this line
+        start_idx = line.find("/*")
+        if start_idx >= 0:
+            before = line[:start_idx].rstrip()
+            rest = line[start_idx + 2 :]
+            end_idx = rest.find("*/")
+            if end_idx >= 0:
+                comment_body = rest[:end_idx].strip()
+                after = rest[end_idx + 2 :].strip()
+                # Preserve pure comment lines as `# ...`; keep before/after directives separated
+                if before:
+                    if comment_body:
+                        out_lines.append(f"# {comment_body}")
+                    out_lines.append(before + (f" {after}" if after else ""))
+                else:
+                    if comment_body:
+                        out_lines.append(f"# {comment_body}")
+                    else:
+                        out_lines.append("#")
+                    if after:
+                        out_lines.append(after)
+            else:
+                in_block = True
+                if before:
+                    out_lines.append(before)
+                comment_body = rest.strip()
+                out_lines.append(f"# {comment_body}" if comment_body else "#")
+            continue
+
+        out_lines.append(line)
+    return out_lines
+
+
+def filter_valid_kitty_lines(kitty_bin: str, lines: list[str]) -> tuple[list[str], list[tuple[int, str, str]]]:
+    """Validate candidate lines using Kitty's own parse_config and drop invalid non-comment lines."""
+    probe_script = r"""
+import json, os, sys
+from kitty.config import parse_config
+
+lines = json.loads(sys.stdin.read())
+results = []
+for idx, line in enumerate(lines, 1):
+    s = line.strip()
+    if not s or s.startswith("#"):
+        results.append({"idx": idx, "ok": True, "line": line, "reason": ""})
+        continue
+    bad = []
+    r_fd, w_fd = os.pipe()
+    saved_2 = os.dup(2)
+    exc_msg = ""
+    try:
+        os.dup2(w_fd, 2)
+        os.close(w_fd)
+        parse_config([line], accumulate_bad_lines=bad)
+    except Exception as exc:
+        exc_msg = f"{type(exc).__name__}: {exc}"
+    finally:
+        os.dup2(saved_2, 2)
+        os.close(saved_2)
+    with os.fdopen(r_fd, "r", errors="replace") as rf:
+        warn = rf.read().strip()
+    if bad:
+        exc_msg = "; ".join(str(b.exception) for b in bad)
+    ok = (not warn) and (not bad) and (not exc_msg)
+    reason = " | ".join(p for p in (warn, exc_msg) if p)
+    results.append({"idx": idx, "ok": ok, "line": line, "reason": reason})
+
+sys.stdout.write(json.dumps(results))
+"""
+    import json
+
+    proc = subprocess.run(
+        [kitty_bin, "+runpy", probe_script],
+        input=json.dumps(lines),
+        capture_output=True,
+        text=True,
+    )
+    if proc.returncode != 0:
+        raise RuntimeError(f"kitty line probe failed ({proc.returncode}): {proc.stderr.strip()}")
+    parsed = json.loads(proc.stdout)
+    kept: list[str] = []
+    dropped: list[tuple[int, str, str]] = []
+    for item in parsed:
+        if item["ok"]:
+            kept.append(item["line"])
+        else:
+            dropped.append((item["idx"], item["line"], item["reason"]))
+    return kept, dropped
+
+
+def validate_file_with_kitty(kitty_bin: str, conf_path: pathlib.Path) -> tuple[bool, str]:
+    """Run Kitty's full load_config over conf_path, failing on any exception or stderr warning."""
+    check_script = (
+        "import sys; from kitty.config import load_config; "
+        "bad=[]; load_config(sys.argv[1], accumulate_bad_lines=bad); "
+        "bad_msgs=[f'line {b.number}: {b.line!r} ({b.exception})' for b in bad]; "
+        "sys.stderr.write('\\n'.join(bad_msgs)+'\\n') if bad_msgs else None; "
+        "sys.exit(1 if bad else 0)"
+    )
+    proc = subprocess.run(
+        [kitty_bin, "+runpy", check_script, str(conf_path)],
+        capture_output=True,
+        text=True,
+    )
+    diag = "\n".join(part for part in (proc.stderr.strip(), proc.stdout.strip()) if part).strip()
+    if proc.returncode != 0 or diag:
+        return False, diag or f"kitty load_config exited {proc.returncode}"
+    return True, ""
+
+
+def atomic_promote(kitty_bin: str, dest: pathlib.Path, content: str) -> None:
+    """Write staged file next to dest, validate with kitty load_config, then atomically replace dest."""
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    fd, tmp_name = tempfile.mkstemp(prefix=f".{dest.name}.stage.", dir=str(dest.parent))
+    tmp_path = pathlib.Path(tmp_name)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as fh:
+            fh.write(content)
+        os.chmod(tmp_path, 0o644)
+        ok, err = validate_file_with_kitty(kitty_bin, tmp_path)
+        if not ok:
+            raise RuntimeError(f"staged file failed kitty validation: {err}")
+        os.replace(tmp_path, dest)
+    except Exception:
+        tmp_path.unlink(missing_ok=True)
+        raise
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = sys.argv[1:] if argv is None else argv
+    home = pathlib.Path.home()
+    in_path = home / DEFAULT_REL_IN
+    out_path = home / DEFAULT_REL_OUT
+    sync_in = False
+    check_only = False
+    allow_empty = False
+    simulate_bad_stage = False
+
+    i = 0
+    while i < len(args):
+        a = args[i]
+        if a in ("-h", "--help"):
+            print(__doc__.strip())
+            return 0
+        if a == "--in" and i + 1 < len(args):
+            in_path = pathlib.Path(args[i + 1]).expanduser()
+            i += 2
+        elif a == "--out" and i + 1 < len(args):
+            out_path = pathlib.Path(args[i + 1]).expanduser()
+            i += 2
+        elif a == "--sync-in":
+            sync_in = True
+            i += 1
+        elif a == "--check":
+            check_only = True
+            i += 1
+        elif a == "--allow-empty":
+            allow_empty = True
+            i += 1
+        elif a == "--simulate-bad-stage":
+            simulate_bad_stage = True
+            i += 1
+        else:
+            print(
+                f"kitty-colors-sanitize: unknown option or missing value: {a}\n"
+                "Usage: kitty-colors-sanitize [--in PATH] [--out PATH] [--sync-in] [--check] [--help]",
+                file=sys.stderr,
+            )
+            return 2
+
+    try:
+        kitty_bin = _find_kitty()
+    except RuntimeError as exc:
+        print(f"kitty-colors-sanitize: {exc}", file=sys.stderr)
+        return 1
+
+    if check_only:
+        if not in_path.is_file():
+            print(f"kitty-colors-sanitize: missing file: {in_path}", file=sys.stderr)
+            return 1
+        raw_text = in_path.read_text(encoding="utf-8", errors="replace")
+        for idx, line in enumerate(raw_text.splitlines(), 1):
+            s = line.strip()
+            if s.startswith("//") or "/*" in line or "*/" in line:
+                print(
+                    f"kitty-colors-sanitize: invalid CSS/JS comment at {in_path}:{idx}: {line.strip()}",
+                    file=sys.stderr,
+                )
+                return 1
+        ok, err = validate_file_with_kitty(kitty_bin, in_path)
+        if not ok:
+            print(f"kitty-colors-sanitize: invalid kitty config {in_path}: {err}", file=sys.stderr)
+            return 1
+        print(f"PASS: {in_path} valid under kitty load_config (0 warnings, 0 bad lines)")
+        return 0
+
+    if not in_path.is_file():
+        print(f"kitty-colors-sanitize: input file not found: {in_path}", file=sys.stderr)
+        return 1
+
+    raw_text = in_path.read_text(encoding="utf-8", errors="replace")
+    converted = rewrite_comments(raw_text)
+    if simulate_bad_stage:
+        converted.append("unrecognized_simulated_bad_directive 123")
+        out_text = "\n".join(converted).rstrip() + "\n"
+        try:
+            atomic_promote(kitty_bin, out_path, out_text)
+        except Exception as exc:
+            print(f"kitty-colors-sanitize: aborted promotion cleanly: {exc}", file=sys.stderr)
+            return 1
+        return 0
+
+    try:
+        kept, dropped = filter_valid_kitty_lines(kitty_bin, converted)
+    except Exception as exc:
+        print(f"kitty-colors-sanitize: {exc}", file=sys.stderr)
+        return 1
+
+    for idx, bad_line, reason in dropped:
+        print(
+            f"kitty-colors-sanitize: dropped unrecognized line {idx} ({bad_line!r}): {reason}",
+            file=sys.stderr,
+        )
+
+    non_comment_kept = [l for l in kept if l.strip() and not l.strip().startswith("#")]
+    if not allow_empty and not non_comment_kept:
+        print(
+            f"kitty-colors-sanitize: refusing to promote {out_path} with 0 valid non-comment directives",
+            file=sys.stderr,
+        )
+        return 1
+
+    out_text = "\n".join(kept).rstrip() + "\n"
+    try:
+        if sync_in and in_path.resolve() != out_path.resolve():
+            atomic_promote(kitty_bin, in_path, out_text)
+        atomic_promote(kitty_bin, out_path, out_text)
+    except Exception as exc:
+        print(f"kitty-colors-sanitize: {exc}", file=sys.stderr)
+        return 1
+
+    print(
+        f"kitty-colors-sanitize: promoted {out_path} "
+        f"({len(non_comment_kept)} directives, {len(dropped)} dropped)"
+    )
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

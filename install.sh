@@ -316,6 +316,16 @@ if [ ! -f "$repo/.config/kitty/colors-matugen.conf" ] && [ -f "$repo/.config/kit
   cp "$repo/.config/kitty/themes/nightfox.conf" "$repo/.config/kitty/colors-matugen.conf"
   echo "  [INIT]   $repo/.config/kitty/colors-matugen.conf (from nightfox default)"
 fi
+if [ -x "$repo/bin/kitty-colors-sanitize" ] && [ -f "$repo/.config/kitty/colors-matugen.conf" ] && command -v kitty >/dev/null 2>&1; then
+  if [ ! -s "$repo/.config/kitty/colors-matugen.validated.conf" ] || \
+     [ "$repo/.config/kitty/colors-matugen.conf" -nt "$repo/.config/kitty/colors-matugen.validated.conf" ] || \
+     ! "$repo/bin/kitty-colors-sanitize" --check --in "$repo/.config/kitty/colors-matugen.validated.conf" >/dev/null 2>&1; then
+    "$repo/bin/kitty-colors-sanitize" --sync-in \
+      --in "$repo/.config/kitty/colors-matugen.conf" \
+      --out "$repo/.config/kitty/colors-matugen.validated.conf" >/dev/null
+    echo "  [INIT]   $repo/.config/kitty/colors-matugen.validated.conf (sanitized & validated)"
+  fi
+fi
 if [ ! -f "$repo/.config/btop/themes/matugen.theme" ] && [ -f "$repo/.config/btop/themes/nightfox.theme" ]; then
   cp "$repo/.config/btop/themes/nightfox.theme" "$repo/.config/btop/themes/matugen.theme"
   echo "  [INIT]   $repo/.config/btop/themes/matugen.theme (from nightfox default)"
