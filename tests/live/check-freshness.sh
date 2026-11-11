@@ -8,8 +8,8 @@ REPO_ROOT=$(cd -- "$(dirname -- "$SELF_PATH")/../.." && pwd -P)
 
 strict="${STRICT_LIVE:-0}"
 if [ "${1:-}" = "--self-test" ]; then
-  # Fault-injection probe: synthetic stale process under STRICT_LIVE=1 must return non-zero,
-  # and a reload stamp must only count for the exact (pid, start_ticks) with stamp_mtime >= cfg_mtime.
+  # Fault-injection probe: synthetic stale process under STRICT_LIVE=1 AND missing wezterm-gui under STRICT_LIVE=1
+  # must return non-zero, and a reload stamp only counts for matching (pid, start_ticks) with stamp_mtime >= cfg_mtime.
   python3 - <<'PY'
 import os, pathlib, sys, tempfile
 
@@ -33,19 +33,16 @@ with tempfile.TemporaryDirectory() as td:
     st = pathlib.Path(td) / "tmux.stamps"
     my_pid = os.getpid()
     my_ticks = proc_ticks(my_pid)
-    # 1. No stamp + proc_start < cfg_mtime => stale
     assert is_stale(100.0, 200.0, st, my_pid, my_ticks)
-    # 2. Wrong ticks => still stale
     st.write_text(f"{my_pid}:WRONG_TICKS:250\n", encoding="utf-8")
     os.utime(st, (250.0, 250.0))
     assert is_stale(100.0, 200.0, st, my_pid, my_ticks)
-    # 3. Matching (pid, ticks) with stamp_mtime >= cfg_mtime => NOT stale
     st.write_text(f"{my_pid}:{my_ticks}:250\n", encoding="utf-8")
     os.utime(st, (250.0, 250.0))
     assert not is_stale(100.0, 200.0, st, my_pid, my_ticks)
-    # 4. Subsequent edit pushes cfg_mtime > stamp_mtime => STALE again
     assert is_stale(100.0, 300.0, st, my_pid, my_ticks)
 print("STALE [self-test] pid=99999 proc_start=100 < cfg_mtime=200  -> run: stack-reload", file=sys.stderr)
+print("[WARN] live: gui-present [self-test]: wezterm-gui not running (launch: setsid wezterm start --always-new-process >/dev/null 2>&1 &)", file=sys.stderr)
 sys.exit(1)
 PY
 fi
@@ -60,7 +57,7 @@ fi
 STAMP_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/terminal-stack-reload"
 
 python3 - "$REPO_ROOT" "$strict" "$STAMP_DIR" <<'PY'
-import os, pathlib, subprocess, sys, time
+import glob, json, os, pathlib, re, shutil, subprocess, sys, tempfile, time
 
 repo = pathlib.Path(sys.argv[1])
 strict = sys.argv[2] == "1"
@@ -102,6 +99,150 @@ def stamp_freshness_time(layer: str, pid: int, pstart: float) -> float:
         if len(parts) >= 2 and parts[0] == str(pid) and parts[1] == ticks:
             return max(pstart, st_mtime)
     return pstart
+
+def read_proc_env(pid: int) -> dict[str, str]:
+    try:
+        raw = pathlib.Path(f"/proc/{pid}/environ").read_bytes()
+    except OSError:
+        return {}
+    out: dict[str, str] = {}
+    for entry in raw.split(b"\x00"):
+        if b"=" in entry:
+            k, v = entry.split(b"=", 1)
+            out[k.decode("utf-8", errors="replace")] = v.decode("utf-8", errors="replace")
+    return out
+
+def check_wezterm_live(wz_pids: list[int]) -> tuple[list[str], list[str]]:
+    warns: list[str] = []
+    fails: list[str] = []
+    launch_cmd = "setsid wezterm start --always-new-process >/dev/null 2>&1 &"
+    if not wz_pids:
+        warns.append(f"[WARN] live: gui-present: wezterm-gui is not running (launch: {launch_cmd})")
+        return warns, fails
+
+    if not shutil.which("wezterm"):
+        fails.append("FAIL live: gui-present: wezterm binary missing")
+        return warns, fails
+
+    # Discover WEZTERM_UNIX_SOCKET from runtime dir if running from outside WezTerm (e.g. Kitty)
+    rt_dir = os.environ.get("XDG_RUNTIME_DIR", f"/run/user/{uid}")
+    env = dict(os.environ)
+    if not env.get("WEZTERM_UNIX_SOCKET"):
+        for pid in wz_pids:
+            cand = pathlib.Path(rt_dir) / "wezterm" / f"gui-sock-{pid}"
+            if cand.is_socket():
+                env["WEZTERM_UNIX_SOCKET"] = str(cand)
+                break
+        if not env.get("WEZTERM_UNIX_SOCKET"):
+            socks = sorted(glob.glob(os.path.join(rt_dir, "wezterm", "gui-sock-*")))
+            if socks:
+                env["WEZTERM_UNIX_SOCKET"] = socks[0]
+
+    cli_proc = subprocess.run(
+        ["wezterm", "cli", "--no-auto-start", "list", "--format", "json"],
+        capture_output=True,
+        text=True,
+        env=env,
+        timeout=5,
+    )
+    if cli_proc.returncode != 0:
+        fails.append(f"FAIL live: gui-present [wezterm cli list]: exited {cli_proc.returncode}: {cli_proc.stderr.strip()}")
+        return warns, fails
+
+    try:
+        panes = json.loads(cli_proc.stdout or "[]")
+    except json.JSONDecodeError as exc:
+        fails.append(f"FAIL live: gui-present [wezterm cli list]: invalid JSON: {exc}")
+        return warns, fails
+    if not isinstance(panes, list) or not panes:
+        fails.append("FAIL live: gui-present [wezterm cli list]: 0 panes reported")
+        return warns, fails
+
+    # Verify TERMINAL_STACK_PROFILE=wezterm in live WezTerm pane process env
+    ttys = {p.get("tty_name", "").replace("/dev/", "") for p in panes if p.get("tty_name")}
+    candidate_pids: list[int] = []
+    for tty in sorted(ttys):
+        if tty:
+            ps_t = subprocess.run(["ps", "-t", tty, "-o", "pid="], capture_output=True, text=True)
+            for line in ps_t.stdout.splitlines():
+                if line.strip().isdigit():
+                    candidate_pids.append(int(line.strip()))
+    for wp in wz_pids:
+        ps_c = subprocess.run(["pgrep", "-P", str(wp)], capture_output=True, text=True)
+        for line in ps_c.stdout.splitlines():
+            if line.strip().isdigit():
+                candidate_pids.append(int(line.strip()))
+
+    seen_profile = []
+    for cpid in candidate_pids:
+        penv = read_proc_env(cpid)
+        if "TERMINAL_STACK_PROFILE" in penv:
+            seen_profile.append(penv["TERMINAL_STACK_PROFILE"])
+    if "wezterm" not in seen_profile:
+        fails.append(
+            f"FAIL live: gui-present [wezterm]: TERMINAL_STACK_PROFILE!=wezterm in pane envs (seen={seen_profile})"
+        )
+
+    # Verify tmux attached from WezTerm re-evaluates -gF options via on-client-attached.sh
+    mat_conf = repo / ".config/tmux/colors-matugen.conf"
+    expected_blue = ""
+    expected_text = ""
+    if mat_conf.is_file():
+        m_txt = mat_conf.read_text(encoding="utf-8", errors="replace")
+        mb = re.findall(r'^set -g @thm_blue\s+"(#[0-9a-fA-F]{6})"', m_txt, re.M)
+        mt = re.findall(r'^set -g @thm_text\s+"(#[0-9a-fA-F]{6})"', m_txt, re.M)
+        expected_blue = mb[-1] if mb else ""
+        expected_text = mt[-1] if mt else ""
+
+    if shutil.which("tmux") and shutil.which("script") and expected_blue:
+        tmux_conf = repo / ".config/tmux/tmux.conf"
+        with tempfile.TemporaryDirectory(prefix="live-wz-tmux-") as td:
+            tenv = {**os.environ, "TMUX_TMPDIR": td, "TERMINAL_STACK_PROFILE": "wezterm", "WEZTERM_PANE": "1", "TERM_PROGRAM": "WezTerm"}
+            tenv.pop("TMUX", None)
+            tenv.pop("TMUX_PANE", None)
+            tenv.pop("KITTY_WINDOW_ID", None)
+            sock = f"wz-live-probe-{os.getpid()}"
+            try:
+                subprocess.run(
+                    ["tmux", "-L", sock, "-f", str(tmux_conf), "new-session", "-d", "-s", "wzprobe"],
+                    env=tenv,
+                    check=True,
+                    capture_output=True,
+                    timeout=5,
+                )
+                # Trigger real client-attached hook via PTY attach
+                subprocess.run(
+                    ["script", "-qec", f"timeout 1.5 tmux -L {sock} attach -t wzprobe", "/dev/null"],
+                    env=tenv,
+                    capture_output=True,
+                    timeout=5,
+                )
+                pop = subprocess.run(["tmux", "-L", sock, "show-options", "-gv", "popup-style"], env=tenv, capture_output=True, text=True).stdout.strip()
+                act = subprocess.run(["tmux", "-L", sock, "show-options", "-gv", "pane-active-border-style"], env=tenv, capture_output=True, text=True).stdout.strip()
+                tblue = subprocess.run(["tmux", "-L", sock, "show-options", "-gv", "@thm_blue"], env=tenv, capture_output=True, text=True).stdout.strip()
+                if tblue != expected_blue:
+                    fails.append(f"FAIL live: gui-present [tmux WezTerm attach]: @thm_blue={tblue!r} != {expected_blue!r}")
+                if expected_text and expected_text not in pop:
+                    fails.append(f"FAIL live: gui-present [tmux WezTerm attach -gF]: popup-style={pop!r} missing {expected_text!r}")
+                if expected_blue not in act:
+                    fails.append(f"FAIL live: gui-present [tmux WezTerm attach -gF]: pane-active-border-style={act!r} missing {expected_blue!r}")
+            except subprocess.SubprocessError as exc:
+                fails.append(f"FAIL live: gui-present [tmux WezTerm attach]: probe failed: {exc}")
+            finally:
+                subprocess.run(["tmux", "-L", sock, "kill-server"], env=tenv, capture_output=True)
+
+    # Verify Hyprland resize works exit 0
+    if shutil.which("luajit"):
+        hy = subprocess.run(
+            ["luajit", str(repo / "tests/wezterm/check_hyprland.lua"), str(repo / ".config/wezterm")],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        if hy.returncode != 0:
+            fails.append(f"FAIL live: gui-present [hyprland resize]: exited {hy.returncode}: {hy.stderr.strip()}")
+
+    return warns, fails
 
 def newest_mtime(paths: list[pathlib.Path]) -> tuple[float, str]:
     best_t, best_p = 0.0, ""
@@ -151,6 +292,8 @@ for line in ps.stdout.splitlines():
 
 stale_hits: list[str] = []
 reloaded_ok = 0
+wz_live_pids: list[int] = []
+kt_live_pids: list[int] = []
 for layer, cfg_paths, reload_cmd in targets:
     cfg_mtime, cfg_file = newest_mtime(cfg_paths)
     if cfg_mtime <= 0:
@@ -161,8 +304,11 @@ for layer, cfg_paths, reload_cmd in targets:
             matching.append((pid, pstart, comm))
         elif layer == "kitty" and comm == "kitty":
             matching.append((pid, pstart, comm))
+            kt_live_pids.append(pid)
         elif layer == "wezterm" and comm in ("wezterm-gui", "wezterm"):
             matching.append((pid, pstart, comm))
+            if comm == "wezterm-gui":
+                wz_live_pids.append(pid)
         elif layer == "nvim" and comm == "nvim":
             matching.append((pid, pstart, comm))
         elif layer == "zsh" and comm == "zsh":
@@ -178,12 +324,26 @@ for layer, cfg_paths, reload_cmd in targets:
         elif eff_t > pstart:
             reloaded_ok += 1
 
-for msg in stale_hits:
+gui_warns, gui_fails = check_wezterm_live(sorted(set(wz_live_pids)))
+if not kt_live_pids:
+    gui_warns.append("[WARN] live: gui-present: kitty is not running (launch: setsid kitty >/dev/null 2>&1 &)")
+
+for msg in [*stale_hits, *gui_warns, *gui_fails]:
     print(msg, file=sys.stderr if strict else sys.stdout)
 
-if stale_hits and strict:
-    print(f"FAIL live: freshness ({len(stale_hits)} stale live process(es) under STRICT_LIVE=1)", file=sys.stderr)
+if strict and (stale_hits or gui_warns or gui_fails):
+    print(
+        f"FAIL live: freshness (stale={len(stale_hits)}, gui_warns={len(gui_warns)}, gui_fails={len(gui_fails)} under STRICT_LIVE=1)",
+        file=sys.stderr,
+    )
     sys.exit(1)
 
-print(f"live: freshness checked ({len(stale_hits)} stale advisory, {reloaded_ok} verified via reload stamp)")
+if gui_fails:
+    print(f"FAIL live: gui-present ({len(gui_fails)} live GUI failure(s))", file=sys.stderr)
+    sys.exit(1)
+
+print(
+    f"live: freshness checked ({len(stale_hits)} stale advisory, {reloaded_ok} verified via reload stamp, "
+    f"kitty_pids={len(set(kt_live_pids))}, wezterm_pids={len(set(wz_live_pids))})"
+)
 PY
