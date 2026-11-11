@@ -16,7 +16,10 @@ trap cleanup EXIT
 
 mkdir -p "$work/wezterm" "$work/kitty"
 cp "$conf_dir/tmux.conf" "$conf"
-sed -i "s|^run '~/.config/tmux/plugins/tpm/tpm'|run 'true'|" "$conf"
+sed -i \
+  -e "s|^if-shell '.*plugins/tpm/tpm.*|run 'true'|" \
+  -e "s|^run '~/.config/tmux/plugins/tpm/tpm'|run 'true'|" \
+  "$conf"
 
 # 1. Start WezTerm profile
 env -u TMUX -u TMUX_PANE -u KITTY_WINDOW_ID TMUX_TMPDIR="$work/wezterm" \

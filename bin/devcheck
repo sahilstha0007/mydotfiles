@@ -174,6 +174,7 @@ if [ "$RUN_ALL" -eq 1 ]; then
     "install: idempotency & backup"
   )
   if [ "${DEVCHECK_IN_CLEAN_CLONE:-0}" != "1" ]; then
+    EXPECTED_GATES+=("state: matrix")
     EXPECTED_GATES+=("clean: clone")
   fi
   EXPECTED_GATES+=("tmp: no leaks")
@@ -602,6 +603,12 @@ if [ "$RUN_ALL" -eq 1 ]; then
   fi
 
   if [ "${DEVCHECK_IN_CLEAN_CLONE:-0}" != "1" ]; then
+    STATE_TEST="$REPO_ROOT/tests/state/check-state-matrix.py"
+    if [ -f "$STATE_TEST" ] && require_cmd python3; then
+      run "state: matrix" "$REPO_ROOT" python3 "$STATE_TEST"
+    else
+      fail "state: matrix" "missing $STATE_TEST or python3"
+    fi
     CLEAN_TEST="$REPO_ROOT/tests/clean-clone.sh"
     if [ -f "$CLEAN_TEST" ]; then
       clean_start=$(date +%s%N)
@@ -637,6 +644,9 @@ if [ "$RUN_ALL" -eq 1 ]; then
 
   # Remove our own temp log BEFORE asserting both private $TMPDIR is empty AND /tmp had no new leaks.
   rm -f "$DEVCHECK_LOG"
+  # Upstream Neovim C core creates an empty $TMPDIR/nvim.<user> parent directory and never unlinks it;
+  # rmdir ONLY removes it if completely empty (any leaked socket/child fails find below).
+  rmdir "$DEVCHECK_PRIV_TMP/nvim.$(id -un)" 2>/dev/null || true
   PRIV_LEAKED=$(find "$DEVCHECK_PRIV_TMP" -mindepth 1 -maxdepth 2 -printf '%P\n' | sort)
   TMP_AFTER=$(find /tmp -maxdepth 1 -mindepth 1 -user "$(id -u)" -printf '%f\n' | grep -vxF "$DEVCHECK_LEAK_SELF" | grep -vxF "$DEVCHECK_TMP_SELF" | sort)
   TMP_LEAKED=$(comm -13 <(printf '%s\n' "$TMP_BEFORE") <(printf '%s\n' "$TMP_AFTER"))

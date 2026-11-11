@@ -9,7 +9,7 @@ set -u
 dir="${1:-$PWD}"
 cmd="${2:-}"
 
-cache_dir="${XDG_RUNTIME_DIR:-/tmp}/tmux-status-$(id -u)"
+cache_dir="${XDG_RUNTIME_DIR:-${TMPDIR:-/tmp}}/tmux-status-$(id -u)"
 mkdir -p "$cache_dir" 2>/dev/null && chmod 700 "$cache_dir" 2>/dev/null || true
 now=$(date +%s)
 
