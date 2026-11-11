@@ -292,7 +292,7 @@ class KittyTabBarTests(unittest.TestCase):
         with (
             mock.patch.object(tab_bar.time, "monotonic", side_effect=clock),
             mock.patch.object(tab_bar, "get_boss", return_value=boss),
-            mock.patch.dict(os.environ, {"TMUX_TMPDIR": "/tmp/tmux-test"}, clear=False),
+            mock.patch.dict(os.environ, {"TMUX_TMPDIR": os.path.join(tempfile.gettempdir(), "tmux-test")}, clear=False),
             mock.patch.object(
                 tab_bar.shutil,
                 "which",
@@ -458,7 +458,7 @@ class KittyTabBarTests(unittest.TestCase):
                 ("bare", {"PATH": path_with_stubs}, _FakeBoss([_FakeTab([_FakeWindow([["zsh"]])])])),
                 (
                     "tmux",
-                    {"PATH": path_with_stubs, "TMUX": "/tmp/tmux-1000/default,1,0"},
+                    {"PATH": path_with_stubs, "TMUX": f"{tempfile.gettempdir()}/tmux-1000/default,1,0"},
                     _FakeBoss([_FakeTab([_FakeWindow([["tmux"]])])]),
                 ),
             ):
@@ -600,7 +600,7 @@ class KittyTabBarTests(unittest.TestCase):
         with (
             mock.patch.object(tab_bar.time, "monotonic", side_effect=clock),
             mock.patch.object(tab_bar, "get_boss", return_value=empty_boss),
-            mock.patch.dict(os.environ, {"TMUX_TMPDIR": "/tmp/tmux-test"}, clear=False),
+            mock.patch.dict(os.environ, {"TMUX_TMPDIR": os.path.join(tempfile.gettempdir(), "tmux-test")}, clear=False),
             mock.patch.object(tab_bar.shutil, "which", return_value="/usr/bin/tmux"),
             mock.patch.object(
                 tab_bar.subprocess,

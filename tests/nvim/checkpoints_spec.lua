@@ -77,7 +77,10 @@ local cp = dofile(ROOT .. '/lua/checkpoints.lua')
 
 -- --- availability ----------------------------------------------------------
 check(cp.available(REPO), 'a real git repo should report available')
-check(not cp.available '/tmp', 'a non-repo should report unavailable')
+local non_repo = vim.fn.tempname()
+vim.fn.mkdir(non_repo, 'p')
+check(not cp.available(non_repo), 'a non-repo should report unavailable')
+vim.fn.delete(non_repo, 'rf')
 
 -- --- the staging area is the user's, and must survive ----------------------
 --

@@ -15,7 +15,7 @@
 --      A binding that fires twice per press moves 0.10 not 0.05.
 --
 -- Mutation target: any edit that breaks 1-5 must turn this red. Verified by
--- /tmp/mutate-check-backdrops.sh, which re-runs it against a patched copy.
+-- tests/wezterm/mutate-check-opacity.sh, which re-runs it against a patched copy.
 --
 -- Run: luajit tests/check_opacity.lua <config-root>
 --   (FAKE_HOME must point at a throwaway dir — the opacity cache is written

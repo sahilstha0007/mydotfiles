@@ -1,5 +1,6 @@
--- Keymap dump tool. Bootstraps its own probe git repo at /tmp/probe_repo
--- (git init + tracked main.py) so gitsigns buffer maps attach; no cwd needed.
+-- Keymap dump tool. Bootstraps an isolated probe git repo (passed via
+-- NVIM_KEYMAPS_PROBE_DIR or created via vim.fn.tempname()) so gitsigns buffer
+-- maps attach, and removes it on exit.
 -- Usage: nvim --headless -u ~/.config/nvim/init.lua -c "luafile ~/.config/nvim/scripts/keymaps-dump.lua" -c "qa!"
 -- Writes ~/.cache/nvim/keymaps_dump.json (all modes, global + buffer-local).
 -- Final union dump: force-load mini.nvim modules (VeryLazy headless miss),
@@ -15,7 +16,22 @@ vim.g.mapleader = ' '
 vim.g.maplocalleader = ' '
 
 -- Bootstrap the probe repo (tracked file → gitsigns attaches)
-local probe = '/tmp/probe_repo'
+local env_probe = vim.env.NVIM_KEYMAPS_PROBE_DIR
+local owns_probe = (env_probe == nil or env_probe == '')
+local probe = owns_probe and (vim.fn.tempname() .. '_probe_repo') or env_probe
+local function cleanup_probe()
+  pcall(vim.cmd, 'silent! %bwipeout!')
+  if owns_probe or vim.env.NVIM_KEYMAPS_CLEANUP_PROBE == '1' then
+    pcall(vim.fn.delete, probe, 'rf')
+  end
+end
+vim.api.nvim_create_autocmd('VimLeavePre', {
+  group = vim.api.nvim_create_augroup(
+    'keymaps-dump-probe-cleanup',
+    { clear = true }
+  ),
+  callback = cleanup_probe,
+})
 if vim.fn.isdirectory(probe .. '/.git') == 0 then
   vim.fn.mkdir(probe, 'p')
   vim.fn.writefile({ 'x = 1', '' }, probe .. '/main.py')
@@ -74,15 +90,15 @@ end
 -- gitsigns attach on a scratch git buffer so on_attach buffer maps exist
 local gs_err = nil
 local gs_ok = pcall(function()
-  vim.cmd 'edit /tmp/probe_repo/main.py'
+  vim.cmd('edit ' .. vim.fn.fnameescape(probe .. '/main.py'))
   vim.cmd 'write'
   local gs = require 'gitsigns'
   local aok, aerr = pcall(gs.attach, {
     bufnr = 0,
     ctx = {
       file = vim.api.nvim_buf_get_name(0),
-      gitdir = '/tmp/probe_repo/.git',
-      toplevel = '/tmp/probe_repo',
+      gitdir = probe .. '/.git',
+      toplevel = probe,
     },
   })
   if not aok then
@@ -96,8 +112,8 @@ local gs_ok = pcall(function()
     bufnr = 0,
     ctx = {
       file = vim.api.nvim_buf_get_name(0),
-      gitdir = '/tmp/probe_repo/.git',
-      toplevel = '/tmp/probe_repo',
+      gitdir = probe .. '/.git',
+      toplevel = probe,
     },
   })
   vim.wait(1500, function()
@@ -198,4 +214,5 @@ end
 local f = io.open(os.getenv 'HOME' .. '/.cache/nvim/keymaps_dump.json', 'w')
 f:write(vim.json.encode(result))
 f:close()
+cleanup_probe()
 print('UNION DUMP OK: g=' .. #result.global.n .. ' b=' .. #result.buffer.n)

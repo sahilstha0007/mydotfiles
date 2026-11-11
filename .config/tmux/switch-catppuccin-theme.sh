@@ -17,8 +17,8 @@ exit 0
 # (commented so shellcheck does not report SC2317 unreachable commands after exit 0):
 # export PATH="/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:$PATH"
 # 
-# echo "TMUX_SOCKET=$TMUX_SOCKET" > /tmp/tmux-debug.log
-# tmux -S "$TMUX_SOCKET" list-sessions >> /tmp/tmux-debug.log 2>&1 || echo "No sessions found" >> /tmp/tmux-debug.log
+# echo "TMUX_SOCKET=$TMUX_SOCKET" > "${TMPDIR:-/tmp}/tmux-debug.log"
+# tmux -S "$TMUX_SOCKET" list-sessions >> "${TMPDIR:-/tmp}/tmux-debug.log" 2>&1 || echo "No sessions found" >> "${TMPDIR:-/tmp}/tmux-debug.log"
 # 
 # set -euo pipefail
 # 

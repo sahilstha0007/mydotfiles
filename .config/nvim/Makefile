@@ -69,9 +69,8 @@ lint:
 # stopped testing anything would report green forever — the exact failure this
 # tree already suffered once (see the harness header).
 #
-# Its own target rather than a `check` dependency: it stages into /tmp and
-# re-copies the tree per mutant, so it is a deliberate, occasional gate, not
-# something to run on every edit. Costs ~0.5s if you do.
+# Its own target rather than a `check` dependency: it creates a temp sandbox
+# via mktemp -d and cleans up on exit, so it is a deliberate, occasional gate.
 mutate:
 	@bash ../../tests/nvim/mutate-terminal-colors.sh
 
@@ -81,7 +80,10 @@ mutate:
 check: test lint fmt-check
 
 # The verification path AGENT.md:242 documents for keymap changes. Bootstraps
-# its own probe git repo at /tmp/probe_repo so gitsigns' buffer maps attach.
+# a throwaway probe git repo inside $TMPDIR and deletes it on EXIT.
 keymaps:
-	NVIM_NO_AUTO_INSTALL=1 nvim --headless -u init.lua -c "luafile scripts/keymaps-dump.lua" -c "qa!"
+	@probe=$$(mktemp -d "$${TMPDIR:-/tmp}/nvim-keymaps-probe.XXXXXX"); \
+	trap 'rm -rf "$$probe"' EXIT; \
+	NVIM_KEYMAPS_PROBE_DIR="$$probe" NVIM_KEYMAPS_CLEANUP_PROBE=1 NVIM_NO_AUTO_INSTALL=1 \
+	  nvim --headless -u init.lua -c "luafile scripts/keymaps-dump.lua" -c "qa!"
 	@echo "keymaps: wrote ~/.cache/nvim/keymaps_dump.json"

@@ -41,14 +41,17 @@ FAILED=0
 SKIPPED=0
 declare -a NAMES=() RESULTS=()
 
-DEVCHECK_LOG=$(mktemp "${TMPDIR:-/tmp}/devcheck-log.XXXXXX")
+DEVCHECK_LOG=$(mktemp /tmp/devcheck-log.XXXXXX)
 DEVCHECK_LEAK_SELF=$(basename -- "$DEVCHECK_LOG")
-trap 'rm -f "$DEVCHECK_LOG"' EXIT
+DEVCHECK_PRIV_TMP=$(mktemp -d /tmp/devcheck-tmp.XXXXXX)
+DEVCHECK_TMP_SELF=$(basename -- "$DEVCHECK_PRIV_TMP")
+export TMPDIR="$DEVCHECK_PRIV_TMP"
+trap 'rm -f "$DEVCHECK_LOG"; rm -rf "$DEVCHECK_PRIV_TMP"' EXIT
 
 # Snapshot user-owned entries in /tmp before gates execute (--all leak detector).
 TMP_BEFORE=""
 if [ "$RUN_ALL" -eq 1 ]; then
-  TMP_BEFORE=$(find /tmp -maxdepth 1 -mindepth 1 -user "$(id -u)" -printf '%f\n' | grep -vxF "$DEVCHECK_LEAK_SELF" | sort)
+  TMP_BEFORE=$(find /tmp -maxdepth 1 -mindepth 1 -user "$(id -u)" -printf '%f\n' | grep -vxF "$DEVCHECK_LEAK_SELF" | grep -vxF "$DEVCHECK_TMP_SELF" | sort)
 fi
 
 # --- output helpers --------------------------------------------------------
@@ -151,6 +154,7 @@ EXPECTED_GATES=(
   "zsh: startup <= 120ms"
   "bin: python syntax"
   "repo: shellcheck"
+  "repo: no hardcoded /tmp"
   "tests: lua fmt"
   "tests: lua lint"
   "contrast: wcag"
@@ -426,7 +430,7 @@ fi
 # --- bin & repo lint/fmt gates ----------------------------------------------
 if require_cmd python3; then
   run "bin: python syntax" "$REPO_ROOT" \
-    python3 -m py_compile "$REPO_ROOT/bin/project-task" "$REPO_ROOT/bin/terminal-cheatsheet" "$REPO_ROOT/bin/sync-keybindings"
+    python3 -m py_compile "$REPO_ROOT/bin/project-task" "$REPO_ROOT/bin/terminal-cheatsheet" "$REPO_ROOT/bin/sync-keybindings" "$REPO_ROOT/bin/kitty-colors-sanitize"
 else
   fail "bin: python syntax" "python3 not installed"
 fi
@@ -457,6 +461,13 @@ if require_cmd shellcheck && require_cmd git; then
   run "repo: shellcheck" "$REPO_ROOT" run_repo_shellcheck
 else
   fail "repo: shellcheck" "shellcheck or git not installed"
+fi
+
+NO_TMP_CHECK="$REPO_ROOT/tests/static/check-no-hardcoded-tmp.py"
+if [ -f "$NO_TMP_CHECK" ] && require_cmd python3; then
+  run "repo: no hardcoded /tmp" "$REPO_ROOT" python3 "$NO_TMP_CHECK"
+else
+  fail "repo: no hardcoded /tmp" "missing $NO_TMP_CHECK or python3"
 fi
 
 if require_cmd stylua; then
@@ -624,20 +635,22 @@ if [ "$RUN_ALL" -eq 1 ]; then
     fi
   fi
 
-  # Remove our own temp log BEFORE snapshotting /tmp for leaked entries.
+  # Remove our own temp log BEFORE asserting both private $TMPDIR is empty AND /tmp had no new leaks.
   rm -f "$DEVCHECK_LOG"
-  TMP_AFTER=$(find /tmp -maxdepth 1 -mindepth 1 -user "$(id -u)" -printf '%f\n' | grep -vxF "$DEVCHECK_LEAK_SELF" | sort)
+  PRIV_LEAKED=$(find "$DEVCHECK_PRIV_TMP" -mindepth 1 -maxdepth 2 -printf '%P\n' | sort)
+  TMP_AFTER=$(find /tmp -maxdepth 1 -mindepth 1 -user "$(id -u)" -printf '%f\n' | grep -vxF "$DEVCHECK_LEAK_SELF" | grep -vxF "$DEVCHECK_TMP_SELF" | sort)
   TMP_LEAKED=$(comm -13 <(printf '%s\n' "$TMP_BEFORE") <(printf '%s\n' "$TMP_AFTER"))
-  if [ -z "$TMP_LEAKED" ]; then
+  if [ -z "$PRIV_LEAKED" ] && [ -z "$TMP_LEAKED" ]; then
     NAMES+=("tmp: no leaks")
     RESULTS+=("${GRN}pass${R}")
-    printf '  %stmp: no leaks%s  %-28s %s\n' "$BOLD" "$R" "" "${DIM}0 leaked${R}"
+    printf '  %stmp: no leaks%s  %-28s %s\n' "$BOLD" "$R" "" "${DIM}0 leaked (private TMPDIR + /tmp)${R}"
   else
     FAILED=$((FAILED + 1))
     NAMES+=("tmp: no leaks")
     RESULTS+=("${RED}FAIL${R}")
-    printf '  %stmp: no leaks%s  %-28s %sFAIL (leaked /tmp entries)%s\n' "$BOLD" "$R" "" "$RED" "$R"
-    printf '%s\n' "$TMP_LEAKED" | sed 's/^/      /'
+    printf '  %stmp: no leaks%s  %-28s %sFAIL (leaked entries)%s\n' "$BOLD" "$R" "" "$RED" "$R"
+    [ -n "$PRIV_LEAKED" ] && printf '%s\n' "$PRIV_LEAKED" | sed 's/^/      [TMPDIR] /'
+    [ -n "$TMP_LEAKED" ] && printf '%s\n' "$TMP_LEAKED" | sed 's/^/      [sys-tmp] /'
   fi
 fi
 

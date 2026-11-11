@@ -32,7 +32,7 @@ fi
 mkdir -p "$SB_HOME/.config/BraveSoftware/Brave-Browser" "$SB_HOME/.config/mozilla/firefox/test.default"
 ln -s "host-1234" "$SB_HOME/.config/BraveSoftware/Brave-Browser/SingletonLock"
 ln -s "999999" "$SB_HOME/.config/BraveSoftware/Brave-Browser/SingletonCookie"
-ln -s "/tmp/nonexistent/SingletonSocket" "$SB_HOME/.config/BraveSoftware/Brave-Browser/SingletonSocket"
+ln -s "$SB_ROOT/nonexistent/SingletonSocket" "$SB_HOME/.config/BraveSoftware/Brave-Browser/SingletonSocket"
 ln -s "127.0.1.1:+999" "$SB_HOME/.config/mozilla/firefox/test.default/lock"
 
 if ! HOME="$SB_HOME" bash "$SB_REPO/install.sh" --doctor --strict >/dev/null; then

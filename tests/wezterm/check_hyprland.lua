@@ -27,7 +27,7 @@ end
 
 local active_runner = nil
 _G.wezterm = {
-   home_dir = os.getenv('HOME') or '/tmp',
+   home_dir = os.getenv('HOME') or os.getenv('TMPDIR') or '.',
    config_dir = root,
    os = 'Linux',
    target_triple = 'x86_64-unknown-linux-gnu',

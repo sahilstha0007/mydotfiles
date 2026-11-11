@@ -11,7 +11,7 @@
 --
 -- To run the suite against a MUTATED COPY instead of the live config, point
 -- this at the copy:
---   NVIM_CONFIG_ROOT=/tmp/mut/nvim nvim --headless -u tests/minimal_init.lua ...
+--   NVIM_CONFIG_ROOT=/path/to/mut/nvim nvim --headless -u tests/minimal_init.lua ...
 -- The default is derived from this file's own location, so a copied tree is
 -- self-testing. It was previously a hardcoded absolute path, which meant a
 -- spec run inside a copied tree still put the LIVE config on the runtimepath
