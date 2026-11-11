@@ -13,6 +13,7 @@ Any gate failure in any state, any new temp leak, or ANY result divergence acros
 
 from __future__ import annotations
 
+import concurrent.futures
 import os
 import pathlib
 import shutil
@@ -81,7 +82,13 @@ def seed_base_state(repo_src: pathlib.Path, work: pathlib.Path, real_home: str, 
         "TMPDIR": str(base_tmp),
     }
     subprocess.run(["bash", str(base_repo / "install.sh")], env=env, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    # Pre-seed lazy plugins once so per-state nvim_keymaps runs deterministically without 5x network fetches
+    # Seed lazy plugins into isolated base_home (local read-only copy when not in clean-clone; full fetch otherwise)
+    host_lazy = pathlib.Path(real_home) / ".local" / "share" / "nvim" / "lazy"
+    base_lazy = base_home / ".local" / "share" / "nvim" / "lazy"
+    if os.environ.get("DEVCHECK_IN_CLEAN_CLONE") != "1" and host_lazy.is_dir() and not base_lazy.exists():
+        base_lazy.parent.mkdir(parents=True, exist_ok=True)
+        subprocess.run(["cp", "-a", str(host_lazy), str(base_lazy)], check=True)
+    # Pre-seed/verify lazy plugins once so per-state nvim_keymaps runs deterministically without 5x network fetches
     subprocess.run(["make", "-C", str(base_repo / ".config/nvim"), "keymaps"], env=env, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     # Seed non-secret empty .zshrc.local in baseline so missing_zshrc_local contrasts cleanly
     (base_home / ".zshrc.local").write_text("# test non-secret placeholder\n", encoding="utf-8")
@@ -93,8 +100,26 @@ def clone_state(base_repo: pathlib.Path, base_home: pathlib.Path, state_dir: pat
     st_home = state_dir / "home"
     st_tmp = state_dir / "tmp"
     st_xdg = state_dir / "xdg"
-    shutil.copytree(base_repo, st_repo, symlinks=True)
-    shutil.copytree(base_home, st_home, symlinks=True)
+    base_lazy = base_home / ".local" / "share" / "nvim" / "lazy"
+    nvim_share_str = str(base_home / ".local" / "share" / "nvim")
+    base_git_parent = str(base_repo)
+
+    shutil.copytree(
+        base_repo,
+        st_repo,
+        symlinks=True,
+        ignore=lambda d, _n: [".git"] if d == base_git_parent else [],
+    )
+    shutil.copytree(
+        base_home,
+        st_home,
+        symlinks=True,
+        ignore=lambda d, _n: ["lazy"] if d == nvim_share_str else [],
+    )
+    if base_lazy.is_dir():
+        st_lazy = st_home / ".local" / "share" / "nvim" / "lazy"
+        st_lazy.parent.mkdir(parents=True, exist_ok=True)
+        st_lazy.symlink_to(base_lazy)
     st_tmp.mkdir(parents=True)
     st_xdg.mkdir(parents=True)
     os.chmod(st_xdg, 0o700)
@@ -102,6 +127,9 @@ def clone_state(base_repo: pathlib.Path, base_home: pathlib.Path, state_dir: pat
     # Re-point symlinks inside st_home that pointed into base_repo so they point to st_repo
     base_repo_resolved = base_repo.resolve()
     for dirpath, dirnames, filenames in os.walk(st_home):
+        # Prune shared read-only lazy dir from symlink rewrite walk
+        if dirpath == str(st_home / ".local" / "share" / "nvim") and "lazy" in dirnames:
+            dirnames.remove("lazy")
         for name in [*dirnames, *filenames]:
             p = pathlib.Path(dirpath) / name
             if p.is_symlink():
@@ -210,34 +238,44 @@ def run_gate(cmd: list[str], cwd: pathlib.Path, env: dict[str, str], check_fn=No
     return True, f"{ms:.0f}ms"
 
 
-def run_state_checks(state: str, st_repo: pathlib.Path, st_home: pathlib.Path, st_dir: pathlib.Path, env: dict[str, str], pre_tmp: set[str]) -> dict[str, tuple[bool, str]]:
-    out: dict[str, tuple[bool, str]] = {}
-    st_tmp = st_dir / "tmp"
-
-    out["zsh_syntax"] = run_gate(["zsh", "-n", str(st_home / ".zshrc"), str(st_home / ".zshenv")], st_home, env)
-
+def run_zsh_latency_checks(st_home: pathlib.Path, env: dict[str, str]) -> dict[str, tuple[bool, str]]:
+    """Run latency-sensitive zsh checks on quiet CPU before concurrent heavy gates."""
     def _chk_zsh(_proc, ms: float) -> tuple[bool, str]:
         if ms > 120.0:
             return False, f"startup {ms:.1f}ms > 120ms"
         return True, f"{ms:.1f}ms"
 
-    out["zsh_startup"] = run_gate(["zsh", "-i", "-c", "exit"], st_home, env, _chk_zsh)
-    out["nvim_keymaps"] = run_gate(["make", "-C", str(st_repo / ".config/nvim"), "keymaps"], st_repo, env)
-    out["kitty_sanitize"] = run_gate(["bash", str(st_repo / "tests/kitty/check-colors-sanitize.sh")], st_repo / ".config/kitty", env)
-    out["kitty_parse"] = run_gate(
-        [
-            "kitty",
-            "+runpy",
-            "import sys; from kitty.config import load_config; bad=[]; load_config(sys.argv[1], accumulate_bad_lines=bad); sys.exit(1 if bad else 0)",
-            str(st_repo / ".config/kitty/kitty.conf"),
-        ],
-        st_repo / ".config/kitty",
-        env,
-        lambda p, ms: ((not p.stderr.strip()), p.stderr.strip() or f"{ms:.0f}ms"),
-    )
-    out["wezterm_theme"] = run_gate(["luajit", str(st_repo / "tests/wezterm/check_theme_source.lua"), str(st_repo / ".config/wezterm")], st_repo / ".config/wezterm", env)
-    out["tmux_reload"] = run_gate(["bash", str(st_repo / "tests/tmux/check-reload-idempotency.sh")], st_repo, env)
-    out["contrast_wcag"] = run_gate(["python3", str(st_repo / "tests/contrast/check-contrast.py")], st_repo, env)
+    return {
+        "zsh_syntax": run_gate(["zsh", "-n", str(st_home / ".zshrc"), str(st_home / ".zshenv")], st_home, env),
+        "zsh_startup": run_gate(["zsh", "-i", "-c", "exit"], st_home, env, _chk_zsh),
+    }
+
+
+def run_state_checks(state: str, st_repo: pathlib.Path, st_home: pathlib.Path, st_dir: pathlib.Path, env: dict[str, str], pre_tmp: set[str], zsh_res: dict[str, tuple[bool, str]] | None = None) -> dict[str, tuple[bool, str]]:
+    out: dict[str, tuple[bool, str]] = dict(zsh_res) if zsh_res is not None else run_zsh_latency_checks(st_home, env)
+    st_tmp = st_dir / "tmp"
+
+    kitty_parse_cmd = [
+        "kitty",
+        "+runpy",
+        "import sys; from kitty.config import load_config; bad=[]; load_config(sys.argv[1], accumulate_bad_lines=bad); sys.exit(1 if bad else 0)",
+        str(st_repo / ".config/kitty/kitty.conf"),
+    ]
+    heavy_specs = [
+        ("nvim_keymaps", ["make", "-C", str(st_repo / ".config/nvim"), "keymaps"], st_repo, None),
+        ("kitty_sanitize", ["bash", str(st_repo / "tests/kitty/check-colors-sanitize.sh")], st_repo / ".config/kitty", None),
+        ("kitty_parse", kitty_parse_cmd, st_repo / ".config/kitty", lambda p, ms: ((not p.stderr.strip()), p.stderr.strip() or f"{ms:.0f}ms")),
+        ("wezterm_theme", ["luajit", str(st_repo / "tests/wezterm/check_theme_source.lua"), str(st_repo / ".config/wezterm")], st_repo / ".config/wezterm", None),
+        ("tmux_reload", ["bash", str(st_repo / "tests/tmux/check-reload-idempotency.sh")], st_repo, None),
+        ("contrast_wcag", ["python3", str(st_repo / "tests/contrast/check-contrast.py")], st_repo, None),
+    ]
+    with concurrent.futures.ThreadPoolExecutor(max_workers=2) as subpool:
+        futs = {
+            name: subpool.submit(run_gate, cmd, cwd, env, fn)
+            for name, cmd, cwd, fn in heavy_specs
+        }
+        for name, _, _, _ in heavy_specs:
+            out[name] = futs[name].result()
 
     # Assert temp directory remained strictly invariant across non-cache gates (including populated_tmp decoys)
     post_tmp = snapshot_tree_rel(st_tmp)
@@ -323,13 +361,27 @@ def main(argv: list[str] | None = None) -> int:
     with tempfile.TemporaryDirectory(prefix="sm-") as td:
         work = pathlib.Path(td)
         base_repo, base_home = seed_base_state(repo_root, work, real_home, sb_path)
-        matrix: dict[str, dict[str, tuple[bool, str]]] = {}
-
-        for idx, state in enumerate(STATES):
+        def _prep(item: tuple[int, str]):
+            idx, state = item
             st_dir = work / f"s{idx}"
             st_repo, st_home, env = clone_state(base_repo, base_home, st_dir, sb_path, real_home)
             pre_tmp = prepare_state(state, st_repo, st_home, st_dir, env)
-            matrix[state] = run_state_checks(state, st_repo, st_home, st_dir, env, pre_tmp)
+            return state, st_repo, st_home, st_dir, env, pre_tmp
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=len(STATES)) as pool:
+            prepared = list(pool.map(_prep, enumerate(STATES)))
+
+        zsh_results = {
+            state: run_zsh_latency_checks(st_home, env)
+            for state, _st_repo, st_home, _st_dir, env, _pre_tmp in prepared
+        }
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=len(STATES)) as pool:
+            results = dict(pool.map(
+                lambda p: (p[0], run_state_checks(p[0], p[1], p[2], p[3], p[4], p[5], zsh_results[p[0]])),
+                prepared,
+            ))
+        matrix = {state: results[state] for state in STATES}
 
         return assert_invariance(matrix)
 
