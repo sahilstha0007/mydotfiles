@@ -305,7 +305,7 @@ for layer, cfg_paths, reload_cmd in targets:
                 pcomm = pathlib.Path(f"/proc/{pid}/comm").read_text(encoding="utf-8").strip()
             except OSError:
                 pcomm = comm
-            if pcomm == "tmux: server" or (comm in ("tmux", "tmux:") and "tmux: client" not in args):
+            if pcomm == "tmux: server" or pcomm == "tmux":
                 matching.append((pid, pstart, pcomm))
         elif layer == "kitty" and comm == "kitty":
             matching.append((pid, pstart, comm))
