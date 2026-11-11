@@ -149,6 +149,7 @@ EXPECTED_GATES=(
   "kitty: full profile"
   "kitty: collisions"
   "kitty: sanitize"
+  "kitty: matugen hook"
   "kitty: tab_bar specs"
   "zsh: syntax"
   "zsh: startup <= 120ms"
@@ -393,6 +394,18 @@ else
   fail "kitty: sanitize" "missing executable check-colors-sanitize.sh, kitty, or python3"
 fi
 
+KITTY_HOOK_TEST="$REPO_ROOT/tests/kitty/check-matugen-hook.sh"
+MATUGEN_CFG_PATH="${MATUGEN_CONFIG:-$HOME/.config/matugen/config.toml}"
+if [ -x "$KITTY_HOOK_TEST" ] && [ -f "$MATUGEN_CFG_PATH" ] && require_cmd python3; then
+  run "kitty: matugen hook" "$REPO_ROOT" bash "$KITTY_HOOK_TEST"
+elif { [ "${DEVCHECK_IN_CLEAN_CLONE:-0}" = "1" ] || [ "${CI:-false}" = "true" ]; } && [ ! -f "$MATUGEN_CFG_PATH" ]; then
+  skip "kitty: matugen hook" "external ML4W matugen config absent in clean-clone"
+elif [ ! -x "$KITTY_HOOK_TEST" ]; then
+  fail "kitty: matugen hook" "missing executable $KITTY_HOOK_TEST"
+else
+  fail "kitty: matugen hook" "missing $MATUGEN_CFG_PATH or python3"
+fi
+
 # Invoked indirectly via `run "kitty: tab_bar specs" ... run_kitty_tab_specs`.
 # shellcheck disable=SC2329
 run_kitty_tab_specs() {
@@ -519,7 +532,7 @@ fi
 DOCS_DIR="${ATLAS_DIR:-$HOME/Documents/Notes/Atlas}"
 if [ -f "$DOCS_DIR/scripts/check_docs_vs_config.py" ] && require_cmd python3; then
   run "docs: vs config" "$DOCS_DIR" python3 scripts/check_docs_vs_config.py
-elif [ "${DEVCHECK_IN_CLEAN_CLONE:-0}" = "1" ]; then
+elif [ "${DEVCHECK_IN_CLEAN_CLONE:-0}" = "1" ] || [ "${CI:-false}" = "true" ]; then
   skip "docs: vs config" "external Atlas vault absent in clean-clone"
 else
   fail "docs: vs config" "missing $DOCS_DIR/scripts/check_docs_vs_config.py"
@@ -575,7 +588,7 @@ if [ "$RUN_ALL" -eq 1 ]; then
       printf '  %swiki: lint%s  %s%d issues (baseline %d, unchanged)%s\n' \
         "$DIM" "$R" "$DIM" "$n" "$WIKI_BASELINE" "$R"
     fi
-  elif [ "${DEVCHECK_IN_CLEAN_CLONE:-0}" = "1" ]; then
+  elif [ "${DEVCHECK_IN_CLEAN_CLONE:-0}" = "1" ] || [ "${CI:-false}" = "true" ]; then
     skip "wiki: lint" "external Atlas vault absent in clean-clone"
   else
     fail "wiki: lint" "missing $WLINT"
@@ -614,19 +627,19 @@ if [ "$RUN_ALL" -eq 1 ]; then
       clean_start=$(date +%s%N)
       if ( cd "$REPO_ROOT" && bash "$CLEAN_TEST" ) > "$DEVCHECK_LOG" 2>&1; then
         clean_ms=$(( ($(date +%s%N) - clean_start) / 1000000 ))
-        clean_skips=$(grep -c 'external Atlas vault absent in clean-clone' "$DEVCHECK_LOG" || true)
+        clean_skips=$(grep -cE 'external (Atlas vault|ML4W matugen config) absent in clean-clone' "$DEVCHECK_LOG" || true)
         clean_summary=$(sed -n 's/^all gates pass[[:space:]]*dims: \([0-9]\+\) run, \([0-9]\+\) skipped.*/\1 passed, \2 skipped/p' "$DEVCHECK_LOG" | tail -n 1)
         clean_total_skips=$(sed -n 's/^all gates pass[[:space:]]*dims: [0-9]\+ run, \([0-9]\+\) skipped.*/\1/p' "$DEVCHECK_LOG" | tail -n 1)
         if [ "${clean_total_skips:-0}" -ne "${clean_skips:-0}" ]; then
           FAILED=$((FAILED + 1))
           NAMES+=("clean: clone")
           RESULTS+=("${RED}FAIL${R}")
-          printf '  %sclean: clone%s  %-28s %sFAIL (unexpected skips: %s != %s Atlas skips)%s\n' \
+          printf '  %sclean: clone%s  %-28s %sFAIL (unexpected skips: %s != %s external skips)%s\n' \
             "$BOLD" "$R" "" "$RED" "${clean_total_skips:-?}" "${clean_skips:-0}" "$R"
         else
           NAMES+=("clean: clone")
           RESULTS+=("${GRN}pass${R}")
-          printf '  %sclean: clone%s  %-28s %s%dms%s  %s(%s; %s legitimate Atlas skips: vault absent)%s\n' \
+          printf '  %sclean: clone%s  %-28s %s%dms%s  %s(%s; %s legitimate external Atlas/ML4W skips)%s\n' \
             "$BOLD" "$R" "" "$DIM" "$clean_ms" "$R" "$DIM" "${clean_summary:-ok}" "${clean_skips:-0}" "$R"
         fi
       else
