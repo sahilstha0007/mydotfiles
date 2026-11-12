@@ -138,7 +138,7 @@ return {
           icon = { icon = '󰓩', color = 'blue' },
         },
         {
-          'gz',
+          'gs',
           group = 'Surround',
           mode = { 'n', 'v' },
           icon = { icon = '', color = 'red' },

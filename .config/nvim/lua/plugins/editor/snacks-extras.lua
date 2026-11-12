@@ -61,7 +61,7 @@ return {
       desc = 'GitHub PRs',
     },
     {
-      '<leader>Z',
+      '<leader>gZ',
       function()
         Snacks.lazygit.open()
       end,

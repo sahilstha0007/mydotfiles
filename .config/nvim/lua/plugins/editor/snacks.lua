@@ -125,6 +125,20 @@ return {
       end,
       desc = 'Git-files',
     },
+    {
+      '<leader>fp',
+      function()
+        Snacks.picker.projects()
+      end,
+      desc = 'Projects',
+    },
+    {
+      '<leader>fR',
+      function()
+        Snacks.picker.recent()
+      end,
+      desc = 'Recent Files',
+    },
     -- Terminal toggle (snacks.terminal): <C-/> mirrors VSCode's terminal
     -- key. Terminals send C-/ as C-_, so map both spellings. Needs t-mode
     -- too: snacks installs no in-terminal keymaps of its own, and lazy's
@@ -381,6 +395,14 @@ return {
         Snacks.picker.grep()
       end,
       desc = 'Grep',
+    },
+    {
+      '<leader>sw',
+      function()
+        Snacks.picker.grep_word()
+      end,
+      mode = { 'n', 'x' },
+      desc = 'Grep Word / Selection',
     },
     {
       -- Search the selection across the whole project.

@@ -27,6 +27,18 @@ return {
       vim.keymap.set({ 'n', 'x', 'o' }, '[f', function()
         move.goto_previous_start('@function.outer', 'textobjects')
       end, { desc = 'Previous function start' })
+      vim.keymap.set({ 'n', 'x', 'o' }, ']C', function()
+        move.goto_next_start('@class.outer', 'textobjects')
+      end, { desc = 'Next class start' })
+      vim.keymap.set({ 'n', 'x', 'o' }, '[C', function()
+        move.goto_previous_start('@class.outer', 'textobjects')
+      end, { desc = 'Previous class start' })
+      vim.keymap.set({ 'n', 'x', 'o' }, ']a', function()
+        move.goto_next_start('@parameter.inner', 'textobjects')
+      end, { desc = 'Next parameter' })
+      vim.keymap.set({ 'n', 'x', 'o' }, '[a', function()
+        move.goto_previous_start('@parameter.inner', 'textobjects')
+      end, { desc = 'Previous parameter' })
     end,
   },
 }

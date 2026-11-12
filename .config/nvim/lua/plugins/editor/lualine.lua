@@ -164,19 +164,49 @@ return {
 
       ins_right {
         function()
-          local msg = ''
-          local buf_ft = vim.api.nvim_get_option_value('filetype', { buf = 0 })
-          local clients = vim.lsp.get_clients()
-          if next(clients) == nil then
-            return msg
+          if vim.g.disable_autoformat or vim.b.disable_autoformat then
+            return '󰉥 fmt off'
           end
+          return ''
+        end,
+        color = { fg = '#f9e2af' },
+      }
+
+      ins_right {
+        function()
+          if vim.bo.filetype ~= 'python' then
+            return ''
+          end
+          local venv_dir = vim.env.VIRTUAL_ENV or vim.env.CONDA_PREFIX
+          if not venv_dir or venv_dir == '' then
+            return ''
+          end
+          local name = vim.fs.basename(venv_dir)
+          if name == '.venv' or name == 'venv' then
+            local parent = vim.fs.basename(vim.fs.dirname(venv_dir))
+            return '󰌠 ' .. parent .. '/' .. name
+          end
+          return '󰌠 ' .. name
+        end,
+        cond = conditions.hide_in_width,
+        color = 'LualineFiletype',
+      }
+
+      ins_right {
+        function()
+          local status = vim.lsp.status()
+          if status ~= '' then
+            return status
+          end
+          local clients = vim.lsp.get_clients { bufnr = 0 }
+          if #clients == 0 then
+            return ''
+          end
+          local names = {}
           for _, client in ipairs(clients) do
-            local filetypes = client.config.filetypes
-            if filetypes and vim.fn.index(filetypes, buf_ft) ~= -1 then
-              return client.name
-            end
+            table.insert(names, client.name)
           end
-          return msg
+          return table.concat(names, ', ')
         end,
         icon = '󰧑',
         color = 'LualineLsp',

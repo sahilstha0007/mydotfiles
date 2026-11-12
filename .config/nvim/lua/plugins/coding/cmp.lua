@@ -34,6 +34,9 @@ return {
       },
       appearance = { nerd_font_variant = 'mono' },
       completion = {
+        list = {
+          selection = { preselect = true, auto_insert = false },
+        },
         -- Frosted menu + docs: blink draws its own windows, so the global
         -- 'pumblend' option doesn't apply — each window needs its own
         -- winblend to match the floats (options.lua sets 25 globally).
@@ -42,6 +45,14 @@ return {
           auto_show = true,
           auto_show_delay_ms = 200,
           window = { winblend = 25 },
+        },
+      },
+      signature = {
+        enabled = true,
+        window = {
+          border = 'rounded',
+          winblend = 25,
+          show_documentation = false,
         },
       },
       sources = {

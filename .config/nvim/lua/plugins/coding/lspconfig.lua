@@ -47,8 +47,13 @@ return {
 
       -- Broadcast completion capabilities (blink.cmp) + ufo folding to every
       -- server via the wildcard config, so individual `lsp/*.lua` files don't
-      -- have to repeat it.
-      local capabilities = require('blink.cmp').get_lsp_capabilities()
+      -- have to repeat it. Disable LSP didChangeWatchedFiles dynamic
+      -- registration so servers do not spawn redundant Linux file watchers.
+      local capabilities = require('blink.cmp').get_lsp_capabilities {
+        workspace = {
+          didChangeWatchedFiles = { dynamicRegistration = false },
+        },
+      }
       capabilities.textDocument.foldingRange =
         { dynamicRegistration = false, lineFoldingOnly = true }
       vim.lsp.config('*', { capabilities = capabilities })
@@ -146,14 +151,26 @@ return {
           then
             map('<leader>th', function()
               vim.lsp.inlay_hint.enable(
-                not vim.lsp.inlay_hint.is_enabled { bufnr = event.buf }
+                not vim.lsp.inlay_hint.is_enabled { bufnr = event.buf },
+                { bufnr = event.buf }
               )
             end, 'Toggle Inlay Hints')
             map('<leader>uh', function()
               vim.lsp.inlay_hint.enable(
-                not vim.lsp.inlay_hint.is_enabled { bufnr = event.buf }
+                not vim.lsp.inlay_hint.is_enabled { bufnr = event.buf },
+                { bufnr = event.buf }
               )
             end, 'Toggle Inlay Hints')
+          end
+
+          if
+            client
+            and client:supports_method(
+              vim.lsp.protocol.Methods.textDocument_codeLens
+            )
+          then
+            vim.lsp.codelens.enable(true, { bufnr = event.buf })
+            map('<leader>cx', vim.lsp.codelens.run, 'Run Code Lens')
           end
         end,
       })
@@ -184,8 +201,9 @@ return {
             'biome',
             'pint',
             'blade-formatter',
-            -- debugger (used by plugins/languages/php.lua DAP config)
+            -- debuggers (used by plugins/languages/php.lua & typescript.lua)
             'php-debug-adapter',
+            'js-debug-adapter',
             'hadolint',
           },
         }

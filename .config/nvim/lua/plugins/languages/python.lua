@@ -84,6 +84,53 @@ return {
         search_timeout = 5,
       },
     },
+    config = function(_, opts)
+      require('venv-selector').setup(opts)
+
+      local function auto_detect_venv(bufnr)
+        if
+          not vim.api.nvim_buf_is_valid(bufnr)
+          or vim.bo[bufnr].buftype ~= ''
+          or vim.bo[bufnr].filetype ~= 'python'
+        then
+          return
+        end
+        if vim.b[bufnr].venv_selector_disabled == true then
+          return
+        end
+        if require('venv-selector.uv2').is_uv_buffer(bufnr) then
+          return
+        end
+
+        -- Respect any explicit cached selection (<leader>vs) before falling
+        -- back to automatic project environment detection.
+        require('venv-selector.cached_venv').ensure_cached_venv_activated(bufnr)
+        if vim.b[bufnr].venv_selector_last_python then
+          return
+        end
+
+        local py, env_type = require('utils.python_env').detect_for_buf(bufnr)
+        if py then
+          local venv = require 'venv-selector.venv'
+          venv.set_source 'auto'
+          venv.activate_for_buffer(py, env_type, bufnr, { save_cache = false })
+        end
+      end
+
+      vim.api.nvim_create_autocmd({ 'FileType', 'BufEnter' }, {
+        group = vim.api.nvim_create_augroup(
+          'python-auto-venv',
+          { clear = true }
+        ),
+        pattern = 'python',
+        callback = function(args)
+          auto_detect_venv(args.buf)
+        end,
+      })
+
+      -- Activate immediately for the buffer that triggered `ft = 'python'`.
+      auto_detect_venv(vim.api.nvim_get_current_buf())
+    end,
     keys = {
       { '<leader>vs', '<cmd>VenvSelect<cr>', desc = 'Venv: select' },
       -- NOT :VenvSelectCached. main only registers that command when

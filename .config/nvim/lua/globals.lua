@@ -76,12 +76,16 @@ vim.lsp.handlers['textDocument/signatureHelp'] = function(
   )
 end
 
--- Prepend bun bin and mise shims to PATH
+-- Prepend bun bin and mise shims to PATH; append Mason bin so formatters/linters
+-- work even before lazy-loaded mason.nvim initializes.
 vim.env.PATH = vim.env.HOME
   .. '/.bun/bin:'
   .. vim.env.HOME
   .. '/.local/share/mise/shims:'
   .. vim.env.PATH
+  .. ':'
+  .. vim.fn.stdpath 'data'
+  .. '/mason/bin'
 
 -- Node.js provider: use Bun's globally managed neovim-node-host when present
 local bun_node_host = vim.env.HOME .. '/.bun/bin/neovim-node-host'

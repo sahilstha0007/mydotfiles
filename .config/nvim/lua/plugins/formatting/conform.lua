@@ -12,7 +12,40 @@ return {
         mode = { 'n', 'v' },
         desc = 'Format buffer / selection',
       },
+      {
+        '<leader>ua',
+        function()
+          vim.g.disable_autoformat = not vim.g.disable_autoformat
+          vim.notify(
+            'Autoformat (global): '
+              .. (vim.g.disable_autoformat and 'OFF' or 'ON'),
+            vim.log.levels.INFO
+          )
+        end,
+        desc = 'Toggle Autoformat (global)',
+      },
+      {
+        '<leader>uA',
+        function()
+          vim.b.disable_autoformat = not vim.b.disable_autoformat
+          vim.notify(
+            'Autoformat (buffer): '
+              .. (vim.b.disable_autoformat and 'OFF' or 'ON'),
+            vim.log.levels.INFO
+          )
+        end,
+        desc = 'Toggle Autoformat (buffer)',
+      },
     },
+    init = function()
+      vim.api.nvim_create_user_command('FormatToggle', function(args)
+        if args.bang then
+          vim.b.disable_autoformat = not vim.b.disable_autoformat
+        else
+          vim.g.disable_autoformat = not vim.g.disable_autoformat
+        end
+      end, { bang = true, desc = 'Toggle autoformat on save (! = buffer)' })
+    end,
     opts = function()
       -- Check if bun has native `bun fmt` support (bun >= 1.4.4)
       local has_bun_fmt = nil
@@ -30,62 +63,57 @@ return {
         return has_bun_fmt
       end
 
+      -- Check upward from the buffer's directory so subprojects / monorepos
+      -- opened from ~ still detect biome.json(c) reliably.
+      local function has_biome_config(bufnr)
+        local name = vim.api.nvim_buf_get_name(bufnr)
+        local path = name ~= '' and vim.fs.dirname(name) or vim.fn.getcwd()
+        return vim.fs.find(
+          { 'biome.json', 'biome.jsonc' },
+          { path = path, upward = true }
+        )[1] ~= nil
+      end
+
+      local function web_formatters(bufnr)
+        if has_biome_config(bufnr) then
+          return { 'biome' }
+        end
+        return { 'bun_fmt', 'prettierd', 'prettier', stop_after_first = true }
+      end
+
+      local prettier_or_bun = {
+        'bun_fmt',
+        'prettierd',
+        'prettier',
+        stop_after_first = true,
+      }
+
       local opts = {
+        notify_on_error = false,
         formatters_by_ft = {
           lua = { 'stylua' },
-          astro = { 'prettier', 'prettierd', stop_after_first = true },
-          javascript = {
-            'bun_fmt',
-            'prettier',
-            'prettierd',
-            stop_after_first = true,
-          },
-          javascriptreact = {
-            'bun_fmt',
-            'prettier',
-            'prettierd',
-            stop_after_first = true,
-          },
-          typescript = {
-            'bun_fmt',
-            'prettier',
-            'prettierd',
-            stop_after_first = true,
-          },
-          typescriptreact = {
-            'bun_fmt',
-            'prettier',
-            'prettierd',
-            stop_after_first = true,
-          },
-          json = { 'bun_fmt', 'prettier', 'prettierd', stop_after_first = true },
-          jsonc = {
-            'bun_fmt',
-            'prettier',
-            'prettierd',
-            stop_after_first = true,
-          },
-          css = { 'bun_fmt', 'prettier', 'prettierd', stop_after_first = true },
-          scss = { 'bun_fmt', 'prettier', 'prettierd', stop_after_first = true },
-          less = { 'bun_fmt', 'prettier', 'prettierd', stop_after_first = true },
-          html = { 'bun_fmt', 'prettier', 'prettierd', stop_after_first = true },
-          vue = { 'bun_fmt', 'prettier', 'prettierd', stop_after_first = true },
-          yaml = { 'bun_fmt', 'prettier', 'prettierd', stop_after_first = true },
-          graphql = {
-            'bun_fmt',
-            'prettier',
-            'prettierd',
-            stop_after_first = true,
-          },
-          markdown = {
-            'bun_fmt',
-            'prettier',
-            'prettierd',
-            stop_after_first = true,
-          },
+          astro = { 'prettierd', 'prettier', stop_after_first = true },
+          javascript = web_formatters,
+          javascriptreact = web_formatters,
+          typescript = web_formatters,
+          typescriptreact = web_formatters,
+          json = web_formatters,
+          jsonc = web_formatters,
+          css = web_formatters,
+          scss = prettier_or_bun,
+          less = prettier_or_bun,
+          html = prettier_or_bun,
+          vue = prettier_or_bun,
+          yaml = prettier_or_bun,
+          graphql = prettier_or_bun,
+          handlebars = prettier_or_bun,
+          markdown = prettier_or_bun,
           php = { 'pint' },
           blade = { 'blade-formatter' },
-          python = { 'ruff_format' },
+          python = { 'ruff_organize_imports', 'ruff_format' },
+          go = { 'gofumpt' },
+          sh = { 'shfmt' },
+          bash = { 'shfmt' },
         },
         formatters = {
           bun_fmt = {
@@ -97,77 +125,16 @@ return {
             end,
           },
         },
+        format_on_save = function(bufnr)
+          if vim.g.disable_autoformat or vim.b[bufnr].disable_autoformat then
+            return
+          end
+          return {
+            timeout_ms = 2000,
+            lsp_format = 'fallback',
+          }
+        end,
       }
-
-      opts.format_after_save = function(bufnr)
-        if vim.g.disable_autoformat or vim.b[bufnr].disable_autoformat then
-          return
-        end
-
-        local filetype = vim.bo[bufnr].filetype
-
-        -- Check if biome.json exists in the project root
-        local has_biome = vim.fn.filereadable(vim.fn.getcwd() .. '/biome.json')
-            == 1
-          or vim.fn.filereadable(vim.fn.getcwd() .. '/biome.jsonc') == 1
-
-        -- Filetypes supported by Biome
-        local biome_supported = {
-          javascript = true,
-          javascriptreact = true,
-          typescript = true,
-          typescriptreact = true,
-          json = true,
-          jsonc = true,
-          css = true,
-        }
-
-        -- Filetypes supported by Bun and Prettier
-        local bun_prettier_supported = {
-          javascript = true,
-          javascriptreact = true,
-          typescript = true,
-          typescriptreact = true,
-          json = true,
-          jsonc = true,
-          css = true,
-          graphql = true,
-          handlebars = true,
-          html = true,
-          less = true,
-          markdown = true,
-          scss = true,
-          vue = true,
-          yaml = true,
-        }
-
-        -- Prioritize Biome only if biome.json exists and filetype is supported
-        if has_biome and biome_supported[filetype] then
-          return {
-            formatters = { 'biome' },
-            timeout_ms = 2000,
-          }
-        end
-
-        -- Primary: bun fmt, then fallback to Prettier
-        if bun_prettier_supported[filetype] then
-          return {
-            formatters = { 'bun_fmt', 'prettier', 'prettierd' },
-            stop_after_first = true,
-            timeout_ms = 2000,
-          }
-        end
-
-        if filetype == 'astro' then
-          return {
-            formatters = { 'prettier', 'prettierd' },
-            stop_after_first = true,
-            timeout_ms = 2000,
-          }
-        end
-
-        return { lsp_format = 'fallback' }
-      end
 
       return opts
     end,

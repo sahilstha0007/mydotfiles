@@ -2,6 +2,17 @@
 -- semanticTokens is left on; modern gopls advertises the provider correctly,
 -- so the old manual capability workaround is no longer needed.
 return {
+  on_attach = function(_, bufnr)
+    vim.keymap.set('n', '<leader>co', function()
+      vim.lsp.buf.code_action {
+        apply = true,
+        context = {
+          only = { 'source.organizeImports' },
+          diagnostics = {},
+        },
+      }
+    end, { buffer = bufnr, desc = 'gopls: Organize Imports' })
+  end,
   settings = {
     gopls = {
       gofumpt = true,

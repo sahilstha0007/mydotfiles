@@ -81,7 +81,8 @@ return {
       sync_root_with_cwd = true,
       auto_reload_on_write = true,
       diagnostics = {
-        enable = false,
+        enable = true,
+        show_on_dirs = true,
       },
       hijack_directories = {
         enable = true,

@@ -18,5 +18,12 @@ return {
         },
       }
     end, { desc = 'ESLint: Fix all autofixable problems' })
+
+    vim.keymap.set(
+      'n',
+      '<leader>cE',
+      '<cmd>EslintFixAll<cr>',
+      { buffer = bufnr, desc = 'ESLint: Fix all' }
+    )
   end,
 }

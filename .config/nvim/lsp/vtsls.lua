@@ -84,7 +84,7 @@ return {
         globalPlugins = {
           {
             name = '@astrojs/ts-plugin',
-            location = vim.env.MASON
+            location = (vim.env.MASON or (vim.fn.stdpath 'data' .. '/mason'))
               .. '/packages/astro-language-server/node_modules/@astrojs/ts-plugin',
             enableForWorkspaceTypeScriptVersions = true,
           },

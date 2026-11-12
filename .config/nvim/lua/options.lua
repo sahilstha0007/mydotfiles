@@ -7,6 +7,12 @@ vim.opt.number = true
 -- Relative numbers
 vim.opt.relativenumber = true
 
+-- Indentation defaults (matches Zed's tab_size=2; vim-sleuth overrides per-file)
+vim.opt.tabstop = 2
+vim.opt.softtabstop = 2
+vim.opt.shiftwidth = 2
+vim.opt.expandtab = true
+
 -- Line wrap & word wrap: enabled by default for natural reading/editing (toggle anytime with <leader>uw)
 vim.opt.wrap = true
 vim.opt.linebreak = true

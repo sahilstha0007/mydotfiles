@@ -4,7 +4,7 @@ return {
     branch = 'main',
     build = ':TSUpdate',
     lazy = false,
-    config = function()
+    config = function(_, opts)
       require('nvim-treesitter').setup()
 
       local ensure_installed = {
@@ -42,6 +42,14 @@ return {
         'regex',
         'toml',
       }
+
+      if type(opts) == 'table' and type(opts.ensure_installed) == 'table' then
+        for _, lang in ipairs(opts.ensure_installed) do
+          if not vim.tbl_contains(ensure_installed, lang) then
+            table.insert(ensure_installed, lang)
+          end
+        end
+      end
 
       if vim.env.NVIM_NO_AUTO_INSTALL ~= '1' then
         require('nvim-treesitter').install(ensure_installed)

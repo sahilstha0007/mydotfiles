@@ -30,6 +30,26 @@ return {
           word = true,
           cyclic = true,
         },
+        augend.constant.new {
+          elements = { 'const', 'let' },
+          word = true,
+          cyclic = true,
+        },
+        augend.constant.new {
+          elements = { 'public', 'protected', 'private' },
+          word = true,
+          cyclic = true,
+        },
+        augend.constant.new {
+          elements = { 'enable', 'disable' },
+          word = true,
+          cyclic = true,
+        },
+        augend.constant.new {
+          elements = { 'on', 'off' },
+          word = true,
+          cyclic = true,
+        },
         augend.case.new {
           types = {
             'camelCase',

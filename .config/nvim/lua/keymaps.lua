@@ -85,6 +85,40 @@ end, { desc = 'Next Diagnostic' })
 keymap.set('n', '[d', function()
   vim.diagnostic.jump { count = -1, float = true }
 end, { desc = 'Prev Diagnostic' })
+keymap.set('n', ']e', function()
+  vim.diagnostic.jump {
+    count = 1,
+    severity = vim.diagnostic.severity.ERROR,
+    float = true,
+  }
+end, { desc = 'Next Error' })
+keymap.set('n', '[e', function()
+  vim.diagnostic.jump {
+    count = -1,
+    severity = vim.diagnostic.severity.ERROR,
+    float = true,
+  }
+end, { desc = 'Prev Error' })
+keymap.set('n', 'gl', function()
+  vim.diagnostic.open_float { scope = 'line' }
+end, { desc = 'Line Diagnostics' })
+keymap.set('n', '<leader>cy', function()
+  local diags = vim.diagnostic.get(0, { lnum = vim.fn.line '.' - 1 })
+  if #diags == 0 then
+    vim.notify('No diagnostics on current line', vim.log.levels.INFO)
+    return
+  end
+  local lines = vim.tbl_map(function(d)
+    return d.source and ('[' .. d.source .. '] ' .. d.message) or d.message
+  end, diags)
+  local text = table.concat(lines, '\n')
+  vim.fn.setreg('+', text)
+  vim.notify('Copied diagnostic to clipboard', vim.log.levels.INFO)
+end, { desc = 'Yank line diagnostics' })
+
+-- Keep cursor centered when stepping through search matches
+keymap.set('n', 'n', 'nzzzv', { desc = 'Next search result (centered)' })
+keymap.set('n', 'N', 'Nzzzv', { desc = 'Prev search result (centered)' })
 
 -- LSP Rename
 vim.keymap.set('n', '<leader>cr', function()
@@ -171,8 +205,9 @@ end
 
 vim.api.nvim_create_autocmd('FileType', {
   pattern = 'qf',
-  desc = 'dd and visual d delete items from quickfix list',
+  desc = 'Load cfilter and bind dd / visual d to delete quickfix items',
   callback = function(args)
+    pcall(vim.cmd.packadd, 'cfilter')
     keymap.set(
       'n',
       'dd',
