@@ -1,8 +1,20 @@
 local keymap = vim.keymap
 local opts = { noremap = true, silent = true }
 
--- Clear highlights on search when pressing <Esc> in normal mode
-keymap.set('n', '<Esc>', '<cmd>nohlsearch<CR>')
+-- Clear highlights on search and close lingering floating windows on <Esc>
+keymap.set('n', '<Esc>', function()
+  vim.cmd 'nohlsearch'
+  for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+    local config = vim.api.nvim_win_get_config(win)
+    if config.relative ~= '' and not config.external then
+      local buf = vim.api.nvim_win_get_buf(win)
+      local ft = vim.bo[buf].filetype
+      if ft ~= 'snacks_notif' and ft ~= 'snacks_dashboard' then
+        pcall(vim.api.nvim_win_close, win, false)
+      end
+    end
+  end
+end, { desc = 'Clear highlights and close floating windows' })
 
 -- Split windows: <leader>| / <leader>- (LazyVim convention — the key
 -- MATCHES the split line you get). `s` is left free for flash.nvim's

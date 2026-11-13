@@ -47,13 +47,12 @@ return {
           window = { winblend = 25 },
         },
       },
+      -- Signature help: disabled in blink.cmp because its experimental auto-signature
+      -- triggers on `(` / `,` and lingers over code while typing. Native LSP
+      -- signature help is wired to <C-k> in insert mode and <leader>ck in normal mode
+      -- (lspconfig.lua), which dismisses cleanly on any cursor movement.
       signature = {
-        enabled = true,
-        window = {
-          border = 'rounded',
-          winblend = 25,
-          show_documentation = false,
-        },
+        enabled = false,
       },
       sources = {
         default = { 'lsp', 'path', 'snippets', 'lazydev' },
