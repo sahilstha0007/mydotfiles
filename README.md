@@ -55,7 +55,7 @@ xargs -n 1 code --install-extension < .config/Code/User/extensions.txt
 - **Universal Cross-Layer Navigation**: `Ctrl+h/j/k/l` moves seamlessly across Kitty/Tmux splits and Neovim splits, and `terminal-cheatsheet` searches the full keybind table interactively.
 
 <details>
-<summary>Complete Live Keybinding Reference (226 generated bindings: WezTerm 99, Kitty 74, Tmux 53)</summary>
+<summary>Complete Live Keybinding Reference (227 generated bindings: WezTerm 99, Kitty 74, Tmux 54)</summary>
 
 | Layer | Scope | Key | Action | Canonical ID |
 |---|---|---|---|---|
@@ -244,6 +244,7 @@ xargs -n 1 code --install-extension < .config/Code/User/extensions.txt
 | Tmux | Prefix | `Prefix + c` | new-window -c "#{?pane_current_path,#{pane_current_path},#{?@project_root,#{@project_root},#{session_path}}}" | `Tmux\|prefix:c` |
 | Tmux | Prefix | `Prefix + x` | confirm-before -p "kill-pane #P? (y/n)" kill-pane | `Tmux\|prefix:x` |
 | Tmux | Prefix | `Prefix + X` | kill-pane | `Tmux\|prefix:X` |
+| Tmux | Prefix | `Prefix + Q` | confirm-before -p "Save state and shutdown tmux server? (y/n)" "run-shell '~/.local/bin/tmux-shutdown'" | `Tmux\|prefix:Q` |
 | Tmux | Prefix | `Prefix + f` | display-popup -E -S "fg=#{@thm_blue}" -b rounded -h "85%" -s bg=default -t "  Project Hub " -w "85%" /home/sahil/.local/bin/project-hub | `Tmux\|prefix:f` |
 | Tmux | Prefix | `Prefix + S` | display-popup -E -S "fg=#{@thm_blue}" -b rounded -s bg=default -t "  Sessions " /home/sahil/.config/tmux/session-switcher.sh | `Tmux\|prefix:S` |
 | Tmux | Prefix | `Prefix + w` | choose-tree -Zw | `Tmux\|prefix:w` |
@@ -283,8 +284,8 @@ xargs -n 1 code --install-extension < .config/Code/User/extensions.txt
 | Tmux | copy-mode-vi | `[copy-mode-vi] C-v` | send-keys -X rectangle-toggle | `Tmux\|copy-mode-vi:C-v` |
 | Tmux | Prefix | `Prefix + l` | last-window | `Tmux\|prefix:l` |
 | Tmux | Prefix | `Prefix + k` | display-popup -E -S "fg=#{@thm_blue}" -b rounded -d "#{pane_current_path}" -h "80%" -s bg=default -w "85%" /home/sahil/.config/tmux/keymap-dump.sh | `Tmux\|prefix:k` |
-| Tmux | Prefix | `Prefix + C-s` | run-shell \~/.config/tmux/plugins/tmux-resurrect/scripts/save.sh | `Tmux\|prefix:C-s` |
-| Tmux | Prefix | `Prefix + C-r` | run-shell \~/.config/tmux/plugins/tmux-resurrect/scripts/restore.sh | `Tmux\|prefix:C-r` |
+| Tmux | Prefix | `Prefix + C-s` | if-shell "[ -x ~/.config/tmux/plugins/tmux-resurrect/scripts/save.sh ]" "run-shell '~/.config/tmux/plugins/tmux-resurrect/scripts/save.sh'" "display-message 'tmux-resurrect not installed (press prefix + I)'" | `Tmux\|prefix:C-s` |
+| Tmux | Prefix | `Prefix + C-r` | if-shell "[ -x ~/.config/tmux/plugins/tmux-resurrect/scripts/restore.sh ]" "run-shell '~/.config/tmux/plugins/tmux-resurrect/scripts/restore.sh'" "display-message 'tmux-resurrect not installed (press prefix + I)'" | `Tmux\|prefix:C-r` |
 
 </details>
 <!-- END KEYBINDINGS -->
