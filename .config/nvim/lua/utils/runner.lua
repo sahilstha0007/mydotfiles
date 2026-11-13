@@ -6,25 +6,33 @@ local M = {}
 ---@return string|nil pane_id Target pane id (e.g. "%3") or nil
 local function get_or_create_runner_pane()
   if not vim.env.TMUX or vim.env.TMUX == '' then
-    vim.notify('Not running inside tmux', vim.log.levels.WARN, { title = 'Runner' })
+    vim.notify(
+      'Not running inside tmux',
+      vim.log.levels.WARN,
+      { title = 'Runner' }
+    )
     return nil
   end
 
-  local cur_pane = vim.fn.system("tmux display-message -p '#{pane_id}'"):gsub('%s+', '')
-  local panes_raw = vim.fn.system("tmux list-panes -F '#{pane_id} #{pane_current_command}'")
+  local cur_pane =
+    vim.fn.system("tmux display-message -p '#{pane_id}'"):gsub('%s+', '')
+  local panes_raw =
+    vim.fn.system "tmux list-panes -F '#{pane_id} #{pane_current_command}'"
   local lines = vim.split(panes_raw, '\n', { trimempty = true })
 
   -- If there's already an adjacent non-editor pane in this window, reuse it
   for _, line in ipairs(lines) do
     local parts = vim.split(line, ' ', { trimempty = true })
     local pid, cmd = parts[1], parts[2] or ''
-    if pid ~= cur_pane and not cmd:match('nvim') and not cmd:match('vim') then
+    if pid ~= cur_pane and not cmd:match 'nvim' and not cmd:match 'vim' then
       return pid
     end
   end
 
   -- No runner pane exists: split window horizontally below (30% height)
-  local new_pane = vim.fn.system("tmux split-window -v -l 30% -P -F '#{pane_id}'"):gsub('%s+', '')
+  local new_pane = vim.fn
+    .system("tmux split-window -v -l 30% -P -F '#{pane_id}'")
+    :gsub('%s+', '')
   -- Keep cursor focus on Neovim
   vim.fn.system('tmux select-pane -t ' .. cur_pane)
   return new_pane
@@ -92,7 +100,11 @@ function M.run_file()
   elseif ft == 'php' then
     cmd = 'php ' .. vim.fn.shellescape(file)
   else
-    vim.notify('No runner configured for filetype: ' .. ft, vim.log.levels.INFO, { title = 'Runner' })
+    vim.notify(
+      'No runner configured for filetype: ' .. ft,
+      vim.log.levels.INFO,
+      { title = 'Runner' }
+    )
     return
   end
 
@@ -152,7 +164,11 @@ function M.kill_runner()
   end
   vim.fn.system { 'tmux', 'send-keys', '-t', target, 'C-c' }
   vim.fn.system { 'tmux', 'send-keys', '-t', target, 'clear', 'Enter' }
-  vim.notify('Runner interrupted & cleared', vim.log.levels.INFO, { title = 'Runner' })
+  vim.notify(
+    'Runner interrupted & cleared',
+    vim.log.levels.INFO,
+    { title = 'Runner' }
+  )
 end
 
 ---Launch or toggle interactive REPL for current filetype in runner pane.
@@ -185,7 +201,11 @@ function M.toggle_repl()
   end
 
   M.send_to_runner(repl_cmd)
-  vim.notify('Started REPL: ' .. repl_cmd, vim.log.levels.INFO, { title = 'Runner' })
+  vim.notify(
+    'Started REPL: ' .. repl_cmd,
+    vim.log.levels.INFO,
+    { title = 'Runner' }
+  )
 end
 
 return M
