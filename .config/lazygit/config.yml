@@ -7,12 +7,12 @@ gui:
   border: rounded
   theme:
     activeBorderColor:
-      - '#ffb4ac'
+      - '#eac16c'
       - bold
     inactiveBorderColor:
-      - '#a08c8a'
+      - '#998f80'
     selectedLineBgColor:
-      - '#322826'
+      - '#2e2921'
   sidePanelWidth: 0.33
   expandFocusedSidePanel: true
 quitOnTopLevelReturn: true

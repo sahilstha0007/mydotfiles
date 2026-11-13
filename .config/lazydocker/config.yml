@@ -5,10 +5,10 @@ gui:
   border: rounded
   theme:
     activeBorderColor:
-      - '#ffb4ac'
+      - '#eac16c'
       - bold
     inactiveBorderColor:
-      - '#a08c8a'
+      - '#998f80'
     selectedLineBgColor:
       - reverse
 reporting: local

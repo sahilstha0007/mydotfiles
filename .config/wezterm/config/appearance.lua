@@ -27,10 +27,8 @@ return {
 
    -- cursor
    animation_fps = 120, -- high-refresh cursor animation
-   -- kitty-style blink, but GLIDED: eased on/off (EaseInOut) instead of a
-   -- hard toggle — the fade is what reads as smooth. 650ms half-period.
-   default_cursor_style = 'BlinkingBlock',
-   cursor_blink_rate = 650,
+   default_cursor_style = 'SteadyBar',
+   cursor_blink_rate = 0,
    cursor_blink_ease_in = 'EaseInOut',
    cursor_blink_ease_out = 'EaseInOut',
 
