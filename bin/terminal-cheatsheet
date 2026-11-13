@@ -396,6 +396,18 @@ GENERATED_ENTRIES = [('WezTerm', 'Alt + Backspace', 'Delete line before cursor (
   'Tmux|prefix:b'),
  ('Tmux', 'Prefix + y', 'choose-buffer -Z', 'Prefix', 'Tmux|prefix:y'),
  ('Tmux',
+  'Prefix + h',
+  'display-popup -E -S "fg=#{@thm_blue}" -b rounded -h "90%" -s bg=default -w "90%" '
+  '"/home/sahil/.config/tmux/scripts/scrollback-pager.sh \'#{pane_id}\'"',
+  'Prefix',
+  'Tmux|prefix:h'),
+ ('Tmux',
+  'Prefix + e',
+  'display-popup -E -S "fg=#{@thm_blue}" -b rounded -d "#{pane_current_path}" -h "65%" -s bg=default -w "85%" '
+  '"/home/sahil/.config/tmux/scripts/error-jump.sh \'#{pane_id}\'"',
+  'Prefix',
+  'Tmux|prefix:e'),
+ ('Tmux',
   'Prefix + P',
   'display-popup -E -S "fg=#{@thm_blue}" -b rounded -d "#{pane_current_path}" -h "40%" -s bg=default -w "60%" '
   '"/home/sahil/.config/tmux/project-task.sh \'#{pane_current_path}\'"',

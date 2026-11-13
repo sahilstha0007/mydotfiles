@@ -133,6 +133,12 @@ return {
           icon = { icon = '󰈉', color = 'grey' },
         },
         {
+          '<leader>r',
+          group = 'Run / REPL',
+          mode = { 'n', 'v' },
+          icon = { icon = '󰐊', color = 'green' },
+        },
+        {
           '<leader>w',
           group = 'Window',
           icon = { icon = '󰓩', color = 'blue' },

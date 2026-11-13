@@ -55,7 +55,7 @@ xargs -n 1 code --install-extension < .config/Code/User/extensions.txt
 - **Universal Cross-Layer Navigation**: `Ctrl+h/j/k/l` moves seamlessly across Kitty/Tmux splits and Neovim splits, and `terminal-cheatsheet` searches the full keybind table interactively.
 
 <details>
-<summary>Complete Live Keybinding Reference (227 generated bindings: WezTerm 99, Kitty 74, Tmux 54)</summary>
+<summary>Complete Live Keybinding Reference (229 generated bindings: WezTerm 99, Kitty 74, Tmux 56)</summary>
 
 | Layer | Scope | Key | Action | Canonical ID |
 |---|---|---|---|---|
@@ -253,6 +253,8 @@ xargs -n 1 code --install-extension < .config/Code/User/extensions.txt
 | Tmux | Prefix | `Prefix + d` | display-popup -E -S "fg=#{@thm_blue}" -b rounded -d "#{pane_current_path}" -h "90%" -s bg=default -w "90%" lazydocker | `Tmux\|prefix:d` |
 | Tmux | Prefix | `Prefix + b` | display-popup -E -S "fg=#{@thm_blue}" -b rounded -d "#{pane_current_path}" -h "90%" -s bg=default -w "90%" yazi | `Tmux\|prefix:b` |
 | Tmux | Prefix | `Prefix + y` | choose-buffer -Z | `Tmux\|prefix:y` |
+| Tmux | Prefix | `Prefix + h` | display-popup -E -S "fg=#{@thm_blue}" -b rounded -h "90%" -s bg=default -w "90%" "/home/sahil/.config/tmux/scripts/scrollback-pager.sh '#{pane_id}'" | `Tmux\|prefix:h` |
+| Tmux | Prefix | `Prefix + e` | display-popup -E -S "fg=#{@thm_blue}" -b rounded -d "#{pane_current_path}" -h "65%" -s bg=default -w "85%" "/home/sahil/.config/tmux/scripts/error-jump.sh '#{pane_id}'" | `Tmux\|prefix:e` |
 | Tmux | Prefix | `Prefix + P` | display-popup -E -S "fg=#{@thm_blue}" -b rounded -d "#{pane_current_path}" -h "40%" -s bg=default -w "60%" "/home/sahil/.config/tmux/project-task.sh '#{pane_current_path}'" | `Tmux\|prefix:P` |
 | Tmux | Prefix | `Prefix + ;` | display-popup -E -S "fg=#{@thm_blue}" -b rounded -d "#{pane_current_path}" -h "40%" -s bg=default -w "60%" "/home/sahil/.config/tmux/project-task.sh '#{pane_current_path}'" | `Tmux\|prefix:;` |
 | Tmux | Prefix | `Prefix + T` | display-popup -E -S "fg=#{@thm_blue}" -b rounded -h "90%" -s bg=default -w "90%" "if [ \"\$TERMINAL_STACK_PROFILE\" = \"kitty\" ]; then exec btop -c \"\$HOME/.config/btop/btop-nightfox.conf\"; else exec btop; fi" | `Tmux\|prefix:T` |

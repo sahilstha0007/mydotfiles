@@ -37,6 +37,12 @@ keymap.set('n', '<leader>wm', function()
   -- pickers.lua uses for snacks.picker).
   require('snacks').zen.zoom()
 end, { desc = 'Toggle Zoom Mode' })
+keymap.set('n', '<leader>wz', function()
+  require('snacks').zen.zoom()
+  if vim.env.TMUX and vim.env.TMUX ~= '' then
+    vim.fn.system 'tmux resize-pane -Z'
+  end
+end, { desc = 'Zoom Window & Tmux Pane' })
 
 -- Tabs: gt/gT are native next/prev; <Tab> is NOT remapped (remapping it
 -- kills <C-i> — terminals send Tab and Ctrl-i as the same byte, and <C-i>
@@ -455,3 +461,38 @@ vim.keymap.set('n', '<leader>us', function()
   vim.wo.spell = not vim.wo.spell
   vim.notify('Spell: ' .. (vim.wo.spell and 'ON' or 'OFF'), vim.log.levels.INFO)
 end, { desc = 'Toggle spell check' })
+
+-- =========================================================================
+-- Tmux & Terminal Code Runner / REPL (<leader>r)
+-- =========================================================================
+keymap.set('n', '<leader>rc', function()
+  require('utils.runner').run_file()
+end, { desc = 'Run Current File' })
+
+keymap.set('n', '<leader>rf', function()
+  require('utils.runner').run_file()
+end, { desc = 'Run Current File' })
+
+keymap.set('n', '<leader>rl', function()
+  require('utils.runner').run_line()
+end, { desc = 'Run Current Line' })
+
+keymap.set('v', '<leader>r', function()
+  require('utils.runner').run_selection()
+end, { desc = 'Run Selection' })
+
+keymap.set('n', '<leader>rs', function()
+  require('utils.runner').run_selection()
+end, { desc = 'Run Selection' })
+
+keymap.set('n', '<leader>rt', function()
+  require('utils.runner').toggle_repl()
+end, { desc = 'Toggle / Start REPL' })
+
+keymap.set('n', '<leader>rp', function()
+  require('utils.runner').focus_runner()
+end, { desc = 'Focus Runner Pane' })
+
+keymap.set('n', '<leader>rk', function()
+  require('utils.runner').kill_runner()
+end, { desc = 'Kill / Clear Runner' })

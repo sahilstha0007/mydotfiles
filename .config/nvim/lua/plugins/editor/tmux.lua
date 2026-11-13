@@ -9,6 +9,17 @@ return {
     config = function()
       local tmux = require 'tmux'
       tmux.setup {
+        copy_sync = {
+          enable = true,
+          sync_clipboard = false, -- Neovim's native unnamedplus + OSC52 handles system clipboard
+          sync_registers = true,
+          sync_deletes = false, -- avoid overwriting tmux paste buffers on simple deletes (dd/dw)
+          sync_unnamed = true,
+        },
+        navigation = {
+          cycle_navigation = true,
+          persist_zoom = true,
+        },
         resize = {
           enable_default_keybindings = false,
         },
