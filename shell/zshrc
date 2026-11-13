@@ -365,13 +365,16 @@ if command -v tmux >/dev/null 2>&1; then
   alias tl='tmux ls'
   unalias tk 2>/dev/null
   tk() {
-    if [ $# -gt 0 ]; then
+    if [ "${1:-}" = "server" ]; then
+      tmux-shutdown
+    elif [ $# -gt 0 ]; then
       tmux kill-session -t "$1"
     else
       tmux kill-session
     fi
   }
   alias td='tmux detach-client'
+  alias ts='tmux-shutdown'
 fi
 
 # OmniRoute user-service aliases (loaded in interactive shells only, not ~/.zshenv)

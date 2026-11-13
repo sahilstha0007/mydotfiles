@@ -68,3 +68,14 @@ if [ -n "$detected" ]; then
     tmux set-environment -u CONFIG_DIR 2>/dev/null || true
   fi
 fi
+
+# Auto-restore saved sessions if this is the primary default server and fresh with 1 pane
+socket_path=$(tmux display-message -p '#{socket_path}' 2>/dev/null || true)
+if [[ "$socket_path" == */default ]] && [ -z "${TMUX_TEST_SOCK:-}" ] && [ ! -f "$HOME/tmux_no_auto_restore" ] && [ -f "$HOME/.local/share/tmux/resurrect/last" ]; then
+  pane_count=$(tmux list-panes -a 2>/dev/null | wc -l || echo 0)
+  if [ "$pane_count" -eq 1 ]; then
+    if [ -x "$HOME/.config/tmux/plugins/tmux-resurrect/scripts/restore.sh" ]; then
+      "$HOME/.config/tmux/plugins/tmux-resurrect/scripts/restore.sh" 2>/dev/null || true
+    fi
+  fi
+fi

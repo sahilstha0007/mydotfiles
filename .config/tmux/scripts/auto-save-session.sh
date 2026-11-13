@@ -9,7 +9,7 @@ SESSION=$(tmux display-message -p '#S' 2>/dev/null) || exit 0
 
 # Save via resurrect if available, otherwise just record the session name
 if [ -x ~/.config/tmux/plugins/tmux-resurrect/scripts/save.sh ]; then
-  ~/.config/tmux/plugins/tmux-resurrect/scripts/save.sh 2>/dev/null || true
+  ~/.config/tmux/plugins/tmux-resurrect/scripts/save.sh "quiet" 2>/dev/null || true
 fi
 
 # Also persist a lightweight marker for quick restore detection

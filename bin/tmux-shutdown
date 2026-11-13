@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# Safely save all tmux sessions and shut down tmux server
+set -euo pipefail
+
+export TMUX_TMPDIR="${TMUX_TMPDIR:-$HOME/.cache/tmux}"
+
+if tmux info >/dev/null 2>&1; then
+  echo "Saving tmux sessions, windows, and panes..."
+  if [ -x "$HOME/.config/tmux/plugins/tmux-resurrect/scripts/save.sh" ]; then
+    "$HOME/.config/tmux/plugins/tmux-resurrect/scripts/save.sh" quiet 2>/dev/null || true
+  fi
+  echo "$(date +%s) shutdown" >> "$HOME/.cache/tmux-session-saves" 2>/dev/null || true
+  echo "Shutting down tmux server..."
+  if systemctl --user is-active --quiet tmux.service 2>/dev/null; then
+    systemctl --user stop tmux.service
+  else
+    tmux kill-server 2>/dev/null || true
+  fi
+  echo "Tmux server cleanly saved and stopped."
+else
+  echo "No active tmux server found."
+fi
