@@ -35,6 +35,52 @@ for spec in "$tests_dir"/*_spec.lua; do
   rm -f "$log"
 done
 
+# Regression assertions against full config (duplicate keymaps, parser merges, LSP capabilities)
+log=$(mktemp)
+NVIM_NO_AUTO_INSTALL=1 nvim --headless -u init.lua -c 'lua
+-- 1. Duplicate Keymap Spec Guard
+local seen_keys = {}
+for name, plugin in pairs(require("lazy.core.config").plugins) do
+  for _, k in ipairs(plugin.keys or {}) do
+    local lhs = type(k) == "table" and k[1] or k
+    local mode = (type(k) == "table" and k.mode) or "n"
+    local modes = type(mode) == "table" and mode or { mode }
+    for _, m in ipairs(modes) do
+      local id = m .. ":" .. lhs
+      assert(not seen_keys[id] or seen_keys[id] == name,
+        string.format("Keymap collision on %s between %s and %s", id, seen_keys[id], name))
+      seen_keys[id] = name
+    end
+  end
+end
+
+-- 2. LSP Watcher & Parser Merge Guard
+require("lazy").load({ plugins = { "nvim-lspconfig" } })
+local star = vim.lsp.config["*"]
+assert(star and star.capabilities and star.capabilities.workspace and star.capabilities.workspace.didChangeWatchedFiles.dynamicRegistration == false,
+  "LSP dynamicRegistration for didChangeWatchedFiles should be false")
+
+local Plugin = require("lazy.core.plugin")
+local ts = require("lazy.core.config").plugins["nvim-treesitter"]
+local ts_opts = Plugin.values(ts, "opts", false)
+assert(vim.tbl_contains(ts_opts.ensure_installed or {}, "gomod"),
+  "gomod should be present in nvim-treesitter ensure_installed")
+
+local mti = require("lazy.core.config").plugins["mason-tool-installer.nvim"]
+local mti_opts = Plugin.values(mti, "opts", false)
+assert(vim.tbl_contains(mti_opts.ensure_installed or {}, "js-debug-adapter"),
+  "js-debug-adapter should be present in mason-tool-installer ensure_installed")
+' -c 'qa!' >"$log" 2>&1
+rc=$?
+if [ "$rc" -ne 0 ] || grep -q '^FAIL:' "$log" || grep -qE '^E[0-9]{3,4}:' "$log"; then
+  fail=1
+  printf 'FAIL  regression assertions\n'
+  grep -E '^FAIL:|^E[0-9]{3,4}:' "$log" | head -5 | sed 's/^/        /'
+else
+  printf 'ok    regression assertions\n'
+fi
+rm -f "$log"
+
 if [ "$fail" -eq 0 ]; then
   echo
   echo "all specs green"

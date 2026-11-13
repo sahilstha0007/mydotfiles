@@ -174,39 +174,44 @@ return {
           end
         end,
       })
-
-      -- Install the binaries the servers + formatters need (skipped in headless tool runs).
+    end,
+  },
+  {
+    'WhoIsSethDaniel/mason-tool-installer.nvim',
+    dependencies = { 'williamboman/mason.nvim' },
+    opts_extend = { 'ensure_installed' },
+    opts = {
+      ensure_installed = {
+        -- language servers
+        'lua-language-server',
+        'vtsls',
+        'eslint-lsp',
+        'tailwindcss-language-server',
+        'css-lsp',
+        -- gopls is provided by mise (go: backend) so it lands on PATH as a
+        -- shim; mason can't install it because mise overrides GOBIN.
+        'basedpyright',
+        'ruff',
+        'astro-language-server',
+        'dockerfile-language-server',
+        'docker-compose-language-service',
+        'neocmakelsp',
+        'intelephense',
+        -- formatters
+        'stylua',
+        'prettier',
+        'prettierd',
+        'biome',
+        'pint',
+        'blade-formatter',
+        -- debuggers (used by plugins/languages/php.lua)
+        'php-debug-adapter',
+        'hadolint',
+      },
+    },
+    config = function(_, opts)
       if vim.env.NVIM_NO_AUTO_INSTALL ~= '1' then
-        require('mason-tool-installer').setup {
-          ensure_installed = {
-            -- language servers
-            'lua-language-server',
-            'vtsls',
-            'eslint-lsp',
-            'tailwindcss-language-server',
-            'css-lsp',
-            -- gopls is provided by mise (go: backend) so it lands on PATH as a
-            -- shim; mason can't install it because mise overrides GOBIN.
-            'basedpyright',
-            'ruff',
-            'astro-language-server',
-            'dockerfile-language-server',
-            'docker-compose-language-service',
-            'neocmakelsp',
-            'intelephense',
-            -- formatters
-            'stylua',
-            'prettier',
-            'prettierd',
-            'biome',
-            'pint',
-            'blade-formatter',
-            -- debuggers (used by plugins/languages/php.lua & typescript.lua)
-            'php-debug-adapter',
-            'js-debug-adapter',
-            'hadolint',
-          },
-        }
+        require('mason-tool-installer').setup(opts)
       end
     end,
   },

@@ -48,7 +48,7 @@ return {
       },
       { "<leader>dC", function() require("dap").run_to_cursor() end, desc = "Run to Cursor" },
       { "<leader>dc", function() require("dap").continue() end, desc = "Run/Continue" },
-      { "<leader>de", function() require("dapui").eval() end, desc = "Evaluate" },
+      { "<leader>de", function() require("dapui").eval() end, desc = "Evaluate", mode = { "n", "v" } },
       { "<leader>dg", function() require("dap").goto_() end, desc = "Go to Line (No Execute)" },
       { "<leader>di", function() require("dap").step_into() end, desc = "Step Into" },
       { "<leader>dj", function() require("dap").down() end, desc = "Down" },
@@ -112,11 +112,6 @@ return {
   {
     'rcarriga/nvim-dap-ui',
     dependencies = { 'nvim-neotest/nvim-nio' },
-    -- stylua: ignore
-    keys = {
-      { "<leader>du", function() require("dapui").toggle({ }) end, desc = "Dap UI" },
-      { "<leader>de", function() require("dapui").eval() end, desc = "Eval", mode = {"n", "v"} },
-    },
     opts = {
       controls = {
         enabled = false,

@@ -26,6 +26,13 @@ return {
   },
 
   {
+    'WhoIsSethDaniel/mason-tool-installer.nvim',
+    opts = {
+      ensure_installed = { 'js-debug-adapter' },
+    },
+  },
+
+  {
     'mfussenegger/nvim-dap',
     optional = true,
     dependencies = {
