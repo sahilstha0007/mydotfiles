@@ -360,7 +360,7 @@ fi
 
 # TMUX — shared session management
 if command -v tmux >/dev/null 2>&1; then
-  alias ta='tmux attach-session -t main 2>/dev/null || tmux new-session -s main'
+  alias ta='tmux-smart-attach'
   alias tn='tmux new-session -A -s main'
   alias tl='tmux ls'
   unalias tk 2>/dev/null

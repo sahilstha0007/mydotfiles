@@ -4,17 +4,33 @@ set -euo pipefail
 
 export TMUX_TMPDIR="${TMUX_TMPDIR:-$HOME/.cache/tmux}"
 
-if tmux info >/dev/null 2>&1; then
+if /usr/bin/tmux info >/dev/null 2>&1; then
+  # Determine and persist the currently active session
+  ACTIVE_SESSION=""
+  ACTIVE_SESSION=$(/usr/bin/tmux list-clients -F "#{client_session}" 2>/dev/null | head -n 1 || true)
+  if [ -z "$ACTIVE_SESSION" ] && [ -f "$HOME/.local/share/tmux/last-session" ]; then
+    ACTIVE_SESSION=$(cat "$HOME/.local/share/tmux/last-session" 2>/dev/null | tr -d '[:space:]')
+  fi
+  if [ -z "$ACTIVE_SESSION" ]; then
+    ACTIVE_SESSION=$(/usr/bin/tmux list-sessions -F '#{session_name}:#{session_activity}' 2>/dev/null | sort -t: -k2 -nr | head -n 1 | cut -d: -f1 || true)
+  fi
+
+  if [ -n "$ACTIVE_SESSION" ] && [ "$ACTIVE_SESSION" != "0" ]; then
+    mkdir -p "$HOME/.local/share/tmux"
+    echo "$ACTIVE_SESSION" > "$HOME/.local/share/tmux/last-session"
+  fi
+
   echo "Saving tmux sessions, windows, and panes..."
   if [ -x "$HOME/.config/tmux/plugins/tmux-resurrect/scripts/save.sh" ]; then
     "$HOME/.config/tmux/plugins/tmux-resurrect/scripts/save.sh" quiet 2>/dev/null || true
   fi
-  echo "$(date +%s) shutdown" >> "$HOME/.cache/tmux-session-saves" 2>/dev/null || true
+  echo "$(date +%s) shutdown (last: ${ACTIVE_SESSION:-unknown})" >> "$HOME/.cache/tmux-session-saves" 2>/dev/null || true
+
   echo "Shutting down tmux server..."
   if systemctl --user is-active --quiet tmux.service 2>/dev/null; then
     systemctl --user stop tmux.service
   else
-    tmux kill-server 2>/dev/null || true
+    /usr/bin/tmux kill-server 2>/dev/null || true
   fi
   echo "Tmux server cleanly saved and stopped."
 else

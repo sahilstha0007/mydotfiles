@@ -1,0 +1,72 @@
+#!/usr/bin/env bash
+# Attaches to the last active tmux session, restoring previous environment if server was killed.
+set -euo pipefail
+
+DATA_DIR="$HOME/.local/share/tmux"
+LAST_SESSION_FILE="$DATA_DIR/last-session"
+RESURRECT_DIR="$DATA_DIR/resurrect"
+REAL_TMUX="/usr/bin/tmux"
+
+# 1. Determine target session
+TARGET="${1:-}"
+if [ -z "$TARGET" ]; then
+  if [ -f "$LAST_SESSION_FILE" ]; then
+    TARGET=$(cat "$LAST_SESSION_FILE" 2>/dev/null | tr -d '[:space:]')
+  fi
+  # Fallback to state line in resurrect/last
+  if [ -z "$TARGET" ] && [ -f "$RESURRECT_DIR/last" ]; then
+    TARGET=$(grep "^state" "$RESURRECT_DIR/last" 2>/dev/null | awk -F'\t' '{print $2}' || true)
+  fi
+  # Final fallback
+  if [ -z "$TARGET" ] || [ "$TARGET" = "0" ]; then
+    TARGET="main"
+  fi
+fi
+
+# 2. Check if tmux server is already running
+if "$REAL_TMUX" info >/dev/null 2>&1; then
+  # Server is running: attach to target if exists
+  if "$REAL_TMUX" has-session -t "$TARGET" 2>/dev/null; then
+    exec "$REAL_TMUX" attach-session -t "$TARGET"
+  fi
+
+  # If target doesn't exist, try most recently active session
+  RECENT=$("$REAL_TMUX" list-sessions -F '#{session_name}:#{session_activity}' 2>/dev/null | sort -t: -k2 -nr | head -n 1 | cut -d: -f1 || true)
+  if [ -n "$RECENT" ] && "$REAL_TMUX" has-session -t "$RECENT" 2>/dev/null; then
+    exec "$REAL_TMUX" attach-session -t "$RECENT"
+  fi
+
+  # Otherwise create target session
+  exec "$REAL_TMUX" new-session -s "$TARGET"
+fi
+
+# 3. Server is NOT running (server was killed or cold boot)
+echo "Restoring previous tmux session ($TARGET)..."
+
+# Start cold server with dummy session "0" so resurrect can restore from scratch cleanly
+"$REAL_TMUX" new-session -d -s "0"
+
+# Restore sessions if saved state exists
+if [ -f "$RESURRECT_DIR/last" ] && [ -x "$HOME/.config/tmux/plugins/tmux-resurrect/scripts/restore.sh" ]; then
+  "$HOME/.config/tmux/plugins/tmux-resurrect/scripts/restore.sh" >/dev/null 2>&1 || true
+fi
+
+# Clean up dummy session "0" if other sessions were restored
+if [ "$TARGET" != "0" ] && "$REAL_TMUX" has-session -t "0" 2>/dev/null; then
+  TOTAL_SESSIONS=$("$REAL_TMUX" list-sessions -F "#{session_name}" 2>/dev/null | wc -l)
+  if [ "$TOTAL_SESSIONS" -gt 1 ]; then
+    "$REAL_TMUX" kill-session -t "0" 2>/dev/null || true
+  fi
+fi
+
+# Attach to target if it exists, otherwise fall back to first restored session or create target
+if "$REAL_TMUX" has-session -t "$TARGET" 2>/dev/null; then
+  exec "$REAL_TMUX" attach-session -t "$TARGET"
+fi
+
+FIRST=$("$REAL_TMUX" list-sessions -F "#{session_name}" 2>/dev/null | head -n 1 || true)
+if [ -n "$FIRST" ]; then
+  exec "$REAL_TMUX" attach-session -t "$FIRST"
+fi
+
+exec "$REAL_TMUX" new-session -s "$TARGET"

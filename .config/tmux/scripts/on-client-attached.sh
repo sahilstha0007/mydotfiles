@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 # Runs on tmux client-attached hook:
 # 1. Repaints client (fixes stale regions)
-# 2. Detects attached terminal emulator and updates TERMINAL_STACK_PROFILE
-# 3. Clears stale profile variables from the opposing emulator so new panes inherit cleanly
+# 2. Tracks attached session as last-active
+# 3. Detects attached terminal emulator and updates TERMINAL_STACK_PROFILE
+# 4. Clears stale profile variables from the opposing emulator so new panes inherit cleanly
 tmux refresh-client
+~/.config/tmux/scripts/track-active-session.sh "${1:-}" 2>/dev/null || true
 client_name=$(tmux display-message -p "#{client_termname}" 2>/dev/null || true)
 client_pid=$(tmux display-message -p "#{client_pid}" 2>/dev/null || true)
 client_termtype=$(tmux display-message -p "#{client_termtype}" 2>/dev/null || true)

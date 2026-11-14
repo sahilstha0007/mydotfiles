@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+# Smart tmux wrapper:
+# 1. Intercepts `tmux kill-server`: saves sessions cleanly before stopping (calls tmux-shutdown)
+# 2. Intercepts bare `tmux` (no arguments, interactive terminal outside tmux): smart attaches / restores last active session
+# 3. Intercepts `tmux a` / `tmux attach` with no -t: attaches to last active session
+# 4. Passes all other subcommands and flags directly to /usr/bin/tmux
+
+set -eo pipefail
+
+REAL_TMUX="/usr/bin/tmux"
+
+# 1. Intercept `kill-server`
+if [ "${1:-}" = "kill-server" ]; then
+  exec "$HOME/.local/bin/tmux-shutdown"
+fi
+
+# 2. Bare `tmux` invocation from interactive terminal outside tmux
+if [ $# -eq 0 ] && [ -t 0 ] && [ -t 1 ] && [ -z "${TMUX:-}" ]; then
+  exec "$HOME/.local/bin/tmux-smart-attach"
+fi
+
+# 3. `tmux a` or `tmux attach` or `tmux attach-session` with no target specified
+if [ -z "${TMUX:-}" ] && [ -t 0 ] && [ -t 1 ]; then
+  if [ "$#" -eq 1 ] && { [ "$1" = "a" ] || [ "$1" = "attach" ] || [ "$1" = "attach-session" ]; }; then
+    exec "$HOME/.local/bin/tmux-smart-attach"
+  fi
+fi
+
+# Default: transparent pass-through to real tmux binary
+exec "$REAL_TMUX" "$@"
