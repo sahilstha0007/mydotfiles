@@ -510,11 +510,14 @@ vim.opt.cmdheight = <span class="s">0</span>        <span class="cm">-- the : li
 
   <div class="cards">
     <div class="card"><kbd>Space</kbd><p>Wait a moment — which-key shows every leader menu.</p></div>
-    <div class="card"><kbd>Space</kbd><kbd>f</kbd><p>Find group: files, buffers, git files.</p></div>
-    <div class="card"><kbd>Space</kbd><kbd>s</kbd><p>Search group: grep, symbols, diagnostics, registers.</p></div>
-    <div class="card"><kbd>Space</kbd><kbd>b</kbd><p>Buffers group: delete, delete others.</p></div>
-    <div class="card"><kbd>Space</kbd><kbd>g</kbd><p>Git group: hunks, blame, diffs, lazygit.</p></div>
-    <div class="card"><kbd>Space</kbd><kbd>c</kbd><p>Code group: LSP, code actions, diagnostics.</p></div>
+    <div class="card"><kbd>Space</kbd><kbd>f</kbd><p>Find group: files, buffers, git files, recent.</p></div>
+    <div class="card"><kbd>Space</kbd><kbd>s</kbd><p>Search group: grep, symbols, diagnostics, grug-far replace.</p></div>
+    <div class="card"><kbd>Space</kbd><kbd>r</kbd><p>Run / REPL: execute file, line, selection in tmux pane.</p></div>
+    <div class="card"><kbd>Space</kbd><kbd>w</kbd><p>Window group: delete, zoom, synchronized tmux zoom.</p></div>
+    <div class="card"><kbd>Space</kbd><kbd>u</kbd><p>UI Toggles: line wrap, numbers, diagnostics, inlay hints.</p></div>
+    <div class="card"><kbd>Space</kbd><kbd>b</kbd><p>Buffers group: delete, delete others, wipe.</p></div>
+    <div class="card"><kbd>Space</kbd><kbd>g</kbd><p>Git group: hunks, blame, diffs, lazygit, gitbrowse.</p></div>
+    <div class="card"><kbd>Space</kbd><kbd>c</kbd><p>Code group: LSP rename, code actions, diagnostics.</p></div>
     <div class="card"><kbd>Space</kbd><kbd>t</kbd><p>Test group (neotest).</p></div>
     <div class="card"><kbd>Space</kbd><kbd>d</kbd><p>Debug group (nvim-dap).</p></div>
     <div class="card"><kbd>Space</kbd><kbd>o</kbd><p>Overseer tasks: run builds &amp; commands.</p></div>
@@ -554,6 +557,8 @@ spec = {
   <div class="krow"><span class="k"><kbd>Space</kbd><kbd>-</kbd></span><span class="d"><b>Your config:</b> horizontal split — one above the other (<code>:split</code>). tmux mirrors this: <kbd>C-a</kbd><kbd>|</kbd> / <kbd>C-a</kbd><kbd>-</kbd>.</span></div>
   <div class="krow"><span class="k"><kbd>Space</kbd><kbd>wd</kbd></span><span class="d"><b>Your config:</b> delete (close) the current window.</span></div>
   <div class="krow"><span class="k"><kbd>Space</kbd><kbd>wm</kbd></span><span class="d"><b>Your config:</b> maximize (zoom) the current window — same engine as <kbd>Space</kbd><kbd>Z</kbd>.</span></div>
+  <div class="krow"><span class="k"><kbd>Space</kbd><kbd>wz</kbd></span><span class="d"><b>Your config:</b> synchronized zoom — maximizes current window inside Neovim AND zooms the outer Tmux pane (<code>resize-pane -Z</code>).</span></div>
+  <div class="krow"><span class="k"><kbd>Esc</kbd></span><span class="d"><b>Your config:</b> clears search highlights and sweeps away any lingering floating windows.</span></div>
   <div class="krow"><span class="k"><kbd>C-↑/↓/←/→</kbd></span><span class="d"><b>Your config:</b> resize window ±2 (LazyVim convention).</span></div>
   <div class="krow"><span class="k"><kbd>C-w</kbd><kbd>C-w</kbd> <kbd>C-w</kbd><kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd></span><span class="d">Native: cycle splits / jump to the split in a direction.</span></div>
   <div class="krow"><span class="k"><kbd>C-w</kbd><kbd>=</kbd> <kbd>C-w</kbd><kbd>_</kbd> <kbd>C-w</kbd><kbd>|</kbd></span><span class="d">Equal-size all splits / maximize this one vertically / horizontally.</span></div>
@@ -639,7 +644,9 @@ spec = {
   <h2><span class="no">10</span>The file tree <span class="badge">normal</span></h2>
   <p class="lede">A real file explorer lives on the <b>right</b> side (unusual — your choice). It opens automatically when you launch nvim in a folder.</p>
 
-  <div class="krow"><span class="k"><kbd>Space</kbd><kbd>e</kbd></span><span class="d"><b>Your config:</b> toggle the explorer (nvim-tree).</span></div>
+  <div class="krow"><span class="k"><kbd>Space</kbd><kbd>e</kbd></span><span class="d"><b>Your config:</b> toggle the explorer (nvim-tree sidebar).</span></div>
+  <div class="krow"><span class="k"><kbd>-</kbd></span><span class="d"><b>Your config:</b> open parent directory in <b>Oil.nvim</b> — edit the filesystem like a normal text buffer (rename, move, create with standard vim commands, <code>:w</code> saves changes).</span></div>
+  <div class="krow"><span class="k"><kbd>Space</kbd><kbd>O</kbd></span><span class="d"><b>Your config:</b> open Oil.nvim in a floating modal window.</span></div>
   <div class="krow"><span class="k"><kbd>Enter</kbd></span><span class="d">Open the file under the cursor (closes the tree — "quit on open").</span></div>
   <div class="krow"><span class="k"><kbd>s</kbd> <kbd>S</kbd></span><span class="d"><b>Your config:</b> open in a side-by-side (<code>:vsplit</code>) / stacked (<code>:split</code>) window.</span></div>
   <div class="krow"><span class="k"><kbd>P</kbd></span><span class="d"><b>Your config:</b> preview the file without leaving the tree.</span></div>
@@ -804,9 +811,15 @@ y  i  t        <span class="cm">yank inside tag        →  yit</span>
     <tr><td><kbd>K</kbd></td><td>Hover — docs for whatever's under the cursor.</td></tr>
     <tr><td><kbd>Space</kbd><kbd>cr</kbd></td><td><b>Your config:</b> rename symbol across the project.</td></tr>
     <tr><td><kbd>Space</kbd><kbd>ca</kbd></td><td><b>Your config:</b> code actions (quick fixes, refactors).</td></tr>
-    <tr><td><kbd>Space</kbd><kbd>th</kbd></td><td><b>Your config:</b> toggle inlay hints (type annotations inline).</td></tr>
+    <tr><td><kbd>C-k</kbd> <small>(insert)</small> / <kbd>Space</kbd><kbd>ck</kbd></td><td><b>Your config:</b> signature help (native clean float; dismisses on cursor move).</td></tr>
+    <tr><td><kbd>gl</kbd></td><td><b>Your config:</b> line diagnostics in floating window.</td></tr>
+    <tr><td><kbd>Space</kbd><kbd>cy</kbd></td><td><b>Your config:</b> yank line diagnostic message to clipboard.</td></tr>
+    <tr><td><kbd>Space</kbd><kbd>uh</kbd></td><td><b>Your config:</b> toggle inlay hints (type annotations inline).</td></tr>
     <tr><td><kbd>]d</kbd> <kbd>[d</kbd></td><td>Jump to next / previous diagnostic.</td></tr>
-    <tr><td><kbd>Space</kbd><kbd>sd</kbd> <kbd>sD</kbd></td><td>List this file2019s / the project2019s diagnostics in the snacks picker.</td></tr>
+    <tr><td><kbd>]q</kbd> <kbd>[q</kbd></td><td>Jump to next / previous quickfix item (wraps around without boundary errors).</td></tr>
+    <tr><td><kbd>dd</kbd> <small>(in quickfix)</small></td><td><b>Your config:</b> delete item from quickfix triage queue (<kbd>d</kbd> deletes visual range).</td></tr>
+    <tr><td><kbd>:Cfilter</kbd> / <kbd>:Cfilter!</kbd></td><td>Filter / exclude quickfix items by pattern.</td></tr>
+    <tr><td><kbd>Space</kbd><kbd>sd</kbd> <kbd>sD</kbd></td><td>List this file’s / the project’s diagnostics in the snacks picker.</td></tr>
     <tr><td><kbd>Space</kbd><kbd>cd</kbd> <kbd>cD</kbd></td><td>Diagnostics in Trouble (navigable list on the left).</td></tr>
     <tr><td><kbd>Space</kbd><kbd>cs</kbd></td><td>Document symbols in Trouble.</td></tr>
   </table>
@@ -973,19 +986,33 @@ keys = { { <span class="s">'&lt;leader&gt;gg'</span>, <span class="s">'&lt;cmd&g
   <p class="lede">A full shell can live inside nvim (<code>:term</code>), and when you run nvim inside tmux, your config fuses them into one surface.</p>
 
   <div class="krow"><span class="k"><kbd>:term</kbd> cmd</span><span class="d">Open a terminal buffer running the shell (or a command).</span></div>
-  <div class="krow"><span class="k"><kbd>C-\</kbd><kbd>C-n</kbd></span><span class="d">In a terminal buffer, escape to Normal mode (then <kbd>q</kbd> closes it, or <kbd>:q</kbd>).</span></div>
+  <div class="krow"><span class="k"><kbd>Esc</kbd><kbd>Esc</kbd></span><span class="d"><b>Your config:</b> in a terminal buffer, escape to Normal mode instantly.</span></div>
 
-  <h3>tmux integration</h3>
+  <h3>Integrated Code Runner &amp; REPL (<kbd>Space</kbd><kbd>r</kbd>)</h3>
+  <div class="krow"><span class="k"><kbd>Space</kbd><kbd>rc</kbd> / <kbd>rf</kbd></span><span class="d"><b>Your config:</b> run current file in adjacent tmux runner split (auto-detects Python, Go, Node, Bash, etc.).</span></div>
+  <div class="krow"><span class="k"><kbd>Space</kbd><kbd>rl</kbd></span><span class="d"><b>Your config:</b> send current line to tmux runner / REPL pane.</span></div>
+  <div class="krow"><span class="k"><kbd>Space</kbd><kbd>rs</kbd> <small>(or visual <kbd>Space</kbd><kbd>r</kbd>)</small></span><span class="d"><b>Your config:</b> send selected lines to tmux runner / REPL pane.</span></div>
+  <div class="krow"><span class="k"><kbd>Space</kbd><kbd>rt</kbd></span><span class="d"><b>Your config:</b> toggle / spawn interactive REPL (IPython, Node, etc.) in split pane.</span></div>
+  <div class="krow"><span class="k"><kbd>Space</kbd><kbd>rp</kbd></span><span class="d"><b>Your config:</b> focus runner pane.</span></div>
+  <div class="krow"><span class="k"><kbd>Space</kbd><kbd>rk</kbd></span><span class="d"><b>Your config:</b> kill / clear runner process in runner pane.</span></div>
+
+  <h3>tmux cross-layer tools</h3>
   <div class="krow"><span class="k"><kbd>C-h</kbd> <kbd>C-j</kbd> <kbd>C-k</kbd> <kbd>C-l</kbd></span><span class="d"><b>Your config:</b> move focus between nvim and tmux panes as if they were one editor.</span></div>
-  <div class="krow"><span class="k">prefix <kbd>C</kbd> + arrows</span><span class="d">tmux.nvim resize bindings.</span></div>
+  <div class="krow"><span class="k"><kbd>Space</kbd><kbd>wz</kbd></span><span class="d"><b>Your config:</b> synchronized zoom — zooms nvim window AND tmux pane simultaneously.</span></div>
+  <div class="krow"><span class="k">prefix <kbd>e</kbd> <small>(tmux)</small></span><span class="d"><b>Your config:</b> error jump — scrapes compiler tracebacks and jumps directly to that line in nvim.</span></div>
+  <div class="krow"><span class="k">prefix <kbd>h</kbd> <small>(tmux)</small></span><span class="d"><b>Your config:</b> scrollback pager — opens 5,000 lines of pane history in floating nvim buffer with search and yank.</span></div>
+  <div class="krow"><span class="k">prefix <kbd>f</kbd> <small>(tmux)</small></span><span class="d"><b>Your config:</b> Project Hub — fuzzy fzf project switcher.</span></div>
+  <div class="krow"><span class="k">prefix <kbd>g</kbd> <small>(tmux)</small></span><span class="d"><b>Your config:</b> Lazygit popup (matches <kbd>Space</kbd><kbd>gg</kbd> in nvim).</span></div>
+  <div class="krow"><span class="k">prefix <kbd>k</kbd> <small>(tmux)</small></span><span class="d"><b>Your config:</b> unified omni-keymap search across nvim, tmux, wezterm, and kitty.</span></div>
+  <div class="krow"><span class="k">prefix <kbd>Q</kbd> <small>(tmux)</small></span><span class="d"><b>Your config:</b> safe snapshot save &amp; shutdown tmux server.</span></div>
 
-  <div class="tip"><b>The payoff:</b> <kbd>Space</kbd><kbd>o</kbd> for the task runner, <kbd>C-l</kbd> back into nvim, tests in another pane — all with the same fingers. That's the whole point of this setup.</div>
+  <div class="tip"><b>The payoff:</b> Edit in nvim, hit <kbd>Space</kbd><kbd>rc</kbd> to run in tmux, and jump errors with <kbd>Prefix</kbd><kbd>e</kbd> — zero context switching.</div>
 
   <div class="yset">
-    <div class="yh"><span class="tag">your config</span> · <code>lua/plugins/editor/tmux.lua</code></div>
+    <div class="yh"><span class="tag">your config</span> · <code>lua/utils/runner.lua</code> + <code>lua/plugins/editor/tmux.lua</code></div>
 <pre>{ <span class="s">'&lt;c-h&gt;'</span>, <span class="s">'&lt;cmd&gt;lua require"tmux".move_left()&lt;cr&gt;'</span> }
 { <span class="s">'&lt;c-l&gt;'</span>, <span class="s">'&lt;cmd&gt;lua require"tmux".move_right()&lt;cr&gt;'</span> }
-<span class="cm">-- aserowy/tmux.nvim, resize default keybindings enabled</span></pre>
+<span class="cm">-- runner: lua/utils/runner.lua, copy_sync bidirectional register sharing enabled</span></pre>
   </div>
 </section>
 
@@ -1132,9 +1159,26 @@ keys = { { <span class="s">'&lt;leader&gt;gg'</span>, <span class="s">'&lt;cmd&g
     <tr class="grp"><td colspan="2">Code <kbd>Space</kbd>c</td></tr>
     <tr><td><kbd>cr</kbd></td><td>Rename symbol (LSP)</td></tr>
     <tr><td><kbd>ca</kbd></td><td>Code action</td></tr>
+    <tr><td><kbd>ck</kbd></td><td>Signature help (also <kbd>C-k</kbd> in insert mode)</td></tr>
+    <tr><td><kbd>cf</kbd></td><td>Format buffer (conform.nvim)</td></tr>
+    <tr><td><kbd>cy</kbd></td><td>Yank line diagnostic to clipboard</td></tr>
     <tr><td><kbd>cd</kbd> <kbd>cD</kbd> <kbd>cs</kbd></td><td>Trouble: buffer diagnostics / all / symbols</td></tr>
+    <tr class="grp"><td colspan="2">Run / REPL <kbd>Space</kbd>r</td></tr>
+    <tr><td><kbd>rc</kbd> / <kbd>rf</kbd></td><td>Run current file in tmux split</td></tr>
+    <tr><td><kbd>rl</kbd></td><td>Run current line in tmux split / REPL</td></tr>
+    <tr><td><kbd>rs</kbd> <small>(visual <kbd>Space</kbd><kbd>r</kbd>)</small></td><td>Run selected block in tmux split / REPL</td></tr>
+    <tr><td><kbd>rt</kbd></td><td>Toggle / start interactive REPL in split</td></tr>
+    <tr><td><kbd>rp</kbd> <kbd>rk</kbd></td><td>Focus runner pane / kill runner process</td></tr>
+    <tr class="grp"><td colspan="2">Window &amp; Zoom <kbd>Space</kbd>w</td></tr>
+    <tr><td><kbd>wd</kbd></td><td>Delete (close) current window</td></tr>
+    <tr><td><kbd>wm</kbd></td><td>Maximize (zoom) current window (zen mode)</td></tr>
+    <tr><td><kbd>wz</kbd></td><td>Synchronized zoom — zooms window AND tmux pane</td></tr>
+    <tr class="grp"><td colspan="2">UI Toggles <kbd>Space</kbd>u</td></tr>
+    <tr><td><kbd>uw</kbd> <kbd>ul</kbd> <kbd>ud</kbd></td><td>Toggle wrap / line numbers / diagnostics</td></tr>
+    <tr><td><kbd>uh</kbd> <kbd>uc</kbd> <kbd>us</kbd></td><td>Toggle inlay hints / conceal level / spell</td></tr>
     <tr class="grp"><td colspan="2">Git <kbd>Space</kbd>g</td></tr>
     <tr><td><kbd>gg</kbd></td><td>lazygit</td></tr>
+    <tr><td><kbd>gG</kbd></td><td>Open on GitHub (gitbrowse)</td></tr>
     <tr><td><kbd>ghs</kbd> <kbd>ghr</kbd> <kbd>ghu</kbd> <kbd>ghp</kbd></td><td>stage / reset / unstage / preview hunk</td></tr>
     <tr><td><kbd>gbl</kbd> <kbd>gds</kbd></td><td>blame line / toggle deleted</td></tr>
     <tr><td><kbd>gD</kbd> <kbd>gH</kbd> <kbd>gq</kbd></td><td>diffview: open diff / file history / close</td></tr>
@@ -1149,29 +1193,34 @@ keys = { { <span class="s">'&lt;leader&gt;gg'</span>, <span class="s">'&lt;cmd&g
     <tr class="grp"><td colspan="2">Session <kbd>Space</kbd>q</td></tr>
     <tr><td><kbd>qq</kbd> <kbd>ql</kbd> <kbd>qs</kbd></td><td>save session / load last / select session</td></tr>
     <tr class="grp"><td colspan="2">Other</td></tr>
-    <tr><td><kbd>e</kbd></td><td>Toggle file tree</td></tr>
+    <tr><td><kbd>e</kbd></td><td>Toggle file tree (nvim-tree)</td></tr>
+    <tr><td><kbd>-</kbd> / <kbd>O</kbd></td><td>Oil.nvim: edit parent directory / float</td></tr>
+    <tr><td><kbd>gl</kbd></td><td>Show line diagnostics float</td></tr>
     <tr><td><kbd>l</kbd></td><td>Lazy actions picker (sync, update, clean, …)</td></tr>
     <tr><td><kbd>fr</kbd></td><td>File ring (recent files, harpoon-style)</td></tr>
     <tr><td><kbd>bp</kbd></td><td>Pick buffer from the tab strip</td></tr>
-    <tr><td><kbd>ut</kbd></td><td>Toggle treesitter-context</td></tr>
-    <tr><td><kbd>th</kbd></td><td>Toggle inlay hints</td></tr>
+    <tr><td><kbd>Space</kbd><kbd>|</kbd> <kbd>-</kbd></td><td>Vertical / horizontal split (LazyVim convention)</td></tr>
     <tr><td><kbd>Space</kbd><kbd>Tab</kbd><kbd>d</kbd></td><td>Close tab</td></tr>
   </table>
 
   <h3>Custom plain keys</h3>
   <table class="ref">
     <tr><th>Keys</th><th>What it does</th></tr>
-    <tr><td><kbd>sh</kbd> <kbd>sv</kbd></td><td>Vertical / horizontal split</td></tr>
+    <tr><td><kbd>-</kbd></td><td>Open parent directory in Oil (edit filesystem as buffer)</td></tr>
     <tr><td><kbd>gt</kbd>/<kbd>gT</kbd> · <kbd>:tabedit</kbd></td><td>Next/prev tab · new tab (native)</td></tr>
     <tr><td><kbd>]b</kbd> <kbd>[b</kbd> · <kbd>S-h</kbd> <kbd>S-l</kbd></td><td>Next / previous buffer</td></tr>
-    <tr><td><kbd>C-l</kbd> (insert)</td><td>Skip past closing bracket / quote / comma</td></tr>
-    <tr><td><kbd>H</kbd> <kbd>L</kbd> <kbd>J</kbd> <kbd>K</kbd> (visual)</td><td>Move selection (mini.move)</td></tr>
+    <tr><td><kbd>]q</kbd> <kbd>[q</kbd></td><td>Next / previous quickfix item (wraps at ends)</td></tr>
+    <tr><td><kbd>dd</kbd> / <kbd>d</kbd> <small>(in quickfix)</small></td><td>Delete item / visual range from quickfix list</td></tr>
+    <tr><td><kbd>C-k</kbd> <small>(insert)</small></td><td>Native LSP signature help (auto-closes on move)</td></tr>
+    <tr><td><kbd>C-l</kbd> <small>(insert)</small></td><td>Skip past closing bracket / quote / comma</td></tr>
+    <tr><td><kbd>H</kbd> <kbd>L</kbd> <kbd>J</kbd> <kbd>K</kbd> <small>(visual)</small></td><td>Move selection (mini.move)</td></tr>
+    <tr><td><kbd>Alt-j</kbd> <kbd>Alt-k</kbd></td><td>Move line / selection up and down</td></tr>
     <tr><td><kbd>gsa</kbd> <kbd>gsd</kbd> <kbd>gsr</kbd> <kbd>gsf</kbd></td><td>Surround: add / delete / replace / find</td></tr>
     <tr><td><kbd>af</kbd> <kbd>if</kbd> <kbd>ac</kbd> <kbd>ic</kbd></td><td>Treesitter text objects: function / class (also <kbd>ab</kbd>/<kbd>ib</kbd> block, <kbd>aa</kbd>/<kbd>ia</kbd> parameter)</td></tr>
     <tr><td><kbd>]f</kbd> <kbd>[f</kbd></td><td>Next / previous function (treesitter)</td></tr>
-    <tr><td><kbd>R</kbd> (visual/op)</td><td>Flash: treesitter search</td></tr>
-    <tr><td><kbd>Esc</kbd></td><td>Clear search highlight</td></tr>
-    <tr><td><kbd>C-h</kbd> <kbd>C-j</kbd> <kbd>C-k</kbd> <kbd>C-l</kbd></td><td>tmux pane navigation</td></tr>
+    <tr><td><kbd>s</kbd> / <kbd>S</kbd> / <kbd>R</kbd></td><td>Flash: 2-char jump / treesitter select / remote flash</td></tr>
+    <tr><td><kbd>Esc</kbd></td><td>Clear search highlight &amp; close lingering float windows</td></tr>
+    <tr><td><kbd>C-h</kbd> <kbd>C-j</kbd> <kbd>C-k</kbd> <kbd>C-l</kbd></td><td>Seamless Neovim &amp; Tmux pane navigation</td></tr>
   </table>
 
   <h3>Survival commands</h3>
