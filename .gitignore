@@ -41,3 +41,4 @@ node_modules/
 /.config/kitty/colors-matugen.conf
 /.config/kitty/colors-matugen.validated.conf
 /.config/btop/themes/matugen.theme
+/.config/lazydocker/**/state.yml
