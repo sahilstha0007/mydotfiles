@@ -156,6 +156,7 @@ EXPECTED_GATES=(
   "bin: python syntax"
   "repo: shellcheck"
   "repo: no hardcoded /tmp"
+  "shell: omp-init"
   "tests: lua fmt"
   "tests: lua lint"
   "contrast: wcag"
@@ -423,6 +424,12 @@ fi
 # --- zsh --------------------------------------------------------------------
 if require_cmd zsh && [ -f "$HOME/.zshrc" ] && [ -f "$HOME/.zshenv" ]; then
   run "zsh: syntax" "$HOME" zsh -n "$HOME/.zshrc" "$HOME/.zshenv"
+  OMP_INIT="$REPO_ROOT/tests/shell/check-omp-init.sh"
+  if [ -f "$OMP_INIT" ] && require_cmd oh-my-posh; then
+    run "shell: omp-init" "$REPO_ROOT" bash "$OMP_INIT"
+  elif [ -f "$OMP_INIT" ]; then
+    skip "shell: omp-init" "oh-my-posh not installed"
+  fi
   if require_cmd python3; then
     run "zsh: startup <= 120ms" "$HOME" \
       python3 -c '
@@ -606,13 +613,6 @@ if [ "$RUN_ALL" -eq 1 ]; then
     run "zsh: runtime matrix" "$REPO_ROOT" bash "$ZSH_RT"
   else
     fail "zsh: runtime matrix" "missing $ZSH_RT or zsh"
-  fi
-
-  OMP_INIT="$REPO_ROOT/tests/shell/check-omp-init.sh"
-  if [ -f "$OMP_INIT" ] && require_cmd oh-my-posh; then
-    run "shell: omp-init" "$REPO_ROOT" bash "$OMP_INIT"
-  elif [ -f "$OMP_INIT" ]; then
-    skip "shell: omp-init" "oh-my-posh not installed"
   fi
 
   INST_TEST="$REPO_ROOT/tests/install/check-install.sh"
