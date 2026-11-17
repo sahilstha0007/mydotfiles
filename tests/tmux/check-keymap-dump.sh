@@ -12,11 +12,13 @@ sandbox_init
 sandbox_install >/dev/null
 
 # 1. Verify dump output matches `wezterm show-keys` 1:1 (default + custom key tables + lua multiline/[[...]] binds)
-dump_out=$(timeout 10 env HOME="$SB_HOME" bash "$SB_HOME/.config/tmux/keymap-dump.sh" --dump)
-python3 - "$SB_HOME/.config/wezterm/wezterm.lua" "$dump_out" <<'PY'
+timeout 10 env HOME="$SB_HOME" bash "$SB_HOME/.config/tmux/keymap-dump.sh" --dump > "$SB_ROOT/keymap-dump.txt"
+python3 - "$SB_HOME/.config/wezterm/wezterm.lua" "$SB_ROOT/keymap-dump.txt" <<'PY'
 import re, subprocess, sys
 
-wz_cfg, dump_text = sys.argv[1], sys.argv[2]
+wz_cfg, dump_path = sys.argv[1], sys.argv[2]
+with open(dump_path, encoding="utf-8") as fh:
+    dump_text = fh.read()
 
 def extract_show_keys(cfg: str) -> set[tuple[str, str]]:
     out = subprocess.run(["wezterm", "--config-file", cfg, "show-keys"], capture_output=True, text=True, check=True).stdout
