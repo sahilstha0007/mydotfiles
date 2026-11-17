@@ -265,15 +265,18 @@ def newest_mtime(paths: list[pathlib.Path]) -> tuple[float, str]:
     return best_t, best_p
 
 targets = [
-    ("tmux", [repo / ".config/tmux/tmux.conf", repo / ".config/tmux/scripts", repo / ".config/tmux/colors-nightfox.conf", repo / ".config/tmux/colors-matugen.conf"], "stack-reload  (or detach & restart tmux server: tmux kill-server)"),
-    ("kitty", [repo / ".config/kitty/kitty.conf", repo / ".config/kitty/custom.conf", repo / ".config/kitty/tab_bar.py", repo / ".config/kitty/themes/nightfox.conf"], "stack-reload  (or restart Kitty for restart-only options like listen_on)"),
+    ("tmux", [repo / ".config/tmux/tmux.conf", repo / ".config/tmux/scripts", repo / ".config/tmux/colors-apple-glass.conf", repo / ".config/tmux/colors-matugen.conf"], "stack-reload  (or detach & restart tmux server: tmux kill-server)"),
+    ("kitty", [repo / ".config/kitty/kitty.conf", repo / ".config/kitty/custom.conf", repo / ".config/kitty/tab_bar.py", repo / ".config/kitty/themes/apple-glass.conf"], "stack-reload  (or restart Kitty for restart-only options like listen_on)"),
     ("wezterm", [repo / ".config/wezterm"], "stack-reload  (auto-reloads live wezterm-gui)"),
     ("nvim", [repo / ".config/nvim/init.lua", repo / ".config/nvim/lua"], "restart stale nvim session(s)"),
     ("zsh", [repo / "shell/zshrc", repo / "shell/zshenv"], "exec zsh  (inside stale interactive shell(s))"),
 ]
 
 ps = subprocess.run(
-    ["ps", "-u", str(uid), "-o", "pid=,etimes=,comm=,args="],
+    # Include stat so zombies can be filtered below. A defunct process is
+    # already dead, cannot "reload", and must not be reported stale (the
+    # harness reaps its own children and left false-positive zombies).
+    ["ps", "-u", str(uid), "-o", "pid=,etimes=,stat=,comm=,args="],
     capture_output=True,
     text=True,
     check=True,
@@ -281,13 +284,16 @@ ps = subprocess.run(
 
 procs: list[tuple[int, float, str, str]] = []
 for line in ps.stdout.splitlines():
-    parts = line.strip().split(None, 3)
-    if len(parts) < 3:
+    parts = line.strip().split(None, 4)
+    if len(parts) < 4:
         continue
     pid = int(parts[0])
     etimes = float(parts[1])
-    comm = parts[2]
-    args = parts[3] if len(parts) > 3 else comm
+    stat = parts[2]
+    if stat.startswith("Z"):  # zombie/defunct — already dead, cannot reload
+        continue
+    comm = parts[3]
+    args = parts[4] if len(parts) > 4 else comm
     procs.append((pid, now - etimes, comm, args))
 
 stale_hits: list[str] = []
