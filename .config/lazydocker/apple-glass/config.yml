@@ -3,7 +3,7 @@ gui:
   border: rounded
   theme:
     activeBorderColor:
-      - '#6c8cff'
+      - '#2dd4bf'
       - bold
     inactiveBorderColor:
       - '#6e6e73'

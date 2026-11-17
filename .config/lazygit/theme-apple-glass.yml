@@ -7,7 +7,7 @@ gui:
   border: rounded
   theme:
     activeBorderColor:
-      - '#6c8cff'
+      - '#2dd4bf'
       - bold
     inactiveBorderColor:
       - '#6e6e73'
@@ -16,4 +16,4 @@ gui:
     selectedRangeBgColor:
       - '#2c2c2e'
     optionsTextColor:
-      - '#6c8cff'
+      - '#2dd4bf'
