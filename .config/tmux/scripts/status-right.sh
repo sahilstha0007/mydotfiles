@@ -9,9 +9,12 @@ set -u
 dir="${1:-$PWD}"
 cmd="${2:-}"
 
-cache_dir="${XDG_RUNTIME_DIR:-${TMPDIR:-/tmp}}/tmux-status-$(id -u)"
-mkdir -p "$cache_dir" 2>/dev/null && chmod 700 "$cache_dir" 2>/dev/null || true
-now=$(date +%s)
+# Bash builtins avoid 3 execve forks on every status tick (this script runs
+# once per 5s client refresh; warm path should be near-zero forks).
+cache_dir="${XDG_RUNTIME_DIR:-${TMPDIR:-/tmp}}/tmux-status-${EUID:-$(id -u)}"
+[ -d "$cache_dir" ] || { mkdir -p "$cache_dir" 2>/dev/null && chmod 700 "$cache_dir" 2>/dev/null; } || true
+now=${EPOCHSECONDS:-$(date +%s)}
+_sep=$'\x1f'  # unit separator for composite cache values
 
 read_cache() {
   local file="$1" ttl="$2" line="" ts="" val=""
@@ -43,6 +46,15 @@ write_cache() {
 git_info=""
 git_state=""
 
+# The git block below forks up to 6 times (rev-parse, symbolic-ref, status,
+# rev-list, stash). Cache its two outputs keyed on dir with a 6s TTL — slightly
+# longer than the 5s status-interval so every tick serves from cache. Staleness
+# is at most one tick, imperceptible for a status bar.
+cache_git="$cache_dir/git.$(printf '%s' "$dir" | tr -c 'A-Za-z0-9' '_')"
+if read_cache "$cache_git" 6; then
+  git_info="${_cache_val%%"$_sep"*}"
+  git_state="${_cache_val#*"$_sep"}"
+else
 case "$cmd" in
   nvim | vim | vi ) ;;
   * )
@@ -74,6 +86,8 @@ case "$cmd" in
     fi
     ;;
 esac
+  write_cache "$cache_git" "${git_info}${_sep}${git_state}"
+fi
 
 # 2. Coding agents (cached 5s)
 agents_raw=""
