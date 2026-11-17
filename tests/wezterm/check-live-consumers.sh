@@ -21,7 +21,11 @@ no()  { printf '  FAIL  %s\n' "$1"; fail=$((fail + 1)); }
 printf '\nLive palette consumers\n'
 
 # 1. the generated snippet exists
-[ -s "$SNIPPET" ] && ok "matugen.css generated" || no "matugen.css missing/empty"
+if [ -s "$SNIPPET" ]; then
+  ok "matugen.css generated"
+else
+  no "matugen.css missing/empty"
+fi
 
 # 2. THE gap that bit twice: generated but not enabled in appearance.json
 if [ -f "$APPEARANCE" ] && python3 -c "
