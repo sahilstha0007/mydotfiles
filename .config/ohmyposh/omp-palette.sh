@@ -9,7 +9,6 @@
 #   @@OK@@     = wallpaper secondary  (was 'magenta' -> prompt chevron)
 #   @@SOFT@@   = wallpaper tertiary   (was 'yellow'  -> exec time)
 #   @@ERR@@    = wallpaper error      (was 'red'     -> failed exit code)
-#   @@MUTED@@  = wallpaper outline    (was 'p:grey'  -> git branch)
 tpl="$HOME/.config/ohmyposh/zen.template.toml"
 out="$HOME/.config/ohmyposh/zen.toml"
 palette="$HOME/.config/wezterm/colors/matugen.lua"
@@ -96,6 +95,5 @@ sed -e "s|@@ACCENT@@|$accent|g" \
     -e "s|@@OK@@|$ok|g" \
     -e "s|@@SOFT@@|$soft|g" \
     -e "s|@@ERR@@|$err|g" \
-    -e "s|@@MUTED@@|$muted|g" \
     "$tpl" > "$out"
 exit 0
