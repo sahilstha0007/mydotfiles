@@ -1,7 +1,7 @@
 # =============================================================================
 # Kitty Custom Tab Bar: Modern Floating Rounded Pills HUD
 # Features:
-#   - Floating rounded pill tabs ( ... ) harmonized with the coding-theme palette
+#   - Floating rounded pill tabs ( ... ) harmonized with Nightfox palette
 #   - Dynamic process badges ( nvim,  lazygit, 󰇥 yazi, 󰓅 btop,  tmux, 󰡨 docker, 󰚩 ai)
 #   - Floating right-aligned status pills: Tmux, AI Agents, Containers, Git, CWD, Battery, Clock
 #   - Adaptive width folding: gracefully drops breadcrumb/battery/containers on narrow screens
@@ -892,23 +892,6 @@ def smart_truncate_title(text: str, max_cols: int) -> str:
     return _truncate_right(text, max_cols)
 
 
-# Fixed pill geometry: every tab occupies exactly this many cells inside its rounded caps, so a
-# long task title can never stretch the bar. Kitty's tab_title_max_length is deliberately ignored.
-TAB_PILL_BODY = 26
-
-
-def _fit_cells(text: str, cells: int) -> str:
-    """Hard-clamp text to `cells` display columns, then right-pad it to exactly `cells`."""
-    if cells <= 0:
-        return ""
-    if _text_display_width(text) > cells:
-        text = _truncate_right(text, cells)
-        if _text_display_width(text) > cells:  # a double-width cluster can overshoot by one
-            text = _truncate_right(text, cells - 1)
-    pad = cells - _text_display_width(text)
-    return text + " " * pad if pad > 0 else text
-
-
 def format_tab_title(tab: TabBarData, max_cols: int) -> str:
     """Format Kitty tab title matching active/window/stack markers with wcwidth truncation."""
     raw = tab.title or ""
@@ -942,23 +925,17 @@ def draw_tab(
     screen.cursor.fg = tab_bg
     screen.draw("")
 
-    # 2. Pill body: fixed-width pill (index + process badge + truncated title), padded to exactly
-    #    TAB_PILL_BODY cells so one long title can never stretch the bar.
+    # 2. Pill body: draw index + process icon badge + wcwidth-truncated title
     screen.cursor.bg = tab_bg
     screen.cursor.fg = tab_fg
     icon = get_tab_icon(tab)
     badge = f" {index} {icon} "
+    screen.draw(badge)
 
-    # Reserve room for the right-hand clock pill so the fixed body always fits on screen.
-    inner = max(10, min(TAB_PILL_BODY, screen.columns - 16))
-    badge_w = wcswidth(badge) if wcswidth(badge) > 0 else _text_display_width(badge)
-    title_budget = inner - badge_w - 1
-    if title_budget < 6:  # narrow window: drop the process icon, keep the index
-        badge = f" {index} "
-        badge_w = wcswidth(badge) if wcswidth(badge) > 0 else _text_display_width(badge)
-        title_budget = max(3, inner - badge_w - 1)
-
-    screen.draw(_fit_cells(badge + format_tab_title(tab, title_budget), inner - 1) + " ")
+    badge_width = _text_display_width(badge) if wcswidth(badge) <= 0 else wcswidth(badge)
+    effective_title_len = max(1, max_title_length - badge_width - 2) if max_title_length > badge_width + 2 else max_title_length
+    screen.draw(format_tab_title(tab, min(effective_title_len, 22) if max_title_length <= 0 else effective_title_len))
+    screen.draw(" ")
 
     # 3. Right rounded pill cap
     screen.cursor.bg = default_bg
