@@ -155,8 +155,8 @@ local function delete_other_buffers()
   end
 end
 
--- Quickfix / loclist navigation (unimpaired-style). After grug-far replace
--- or grep-picker picks land in the quickfix, ]q/[q walks them without the
+-- Quickfix / loclist navigation (unimpaired-style). After a search/replace
+-- or grep-picker pick lands in the quickfix, ]q/[q walks them without the
 -- picker open. Same for ]l/[l in the location list. Wrapping at the ends
 -- (stock :cnext errors E553 "No more items" at boundaries; wrap instead,
 -- LazyVim-style, so cycling never dead-ends).
@@ -320,7 +320,7 @@ keymap.set(
 -- In normal FILE buffers nothing changes: `q` still records macros and
 -- <Esc> still clears search highlights (map at the top of this file).
 -- In special windows the same keys become "close this": quickfix/loclist,
--- help, man, lspinfo, checkhealth, gitsigns blame, trouble, nvim-tree,
+-- help, man, lspinfo, checkhealth, gitsigns blame, trouble,
 -- LSP hover / diagnostic floats (buftype nofile) — LazyVim behaviour.
 -- Implemented as BUFFER-LOCAL maps installed by BufWinEnter, so global
 -- `q` macro recording is never shadowed in real buffers. nvim_win_close

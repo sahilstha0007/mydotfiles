@@ -63,13 +63,8 @@ assert(star and star.capabilities and star.capabilities.workspace and star.capab
 local Plugin = require("lazy.core.plugin")
 local ts = require("lazy.core.config").plugins["nvim-treesitter"]
 local ts_opts = Plugin.values(ts, "opts", false)
-assert(vim.tbl_contains(ts_opts.ensure_installed or {}, "gomod"),
-  "gomod should be present in nvim-treesitter ensure_installed")
-
-local mti = require("lazy.core.config").plugins["mason-tool-installer.nvim"]
-local mti_opts = Plugin.values(mti, "opts", false)
-assert(vim.tbl_contains(mti_opts.ensure_installed or {}, "js-debug-adapter"),
-  "js-debug-adapter should be present in mason-tool-installer ensure_installed")
+assert(vim.tbl_contains(ts_opts.ensure_installed or {}, "go"),
+  "go should be present in nvim-treesitter ensure_installed (core editing parser)")
 ' -c 'qa!' >"$log" 2>&1
 rc=$?
 if [ "$rc" -ne 0 ] || grep -q '^FAIL:' "$log" || grep -qE '^E[0-9]{3,4}:' "$log"; then

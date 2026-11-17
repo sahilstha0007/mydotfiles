@@ -187,7 +187,7 @@ return {
       desc = 'Terminal (toggle, git root)',
     },
     -- lazydocker float: the docker TUI over the editor, mirroring tmux's
-    -- Prefix+d popup and lazygit.nvim's <leader>gg float. UPPERCASE D —
+    -- Prefix+d popup and the <leader>gg lazygit float. UPPERCASE D —
     -- lowercase <leader>d is the DAP debug group (dap/core.lua). toggle()
     -- re-press closes it; auto_close ends the float when lazydocker exits.
     {
@@ -295,7 +295,7 @@ return {
     -- and learn-nvim.html all documented <leader>gB as the blame popup.
     -- The blame mapping is the one four sources agree on, so it keeps the key
     -- and gitbrowse moves here. <leader>gG is free (nothing binds it) and sits
-    -- next to <leader>gg lazygit, which is the "leave the editor" end of the
+    -- next to the lazygit binding, which is the "leave the editor" end of the
     -- group. tests/git_keymap_conflicts_spec.lua fails if this key is ever
     -- bound twice again.
     {
@@ -865,16 +865,10 @@ return {
               action = ":lua Snacks.dashboard.pick('live_grep')",
             }, -- md-magnify
             {
-              icon = ic(0xF0093),
-              key = 't',
-              desc = 'Run Tests',
-              action = ":lua require('neotest').run.run(vim.uv.cwd())",
-            }, -- md-flask
-            {
               icon = ic(0xF02A2),
               key = 'G',
-              desc = 'LazyGit',
-              action = ':LazyGit',
+              desc = 'Lazygit (snacks)',
+              action = ':lua Snacks.lazygit.open()',
             }, -- md-git
             {
               icon = ic(0xF02DA),

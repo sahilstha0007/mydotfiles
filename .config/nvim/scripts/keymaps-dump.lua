@@ -57,10 +57,6 @@ local ok = pcall(function()
   -- trigger lazy load of everything with a build/keys lazy trigger
   vim.cmd 'Lazy load mini.nvim'
   vim.cmd 'Lazy load gitsigns.nvim'
-  vim.cmd 'Lazy load grug-far.nvim'
-  vim.cmd 'Lazy load yanky.nvim'
-  vim.cmd 'Lazy load venv-selector.nvim'
-  vim.cmd 'Lazy load octo.nvim'
 end)
 
 -- Fire VeryLazy (headless never does) so deferred maps load
@@ -206,7 +202,7 @@ local result = {
 }
 
 -- :commands from user config (grep-documented set)
-for _, cmd in ipairs { 'Lazy', 'Mason', 'Rest', 'GrugFar', 'VenvSelect', 'Octo' } do
+for _, cmd in ipairs { 'Lazy', 'Mason', 'Rest' } do
   local ok3, out3 = pcall(vim.api.nvim_get_commands, { output = 'dict' })
   result.commands[cmd] = ok3 and (out3[cmd] ~= nil) or false
 end

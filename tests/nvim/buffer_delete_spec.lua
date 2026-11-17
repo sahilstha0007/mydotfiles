@@ -12,8 +12,8 @@
 -- are not secretly the same binding.
 --
 -- Scope: these two keys only. A whole-tree duplicate-action detector is
--- deliberately not attempted -- it goes red on the harmless nvim-dap /
--- nvim-dap-ui pairs (`<leader>du`, `de`) and an allowlist of known-fine
+-- deliberately not attempted -- it flags harmless duplicates where the same
+-- action is declared in more than one spec, and an allowlist of known-fine
 -- duplicates is exactly the kind of thing that rots.
 --
 -- Run: nvim --headless -u tests/minimal_init.lua -l tests/buffer_delete_spec.lua

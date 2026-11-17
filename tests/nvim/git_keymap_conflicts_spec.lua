@@ -13,11 +13,10 @@
 -- user actually gets. Hence a spec that counts owners per key.
 --
 -- Scope: the <leader>g group only. A whole-tree duplicate detector is not what
--- this is -- it goes red on the two harmless nvim-dap / nvim-dap-ui pairs
--- (`<leader>du`, `<leader>de`: same action declared on both the provider spec
--- and the UI spec), and an allowlist of "known fine duplicates" is exactly the
--- kind of thing that rots. The git group is where the audit found the collision
--- and docs/keymaps.md documents it key by key.
+-- this is -- it flags harmless duplicates where the same action is declared in
+-- more than one spec, and an allowlist of "known fine duplicates" is exactly
+-- the kind of thing that rots. The git group is where the audit found the
+-- collision and docs/keymaps.md documents it key by key.
 --
 -- Run: nvim --headless -u tests/minimal_init.lua -l tests/git_keymap_conflicts_spec.lua
 
