@@ -185,6 +185,9 @@ return {
   },
   {
     'antosha417/nvim-lsp-file-operations',
+    -- Only relevant once an LSP attaches (file rename/move via LSP). Loading it
+    -- at boot adds ~1.3ms and an eager plenary require for no benefit.
+    event = 'LspAttach',
     dependencies = {
       'nvim-lua/plenary.nvim',
     },

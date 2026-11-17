@@ -46,9 +46,13 @@ vim.diagnostic.config {
   float = { border = 'rounded', source = 'if_many', wrap = true },
 }
 
--- Disable unused providers to accelerate startup and eliminate health warnings
+-- Disable unused providers to accelerate startup and eliminate health warnings.
+-- python3 provider is unused: Python tools (neotest-python, nvim-dap-python) run
+-- via venv binaries in utils/runner.lua, not vim's remote host. Disabling it also
+-- stops nvim sourcing a stale rplugin.vim that registers a removed molten-nvim host.
 vim.g.loaded_perl_provider = 0
 vim.g.loaded_ruby_provider = 0
+vim.g.loaded_python3_provider = 0
 
 -- Hover and signature help floating windows: wrap lines cleanly
 local orig_hover = vim.lsp.handlers.hover
