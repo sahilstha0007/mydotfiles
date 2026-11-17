@@ -1,0 +1,258 @@
+local M = {}
+
+local extmark_writer = require("tiny-inline-diagnostic.extmark_writer")
+
+local DIAGNOSTIC_NAMESPACE = vim.api.nvim_create_namespace("TinyInlineDiagnostic")
+
+local function is_valid_buffer(buf)
+  return buf and vim.api.nvim_buf_is_valid(buf)
+end
+
+---Window column where virtual text starts for the cursor line
+---@return number
+function M.get_window_col()
+  local ok_virtcol, result_virtcol = pcall(vim.fn.virtcol, "$")
+  local ok_winsaveview, result_winsaveview = pcall(vim.fn.winsaveview)
+
+  if not (ok_virtcol and ok_winsaveview) then
+    return 0
+  end
+
+  return result_virtcol - result_winsaveview.leftcol
+end
+
+---Index of the first buffer line in [first, last] (0-indexed) that soft-wraps
+---in the current window, or nil if none does.
+local function first_softwrapped_line(bufnr, first, last)
+  local win = vim.api.nvim_get_current_win()
+  local text_width = vim.api.nvim_win_get_width(win) - vim.fn.getwininfo(win)[1].textoff
+  local lines = vim.api.nvim_buf_get_lines(bufnr, first, last + 1, false)
+  for i, line in ipairs(lines) do
+    if vim.fn.strdisplaywidth(line) > text_width then
+      return first + i - 1
+    end
+  end
+  return nil
+end
+
+local function should_skip_line(cursor_line, diag_line, diags_dims, virt_lines_count)
+  for _, dims in ipairs(diags_dims) do
+    if diag_line ~= dims[1] then
+      if cursor_line == dims[1] then
+        if diag_line > dims[1] and diag_line < dims[1] + dims[2] then
+          return true
+        end
+      end
+    end
+  end
+
+  return false
+end
+
+---Count inlay hint characters
+---@param buf number
+---@param linenr number
+---@return number
+function M.count_inlay_hints_characters(buf, linenr)
+  local line = vim.api.nvim_buf_get_lines(buf, linenr, linenr + 1, false)[1]
+  if not line then
+    return 0
+  end
+
+  local line_char_count = vim.fn.strchars(line)
+  local inlay_hints = vim.lsp.inlay_hint.get({
+    bufnr = buf,
+    range = {
+      start = { line = linenr, character = 0 },
+      ["end"] = { line = linenr, character = line_char_count },
+    },
+  })
+
+  local count = 0
+  for _, hint in ipairs(inlay_hints) do
+    if type(hint.inlay_hint.label) == "string" then
+      count = count + #hint.inlay_hint.label
+    else
+      for _, label in ipairs(hint.inlay_hint.label) do
+        count = count + #label.value
+      end
+    end
+  end
+  return count
+end
+
+---Update the current namespace used for extmarks to only include the active window.
+---Note: this uses a currently experimental API call, and may break in future NeoVim releases.
+function M.update_namespace_window()
+  local current_window = vim.api.nvim_get_current_win()
+  vim.api.nvim__ns_set(DIAGNOSTIC_NAMESPACE, { wins = { current_window } })
+end
+
+-- Public API
+
+---Clear extmarks from buffer
+---@param buf number
+function M.clear(buf)
+  if not is_valid_buffer(buf) then
+    return
+  end
+  pcall(vim.api.nvim_buf_clear_namespace, buf, DIAGNOSTIC_NAMESPACE, 0, -1)
+end
+
+---Get extmarks on a specific line
+---@param bufnr number
+---@param linenr number
+---@param col number
+---@return table
+function M.get_extmarks_on_line(bufnr, linenr, col)
+  if not is_valid_buffer(bufnr) then
+    return {}
+  end
+
+  return vim.api.nvim_buf_get_extmarks(bufnr, -1, { linenr, col }, { linenr, -1 }, {
+    details = true,
+    overlap = true,
+  })
+end
+
+---Handle other extmarks
+---@param bufnr number
+---@param curline number
+---@param col number
+---@return number
+function M.handle_other_extmarks(bufnr, curline, col)
+  local extmarks = M.get_extmarks_on_line(bufnr, curline, col)
+  local offset = 0
+
+  for _, extmark in ipairs(extmarks) do
+    local detail = extmark[4]
+    if
+      (detail.virt_text_pos == "eol" or detail.virt_text_pos == "win_col")
+      and detail.virt_text
+      and detail.virt_text[1]
+      and detail.virt_text[1][1]
+    then
+      offset = offset + #detail.virt_text[1][1]
+    end
+  end
+
+  if vim.lsp.inlay_hint.is_enabled({ bufnr = bufnr }) then
+    offset = offset + M.count_inlay_hints_characters(bufnr, curline)
+  end
+
+  return offset
+end
+
+---Create extmarks
+---@param opts table
+---@param bufnr number
+---@param diag_line number
+---@param virt_lines table
+---@param offset number
+---@param signs_offset number
+---@param need_to_be_under boolean
+---@param virt_priority number
+---@param render_ctx table|nil: per-render values { cursor_line, win_col, buf_lines_count }
+function M.create_extmarks(
+  opts,
+  bufnr,
+  diag_line,
+  diags_dims,
+  virt_lines,
+  offset,
+  signs_offset,
+  need_to_be_under,
+  virt_priority,
+  render_ctx
+)
+  if not is_valid_buffer(bufnr) or not virt_lines or vim.tbl_isempty(virt_lines) then
+    return
+  end
+
+  local buf_lines_count = render_ctx and render_ctx.buf_lines_count
+    or vim.api.nvim_buf_line_count(bufnr)
+  if buf_lines_count == 0 then
+    return
+  end
+
+  local win_col = 0
+  if not need_to_be_under then
+    win_col = render_ctx and render_ctx.win_col or M.get_window_col()
+  end
+  local cursor_line = render_ctx and render_ctx.cursor_line
+    or (vim.api.nvim_win_get_cursor(0)[1] - 1)
+
+  if opts.options.multilines and diag_line ~= cursor_line then
+    if should_skip_line(cursor_line, diag_line, diags_dims, #virt_lines) then
+      return
+    end
+
+    extmark_writer.create_multiline_extmark(
+      bufnr,
+      DIAGNOSTIC_NAMESPACE,
+      diag_line,
+      virt_lines,
+      virt_priority
+    )
+
+    return
+  end
+
+  if vim.wo.wrap and #virt_lines > 1 then
+    local wrapped_line = first_softwrapped_line(bufnr, diag_line, diag_line + #virt_lines - 1)
+
+    if wrapped_line == diag_line or (wrapped_line and need_to_be_under) then
+      extmark_writer.create_wrapped_extmarks(
+        bufnr,
+        DIAGNOSTIC_NAMESPACE,
+        diag_line,
+        virt_lines,
+        win_col,
+        offset,
+        signs_offset,
+        need_to_be_under,
+        virt_priority
+      )
+      return
+    elseif wrapped_line then
+      extmark_writer.create_split_extmarks(
+        bufnr,
+        DIAGNOSTIC_NAMESPACE,
+        diag_line,
+        virt_lines,
+        wrapped_line - diag_line,
+        win_col,
+        offset,
+        signs_offset,
+        virt_priority
+      )
+      return
+    end
+  end
+
+  if need_to_be_under or diag_line - 1 + #virt_lines > buf_lines_count - 1 then
+    extmark_writer.create_overflow_extmarks(bufnr, DIAGNOSTIC_NAMESPACE, {
+      curline = diag_line,
+      virt_lines = virt_lines,
+      win_col = win_col,
+      offset = offset,
+      signs_offset = signs_offset,
+      priority = virt_priority,
+      need_to_be_under = need_to_be_under,
+      buf_lines_count = buf_lines_count,
+    })
+  else
+    extmark_writer.create_simple_extmarks(
+      bufnr,
+      DIAGNOSTIC_NAMESPACE,
+      diag_line,
+      virt_lines,
+      win_col,
+      offset,
+      signs_offset,
+      virt_priority
+    )
+  end
+end
+
+return M

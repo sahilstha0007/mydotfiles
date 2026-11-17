@@ -55,7 +55,7 @@ xargs -n 1 code --install-extension < .config/Code/User/extensions.txt
 - **Universal Cross-Layer Navigation**: `Ctrl+h/j/k/l` moves seamlessly across Kitty/Tmux splits and Neovim splits, and `terminal-cheatsheet` searches the full keybind table interactively.
 
 <details>
-<summary>Complete Live Keybinding Reference (229 generated bindings: WezTerm 99, Kitty 74, Tmux 56)</summary>
+<summary>Complete Live Keybinding Reference (220 generated bindings: WezTerm 99, Kitty 65, Tmux 56)</summary>
 
 | Layer | Scope | Key | Action | Canonical ID |
 |---|---|---|---|---|
@@ -163,10 +163,10 @@ xargs -n 1 code --install-extension < .config/Code/User/extensions.txt
 | Kitty | Keys | `ctrl+shift+enter` | launch --cwd=current | `Kitty\|ctrl+shift+enter` |
 | Kitty | Keys | `ctrl+shift+z` | toggle_layout stack | `Kitty\|ctrl+shift+z` |
 | Kitty | Keys | `ctrl+shift+l` | next_layout | `Kitty\|ctrl+shift+l` |
-| Kitty | Keys | `ctrl+h` | kitten pass_keys.py left ctrl+h | `Kitty\|ctrl+h` |
-| Kitty | Keys | `ctrl+j` | kitten pass_keys.py bottom ctrl+j | `Kitty\|ctrl+j` |
-| Kitty | Keys | `ctrl+k` | kitten pass_keys.py top ctrl+k | `Kitty\|ctrl+k` |
-| Kitty | Keys | `ctrl+l` | kitten pass_keys.py right ctrl+l | `Kitty\|ctrl+l` |
+| Kitty | Keys | `ctrl+h` | neighboring_window left | `Kitty\|ctrl+h` |
+| Kitty | Keys | `ctrl+j` | neighboring_window bottom | `Kitty\|ctrl+j` |
+| Kitty | Keys | `ctrl+k` | neighboring_window top | `Kitty\|ctrl+k` |
+| Kitty | Keys | `ctrl+l` | neighboring_window right | `Kitty\|ctrl+l` |
 | Kitty | Keys | `ctrl+shift+left` | neighboring_window left | `Kitty\|ctrl+shift+left` |
 | Kitty | Keys | `ctrl+shift+right` | neighboring_window right | `Kitty\|ctrl+shift+right` |
 | Kitty | Keys | `ctrl+shift+up` | neighboring_window up | `Kitty\|ctrl+shift+up` |
@@ -199,7 +199,6 @@ xargs -n 1 code --install-extension < .config/Code/User/extensions.txt
 | Kitty | Leader > | `ctrl+shift+p>t` | launch --type=overlay tab-switcher.sh | `Kitty\|ctrl+shift+p>t` |
 | Kitty | Keys | `ctrl+shift+f` | launch --type=overlay --stdin-source=@screen_scrollback fzf --no-sort --exact -i --reverse | `Kitty\|ctrl+shift+f` |
 | Kitty | Keys | `ctrl+shift+h` | launch --stdin-source=@screen_scrollback --type=overlay nvim-scrollback-pager.sh | `Kitty\|ctrl+shift+h` |
-| Kitty | Keys | `ctrl+shift+b` | launch --allow-remote-control kitten broadcast --match-tab state:focused | `Kitty\|ctrl+shift+b` |
 | Kitty | Keys | `ctrl+shift+k` | kitten command_palette | `Kitty\|ctrl+shift+k` |
 | Kitty | Leader > | `ctrl+shift+p>c` | kitten command_palette | `Kitty\|ctrl+shift+p>c` |
 | Kitty | Keys | `ctrl+shift+g` | launch --type=overlay --cwd=current lazygit | `Kitty\|ctrl+shift+g` |
@@ -207,21 +206,13 @@ xargs -n 1 code --install-extension < .config/Code/User/extensions.txt
 | Kitty | Leader > | `ctrl+shift+p>d` | launch --type=overlay --cwd=current lazydocker | `Kitty\|ctrl+shift+p>d` |
 | Kitty | Keys | `ctrl+shift+y` | launch --type=overlay --cwd=current yazi | `Kitty\|ctrl+shift+y` |
 | Kitty | Leader > | `ctrl+shift+p>y` | launch --type=overlay --cwd=current yazi | `Kitty\|ctrl+shift+p>y` |
-| Kitty | Keys | `ctrl+shift+m` | launch --type=overlay btop -c ~/.config/btop/btop-nightfox.conf | `Kitty\|ctrl+shift+m` |
-| Kitty | Leader > | `ctrl+shift+p>m` | launch --type=overlay btop -c ~/.config/btop/btop-nightfox.conf | `Kitty\|ctrl+shift+p>m` |
+| Kitty | Keys | `ctrl+shift+m` | launch --type=overlay btop -c ~/.config/btop/btop-apple-glass.conf | `Kitty\|ctrl+shift+m` |
+| Kitty | Leader > | `ctrl+shift+p>m` | launch --type=overlay btop -c ~/.config/btop/btop-apple-glass.conf | `Kitty\|ctrl+shift+p>m` |
 | Kitty | Leader > | `ctrl+shift+p>k` | launch --type=overlay --cwd=current zsh -c 'git difftool --tool=kitty --no-prompt \|\| { echo "No git diff to display"; sleep 1; }' | `Kitty\|ctrl+shift+p>k` |
 | Kitty | Keys | `ctrl+shift+u` | kitten unicode_input | `Kitty\|ctrl+shift+u` |
-| Kitty | Keys | `ctrl+shift+space` | kitten hints --type word --program @ | `Kitty\|ctrl+shift+space` |
 | Kitty | Keys | `ctrl+shift+e` | open_url_with_hints | `Kitty\|ctrl+shift+e` |
 | Kitty | Leader > | `ctrl+shift+p>n` | kitten hints --type linenum --linenum-action=self nvim +{line} {path} | `Kitty\|ctrl+shift+p>n` |
-| Kitty | Leader > | `ctrl+shift+p>h` | kitten hints --type hash --program - | `Kitty\|ctrl+shift+p>h` |
-| Kitty | Leader > | `ctrl+shift+p>shift+h` | kitten hints --type hash --program @ | `Kitty\|ctrl+shift+p>shift+h` |
-| Kitty | Leader > | `ctrl+shift+p>f` | kitten hints --type path --program - | `Kitty\|ctrl+shift+p>f` |
 | Kitty | Leader > | `ctrl+shift+p>shift+f` | kitten hints --type path | `Kitty\|ctrl+shift+p>shift+f` |
-| Kitty | Leader > | `ctrl+shift+p>l` | kitten hints --type line --program - | `Kitty\|ctrl+shift+p>l` |
-| Kitty | Leader > | `ctrl+shift+p>shift+l` | kitten hints --type line --program @ | `Kitty\|ctrl+shift+p>shift+l` |
-| Kitty | Leader > | `ctrl+shift+p>w` | kitten hints --type word --program - | `Kitty\|ctrl+shift+p>w` |
-| Kitty | Leader > | `ctrl+shift+p>i` | kitten hints --type ip --program - | `Kitty\|ctrl+shift+p>i` |
 | Kitty | Keys | `ctrl+shift+o` | launch --type=overlay project-hub.sh | `Kitty\|ctrl+shift+o` |
 | Kitty | Leader > | `ctrl+shift+p>p` | launch --type=overlay project-hub.sh | `Kitty\|ctrl+shift+p>p` |
 | Kitty | Leader > | `ctrl+shift+a>m` | set_background_opacity +0.05 | `Kitty\|ctrl+shift+a>m` |
@@ -245,8 +236,8 @@ xargs -n 1 code --install-extension < .config/Code/User/extensions.txt
 | Tmux | Prefix | `Prefix + x` | confirm-before -p "kill-pane #P? (y/n)" kill-pane | `Tmux\|prefix:x` |
 | Tmux | Prefix | `Prefix + X` | kill-pane | `Tmux\|prefix:X` |
 | Tmux | Prefix | `Prefix + Q` | confirm-before -p "Save state and shutdown tmux server? (y/n)" "run-shell '~/.local/bin/tmux-shutdown'" | `Tmux\|prefix:Q` |
-| Tmux | Prefix | `Prefix + f` | display-popup -E -S "fg=#{@thm_blue}" -b rounded -h "85%" -s bg=default -t "  Project Hub " -w "85%" /home/sahil/.local/bin/project-hub | `Tmux\|prefix:f` |
-| Tmux | Prefix | `Prefix + S` | display-popup -E -S "fg=#{@thm_blue}" -b rounded -s bg=default -t "  Sessions " /home/sahil/.config/tmux/session-switcher.sh | `Tmux\|prefix:S` |
+| Tmux | Prefix | `Prefix + f` | display-popup -E -S "fg=#{@thm_blue}" -T "  Project Hub " -b rounded -h "85%" -s bg=default -w "85%" /home/sahil/.local/bin/project-hub | `Tmux\|prefix:f` |
+| Tmux | Prefix | `Prefix + S` | display-popup -E -S "fg=#{@thm_blue}" -T "  Sessions " -b rounded -s bg=default /home/sahil/.config/tmux/session-switcher.sh | `Tmux\|prefix:S` |
 | Tmux | Prefix | `Prefix + w` | choose-tree -Zw | `Tmux\|prefix:w` |
 | Tmux | Prefix | `Prefix + g` | display-popup -E -S "fg=#{@thm_blue}" -b rounded -d "#{pane_current_path}" -h "90%" -s bg=default -w "90%" lazygit | `Tmux\|prefix:g` |
 | Tmux | Prefix | `Prefix + G` | display-popup -E -S "fg=#{@thm_blue}" -b rounded -d "#{pane_current_path}" -h "90%" -s bg=default -w "90%" "gh dash" | `Tmux\|prefix:G` |
@@ -257,7 +248,7 @@ xargs -n 1 code --install-extension < .config/Code/User/extensions.txt
 | Tmux | Prefix | `Prefix + e` | display-popup -E -S "fg=#{@thm_blue}" -b rounded -d "#{pane_current_path}" -h "65%" -s bg=default -w "85%" "/home/sahil/.config/tmux/scripts/error-jump.sh '#{pane_id}'" | `Tmux\|prefix:e` |
 | Tmux | Prefix | `Prefix + P` | display-popup -E -S "fg=#{@thm_blue}" -b rounded -d "#{pane_current_path}" -h "40%" -s bg=default -w "60%" "/home/sahil/.config/tmux/project-task.sh '#{pane_current_path}'" | `Tmux\|prefix:P` |
 | Tmux | Prefix | `Prefix + ;` | display-popup -E -S "fg=#{@thm_blue}" -b rounded -d "#{pane_current_path}" -h "40%" -s bg=default -w "60%" "/home/sahil/.config/tmux/project-task.sh '#{pane_current_path}'" | `Tmux\|prefix:;` |
-| Tmux | Prefix | `Prefix + T` | display-popup -E -S "fg=#{@thm_blue}" -b rounded -h "90%" -s bg=default -w "90%" "if [ \"\$TERMINAL_STACK_PROFILE\" = \"kitty\" ]; then exec btop -c \"\$HOME/.config/btop/btop-nightfox.conf\"; else exec btop; fi" | `Tmux\|prefix:T` |
+| Tmux | Prefix | `Prefix + T` | display-popup -E -S "fg=#{@thm_blue}" -b rounded -h "90%" -s bg=default -w "90%" "if [ \"\$TERMINAL_STACK_PROFILE\" = \"kitty\" ]; then exec btop -c \"\$HOME/.config/btop/btop-apple-glass.conf\"; else exec btop; fi" | `Tmux\|prefix:T` |
 | Tmux | Prefix | `Prefix + V` | display-popup -E -S "fg=#{@thm_blue}" -b rounded -h "90%" -s bg=default -w "90%" nvtop | `Tmux\|prefix:V` |
 | Tmux | Prefix | `Prefix + D` | detach-client | `Tmux\|prefix:D` |
 | Tmux | Prefix | `Prefix + s` | choose-tree -Zs | `Tmux\|prefix:s` |

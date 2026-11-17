@@ -1,0 +1,244 @@
+-- lua/venv-selector/utils.lua
+--
+-- Small utility helpers used across venv-selector.nvim.
+--
+-- Responsibilities:
+-- - Generic table helpers.
+-- - Safe nested table access.
+-- - Command string splitting (with basic quote handling).
+-- - Debug table printing.
+--
+-- Notes:
+-- - These utilities are intentionally dependency-light.
+-- - Some functionality (like Windows splitting) is currently thin wrappers,
+--   but kept for future extensibility.
+require("venv-selector.types")
+
+local log = require("venv-selector.logger")
+local is_windows = nil
+
+local M = {}
+
+-- ============================================================================
+-- Table helpers
+-- ============================================================================
+
+function M.is_windows()
+    if is_windows == nil then
+        is_windows = vim.uv.os_uname().sysname == "Windows_NT" -- Saving result locally since its called for every search
+    end
+
+    return is_windows
+end
+
+function M.strip_shellcmd_preamble(shell, shell_cmdflags)
+    -- On PowerShell (pwsh / powershell), anything after the -Command / /c flag
+    -- in shellcmdflag is a Neovim terminal encoding preamble (e.g. setting
+    -- $PSDefaultParameterValues or [Console]::OutputEncoding). That preamble is
+    -- only needed for Neovim's own interactive terminal and must not be forwarded
+    -- to fd search jobs for two reasons:
+    --
+    --   1. split_string strips quotes, corrupting key literals such as
+    --      ['Out-File:Encoding'] -> [Out-File:Encoding], which is invalid
+    --      PowerShell syntax and causes a ParserError on every search job.
+    --
+    --   2. fd produces plain ASCII paths and requires no encoding setup.
+    --
+    -- Truncate shell_cmdflags at -Command (inclusive) so the fd command is the
+    -- only argument that follows.
+    local shell_basename = shell:match("[^\\/]+$") or shell
+    local is_powershell = shell_basename:lower() == "pwsh" or shell_basename:lower() == "powershell"
+
+    if is_powershell then
+        local command_flag_idx = nil
+        for i, flag in ipairs(shell_cmdflags) do
+            if flag:lower() == "-command" or flag:lower() == "/c" then
+                command_flag_idx = i
+                break
+            end
+        end
+        if command_flag_idx then
+            while #shell_cmdflags > command_flag_idx do
+                table.remove(shell_cmdflags)
+            end
+        end
+    end
+
+    return shell_cmdflags
+end
+
+function M.on_windows_inject_noprofile(shell, shell_cmdflags)
+    -- On PowerShell (pwsh / powershell), inject -NoProfile before -Command if
+    -- it is not already present. The user's PowerShell profile is not needed to
+    -- run fd, and profiles commonly cause search job failures on Windows:
+    --
+    --   * Modules such as Terminal-Icons hold file locks on their XML caches,
+    --     crashing the PowerShell process before fd can run (exit code 1).
+    --   * Heavy profiles (Oh-My-Posh, PSReadLine, etc.) can take several seconds
+    --     to load, causing jobs to hit the 5-second search timeout with the
+    --     misleading warning "Avoid using VenvSelect in $HOME directory".
+    --
+    -- Users who have already added -NoProfile to their shellcmdflag or to the
+    -- venv-selector shell.shellcmdflag option are unaffected.
+    local shell_basename = shell:match("[^\\/]+$") or shell
+    local is_powershell = shell_basename:lower() == "pwsh" or shell_basename:lower() == "powershell"
+
+    if is_powershell then
+        local has_noprofile = false
+        for _, flag in ipairs(shell_cmdflags) do
+            if flag:lower() == "-noprofile" then
+                has_noprofile = true
+                break
+            end
+        end
+        if not has_noprofile then
+            -- Insert before -Command so the flag order stays conventional.
+            local insert_at = #shell_cmdflags + 1
+            for i, flag in ipairs(shell_cmdflags) do
+                if flag:lower() == "-command" or flag:lower() == "/c" then
+                    insert_at = i
+                    break
+                end
+            end
+            table.insert(shell_cmdflags, insert_at, "-NoProfile")
+        end
+    end
+
+    return shell_cmdflags
+end
+
+---Check whether a table contains at least one key.
+---
+---@param t table|nil The table to check
+---@return boolean has_content True if table is non-nil and not empty
+function M.table_has_content(t)
+    return t ~= nil and next(t) ~= nil
+end
+
+-- ============================================================================
+-- String / command splitting
+-- ============================================================================
+
+---Split a string into whitespace-separated parts,
+---while respecting single and double quotes.
+---
+---Example:
+---  split_string([[cmd "arg with space" 'another one']])
+---  -> { "cmd", "arg with space", "another one" }
+---
+---Quotes are not included in the resulting tokens.
+---
+---@param str string The string to split
+---@return string[] parts
+function M.split_string(str)
+    local result = {}
+    local buffer = ""
+    local in_quotes = false
+    local quote_char = nil
+    local i = 1
+
+    while i <= #str do
+        local c = str:sub(i, i)
+
+        if c == "'" or c == '"' then
+            if in_quotes then
+                if c == quote_char then
+                    -- Closing matching quote.
+                    in_quotes = false
+                    quote_char = nil
+                else
+                    -- Different quote inside quoted region.
+                    buffer = buffer .. c
+                end
+            else
+                -- Opening quote.
+                in_quotes = true
+                quote_char = c
+            end
+        elseif c == " " then
+            if in_quotes then
+                buffer = buffer .. c
+            else
+                if #buffer > 0 then
+                    table.insert(result, buffer)
+                    buffer = ""
+                end
+            end
+        else
+            buffer = buffer .. c
+        end
+
+        i = i + 1
+    end
+
+    -- Append trailing token.
+    if #buffer > 0 then
+        table.insert(result, buffer)
+    end
+
+    return result
+end
+
+---Split a command string for Windows execution.
+---Currently just delegates to split_string, but exists
+---as a dedicated entrypoint for future platform-specific logic.
+---
+---@param str string
+---@return string[] parts
+function M.split_cmd_for_windows(str)
+    return M.split_string(str)
+end
+
+--- Extend a list with multiple other tables.
+--- Note that the list is modified in place
+--- but also returned for convenience.
+--- @param dst table the list to extend
+--- @param ... table lists of items to extend dst with
+--- @return table the extended list
+function M.extend(dst, ...)
+    for _, t in ipairs({ ... }) do
+        vim.list_extend(dst, t)
+    end
+    return dst
+end
+
+---Safely access nested table keys
+---@param tbl table The table to access
+---@param ... string The keys to follow
+---@return any|nil The value if found, or nil
+function M.try(tbl, ...)
+    local result = tbl
+    for _, key in ipairs({ ... }) do
+        if result and type(result) == "table" then
+            result = result[key]
+        else
+            return nil
+        end
+    end
+    return result
+end
+
+-- ============================================================================
+-- Debug helpers
+-- ============================================================================
+
+---Recursively print a table to stdout (not to logger buffer).
+---Intended for quick debugging during development.
+---
+---@param tbl table
+---@param indent? integer
+function M.print_table(tbl, indent)
+    indent = indent or 0
+
+    for k, v in pairs(tbl) do
+        local formatting = string.rep("  ", indent) .. tostring(k) .. ": "
+        if type(v) == "table" then
+            print(formatting)
+            M.print_table(v, indent + 1)
+        else
+            print(formatting .. tostring(v))
+        end
+    end
+end
+
+return M

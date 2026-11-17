@@ -1,0 +1,286 @@
+---@class HighlightColor
+---@field fg string
+---@field bg string
+---@field italic boolean
+
+---@class BlendOptions
+---@field factor number
+
+---@class DefaultHighlights
+---@field error string
+---@field warn string
+---@field info string
+---@field hint string
+---@field arrow string
+---@field background string
+---@field mixing_color string
+
+local M = {}
+
+local utils = require("tiny-inline-diagnostic.utils")
+
+local SEVERITY_NAMES = { "Error", "Warn", "Info", "Hint" }
+local HIGHLIGHT_PREFIX = "TinyInlineDiagnosticVirtualText"
+local INV_HIGHLIGHT_PREFIX = "TinyInlineInvDiagnosticVirtualText"
+
+---Get highlight attributes for a given highlight group
+---@param name string
+---@return HighlightColor
+local function get_highlight(name)
+  local hi = vim.api.nvim_get_hl(0, {
+    name = name,
+    link = false,
+  })
+
+  return {
+    fg = utils.int_to_hex(hi.fg),
+    bg = utils.int_to_hex(hi.bg),
+    italic = hi.italic or false,
+  }
+end
+
+---Get background color based on configuration
+---@param color string
+---@return string
+local function get_background_color(color)
+  if color:sub(1, 1) == "#" then
+    return color
+  end
+  return get_highlight(color).bg
+end
+
+---Get mixing color based on configuration
+---@param color string
+---@return string
+local function get_mixing_color(color)
+  if color == "None" then
+    return vim.o.background == "light" and "#ffffff" or "#000000"
+  end
+  if color:sub(1, 1) == "#" then
+    return color
+  end
+
+  local resolved = get_highlight(color).bg
+  if resolved == "None" then
+    return vim.o.background == "light" and "#ffffff" or "#000000"
+  end
+  return resolved
+end
+
+---Check if the cursorline is visible
+---@return boolean
+local function is_cursorline_visible()
+  return vim.wo.cursorline and vim.wo.cursorlineopt ~= "number"
+end
+
+---@param colors table
+---@param blends table
+---@param transparent boolean
+---@return table
+local function build_base_groups(colors, blends, transparent)
+  local hi = {
+    [HIGHLIGHT_PREFIX .. "Bg"] = { bg = colors.background },
+  }
+
+  for _, name in ipairs(SEVERITY_NAMES) do
+    local name_lower = string.lower(name)
+    local color = colors[name_lower]
+
+    hi[HIGHLIGHT_PREFIX .. name .. "CursorLine"] = {
+      bg = colors.cursor_line.bg,
+      fg = color.fg,
+      italic = color.italic,
+    }
+
+    hi[HIGHLIGHT_PREFIX .. name] = {
+      bg = transparent and "None" or blends[name_lower],
+      fg = color.fg,
+      italic = color.italic,
+    }
+
+    hi[HIGHLIGHT_PREFIX .. name .. "NoBg"] = {
+      fg = color.fg,
+      bg = "None",
+      italic = color.italic,
+    }
+
+    hi[INV_HIGHLIGHT_PREFIX .. name] = {
+      fg = blends[name_lower],
+      bg = transparent and "None" or colors.background,
+      italic = color.italic,
+    }
+
+    hi[INV_HIGHLIGHT_PREFIX .. name .. "CursorLine"] = {
+      fg = blends[name_lower],
+      bg = colors.cursor_line.bg,
+      italic = color.italic,
+    }
+
+    hi[INV_HIGHLIGHT_PREFIX .. name .. "NoBg"] = {
+      fg = blends[name_lower],
+      bg = "None",
+      italic = color.italic,
+    }
+  end
+
+  hi[HIGHLIGHT_PREFIX .. "Arrow"] = {
+    bg = transparent and colors.cursor_line.bg or colors.background,
+    fg = colors.arrow.fg,
+  }
+  hi[HIGHLIGHT_PREFIX .. "ArrowNoBg"] = {
+    bg = "None",
+    fg = colors.arrow.fg,
+  }
+
+  return hi
+end
+
+---@param base_groups table
+---@return table
+local function build_mixed_groups(base_groups)
+  local hi = {}
+
+  for _, primary_name in ipairs(SEVERITY_NAMES) do
+    for _, secondary_name in ipairs(SEVERITY_NAMES) do
+      local primary = HIGHLIGHT_PREFIX .. primary_name
+      local secondary = HIGHLIGHT_PREFIX .. secondary_name
+      hi[primary .. "Mix" .. secondary_name] = {
+        fg = base_groups[primary].fg,
+        bg = base_groups[secondary].bg,
+        italic = base_groups[primary].italic,
+      }
+    end
+  end
+
+  return hi
+end
+
+---@param blend BlendOptions
+---@param default_hi DefaultHighlights
+function M.setup_highlights(blend, default_hi, transparent_bg)
+  if not transparent_bg then
+    transparent_bg = false
+  end
+
+  if blend.factor == 0 then
+    transparent_bg = true
+  end
+
+  local cursorline_hl = get_highlight("CursorLine")
+  local cursorline_is_visible = is_cursorline_visible()
+  local has_cursorline_bg = cursorline_hl.bg ~= "None"
+
+  local cursor_line_color = (cursorline_is_visible and has_cursorline_bg) and cursorline_hl
+    or { bg = "None" }
+
+  local colors = {
+    error = get_highlight(default_hi.error),
+    warn = get_highlight(default_hi.warn),
+    info = get_highlight(default_hi.info),
+    hint = get_highlight(default_hi.hint),
+    arrow = get_highlight(default_hi.arrow),
+    cursor_line = cursor_line_color,
+  }
+
+  -- Get special colors
+  colors.background = get_background_color(default_hi.background)
+  colors.mixing_color = get_mixing_color(default_hi.mixing_color)
+
+  -- Create blended colors
+  local blends = {
+    error = utils.blend(colors.error.fg, colors.mixing_color, blend.factor),
+    warn = utils.blend(colors.warn.fg, colors.mixing_color, blend.factor),
+    info = utils.blend(colors.info.fg, colors.mixing_color, blend.factor),
+    hint = utils.blend(colors.hint.fg, colors.mixing_color, blend.factor),
+    background = colors.background,
+  }
+
+  local base_groups = build_base_groups(colors, blends, transparent_bg)
+  local mixed_groups = build_mixed_groups(base_groups)
+  local hi = vim.tbl_extend("force", base_groups, mixed_groups)
+
+  for name, opts in pairs(hi) do
+    vim.api.nvim_set_hl(0, name, opts)
+  end
+end
+
+---Get diagnostic highlight groups
+---@param blend_factor number
+---@param diag_ret table
+---@param curline number
+---@param index_diag number
+---@return string diag_hi
+---@return string diag_inv_hi
+---@return string body_hi
+function M.get_diagnostic_highlights(blend_factor, diag_ret, curline, index_diag)
+  local diag_hi, diag_inv_hi, body_hi = M.get_diagnostic_highlights_from_severity(diag_ret.severity)
+
+  local cursorline_is_visible = is_cursorline_visible()
+
+  if
+    (diag_ret.line and diag_ret.line == curline)
+    and index_diag == 1
+    and not diag_ret.need_to_be_under
+  then
+    if blend_factor == 0 then
+      diag_hi = diag_hi .. "CursorLine"
+      diag_inv_hi = diag_inv_hi .. "CursorLine"
+    end
+  end
+
+  if
+    (diag_ret.line and diag_ret.line ~= curline)
+    or index_diag > 1
+    or diag_ret.need_to_be_under
+    or not cursorline_is_visible
+  then
+    diag_inv_hi = diag_inv_hi .. "NoBg"
+  end
+
+  return diag_hi, diag_inv_hi, body_hi
+end
+
+---Get base diagnostic highlight groups from severity
+---@param severity number
+---@return string diag_hi
+---@return string diag_inv_hi
+---@return string body_hi
+function M.get_diagnostic_highlights_from_severity(severity)
+  local hi = SEVERITY_NAMES[severity] or "Error"
+
+  return HIGHLIGHT_PREFIX .. hi, INV_HIGHLIGHT_PREFIX .. hi, INV_HIGHLIGHT_PREFIX .. hi .. "NoBg"
+end
+
+---Get mixed diagnostic highlight groups from two severities
+---@param severity_a number
+---@param severity_b number
+---@return string diag_hi
+---@return string diag_inv_hi
+function M.get_diagnostic_mixed_highlights_from_severity(severity_a, severity_b)
+  local hi_a = SEVERITY_NAMES[severity_a] or "Error"
+  local hi_b = SEVERITY_NAMES[severity_b] or "Error"
+
+  return HIGHLIGHT_PREFIX .. hi_b .. "Mix" .. hi_a, INV_HIGHLIGHT_PREFIX .. hi_a .. "Mix" .. hi_b
+end
+
+---Get diagnostic icon
+---@param severity number|string
+---@return string
+function M.get_diagnostic_icon(severity)
+  local name = vim.diagnostic.severity[severity]:lower():gsub("^%l", string.upper)
+  local sign = vim.fn.sign_getdefined("DiagnosticSign" .. name)[1]
+
+  local config = vim.diagnostic.config() or {}
+  if config.signs == nil or type(config.signs) == "boolean" then
+    return sign and sign.text or name:sub(1, 1)
+  end
+  local signs = config.signs or {}
+  if type(signs) == "function" then
+    signs = signs(0, 0)
+  end
+  return type(signs) == "table" and signs.text and signs.text[severity]
+    or sign and sign.text
+    or name:sub(1, 1)
+end
+
+return M

@@ -1,14 +1,5 @@
 local Config = require('config')
 
-require('utils.backdrops')
-   :set_images_dir(require('wezterm').home_dir .. '/Pictures/wallpaper/')
-   :scan_images_dir()
-   :exclude_files({
-      'wallhaven-x1elzo_1920x1080.png',
-      'Generated Image September 16, 2025 - 11_32PM.png',
-   })
-   :from_cache_or_random()
-
 -- events.fail writes a load marker as its first statement and removes it at
 -- the very end of wezterm.lua, once every module has resolved. If a require
 -- below dies, the marker survives and scripts/check-config.sh says the config

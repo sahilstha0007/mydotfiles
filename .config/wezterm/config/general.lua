@@ -32,12 +32,9 @@ return {
    -- tell them apart. Revert if a TUI misbehaves and report it.
    enable_kitty_keyboard = true,
 
-   -- Kitty graphics protocol: lets yazi (prefix+b) render native image/video
-   -- previews inline. Without it yazi falls back to text-only. Enabled for
-   -- wezterm's own renderer only — the real Kitty terminal is a separate app
-   -- and is unaffected by this file. If a TUI ever draws garbage or misplaces
-   -- rows, this is the first flag to turn back off.
-   enable_kitty_graphics = true,
+   -- Inline image previews disabled: the image pipeline was stripped to cut
+   -- config load time. yazi falls back to text-only.
+   enable_kitty_graphics = false,
 
    scrollback_lines = 20000,
 

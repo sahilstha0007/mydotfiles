@@ -95,46 +95,10 @@ fi
 SELF_PATH=$(readlink -f -- "${BASH_SOURCE[0]}")
 REPO_ROOT=$(cd -- "$(dirname -- "$SELF_PATH")/.." && pwd -P)
 
-# The ML4W dotfiles installer (`ml4w-dotfiles-installer --install ...`) calls
-# deploy_symlinks(), which re-creates ~/.config/matugen from ML4W's own repo and
-# only skips blacklisted entries. When our config is absent from that blacklist,
-# the installer swaps in ML4W's config.toml — whose kitty post_hook has no
-# sanitizer, so bare `matugen` writes invalid /* */ comments into
-# colors-matugen.conf. Re-assert our vendored copy on every reload and pin it in
-# the ML4W blacklist so future installer runs skip it entirely.
-reassert_matugen_config() {
-  local src="$REPO_ROOT/.config/matugen"
-  local dst="$HOME/.config/matugen"
-  [ -d "$src" ] || return 0
+# Wallpaper-driven theming is gone: no matugen config re-assert on reload.
+# ~/.config/matugen is still owned by install.sh's doctor check, not by this script.
 
-  if [ ! -L "$dst" ] || [ "$(readlink -f "$dst" 2>/dev/null || true)" != "$(readlink -f "$src")" ]; then
-    if [ "$DRY_RUN" -eq 1 ]; then
-      printf 'DRY-RUN: would re-assert %s -> %s (target left untouched)\n' "$dst" "$src"
-    else
-      rm -f "$dst"   # remove the link only — never the ML4W target directory
-      ln -s "$src" "$dst"
-      echo "  [FIX] $dst re-asserted -> $src"
-    fi
-  fi
-
-  local ml4w_cfg="$HOME/.config/ml4w-dotfiles-installer"
-  [ -d "$ml4w_cfg" ] || return 0
-  local bl
-  for bl in "$ml4w_cfg"/*/blacklist; do
-    [ -f "$bl" ] || continue
-    if ! grep -Fxq '.config/matugen' "$bl" 2>/dev/null; then
-      if [ "$DRY_RUN" -eq 1 ]; then
-        printf 'DRY-RUN: would add .config/matugen to %s\n' "$bl"
-      else
-        printf '%s\n' '.config/matugen' >> "$bl"
-        echo "  [LOCK] .config/matugen -> $bl"
-      fi
-    fi
-  done
-}
-reassert_matugen_config
-
-# 2. Kitty live instances (sanitize matugen output before reload + socket-only RC + SIGUSR1 fallback)
+# 2. Kitty live instances (sanitize the static include before reload + socket-only RC + SIGUSR1 fallback)
 if command -v kitty >/dev/null 2>&1; then
   SANITIZER=$(command -v kitty-colors-sanitize 2>/dev/null || printf '%s' "$REPO_ROOT/bin/kitty-colors-sanitize")
   if [ -x "$SANITIZER" ] && [ -f "$HOME/.config/kitty/colors-matugen.conf" ]; then

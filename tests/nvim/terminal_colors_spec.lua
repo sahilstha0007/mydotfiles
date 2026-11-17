@@ -18,9 +18,9 @@
 --      the whole change was theatre.
 --   4. acc() rejects the tokens the old gate accepted, and keeps the ones
 --      that are genuinely fine.
---   5. MIN_CONTRAST is 4.5 and the same constant appears in the other two
---      consumers, so "keep the three in sync" is enforced, not just written
---      in a comment.
+--   5. The terminal consumers stay on the committed STATIC Apple Glass palette
+--      (bg #1c1c1e, fg #f5f5f7, accent #2dd4bf), while nvim's own contrast gate
+--      still uses MIN_CONTRAST 4.5.
 --
 -- Run: nvim --headless -u tests/minimal_init.lua -c "lua dofile('tests/terminal_colors_spec.lua')" -c "qa!"
 
@@ -479,10 +479,12 @@ do
 end
 
 -- ---------------------------------------------------------------------------
--- CHECK 6: the constant is in sync across all three consumers
+-- CHECK 6: the terminal consumers all use the committed STATIC Apple Glass palette
 -- ---------------------------------------------------------------------------
--- "Keep the three in sync" is a comment in three files. This makes it a test.
--- If someone changes one MIN_CONTRAST and not the others, this goes red.
+-- The wallpaper/matugen derivation pipeline is gone. wezterm now carries a
+-- committed static palette and tmux just copies the committed
+-- colors-apple-glass.conf. These checks go red if either drifts from the
+-- shared Apple Glass hexes; nvim's contrast gate still uses MIN_CONTRAST 4.5.
 do
   local function has_const(path, pattern)
     local fh = io.open(path, 'r')
@@ -492,6 +494,22 @@ do
     local src = fh:read '*a'
     fh:close()
     return src:match(pattern) ~= nil
+  end
+
+  -- A static palette is several hexes at once; require all of them in one file.
+  local function has_all(path, patterns)
+    local fh = io.open(path, 'r')
+    if not fh then
+      return false
+    end
+    local src = fh:read '*a'
+    fh:close()
+    for _, pattern in ipairs(patterns) do
+      if not src:match(pattern) then
+        return false
+      end
+    end
+    return true
   end
 
   local function dotfiles_config_root()
@@ -513,16 +531,20 @@ do
   local cfg_root = dotfiles_config_root()
 
   check(
-    has_const(
-      cfg_root .. '/wezterm/colors/custom.lua',
-      'local MIN_CONTRAST = 4%.5'
-    ),
-    'wezterm colors/custom.lua uses the same MIN_CONTRAST'
+    has_all(cfg_root .. '/wezterm/colors/custom.lua', {
+      "background = '#1c1c1e'",
+      "foreground = '#f5f5f7'",
+      "'#2dd4bf'", -- accent / ANSI blue
+    }),
+    'wezterm colors/custom.lua uses the committed Apple Glass palette'
   )
-  check(
-    has_const(cfg_root .. '/tmux/colors-from-matugen.sh', 'MIN_CONTRAST=4%.5'),
-    'tmux colors-from-matugen.sh uses the same MIN_CONTRAST'
-  )
+  check(has_all(cfg_root .. '/tmux/colors-from-matugen.sh', {
+    'colors%-apple%-glass%.conf', -- copies the committed static source
+  }) and has_all(cfg_root .. '/tmux/colors-apple-glass.conf', {
+    'set %-g @thm_bg "#1c1c1e"',
+    'set %-g @thm_fg "#f5f5f7"',
+    'set %-g @thm_blue "#2dd4bf"',
+  }), 'tmux colors-from-matugen.sh copies the committed Apple Glass palette')
   check(
     has_const(SRC, 'local MIN_CONTRAST = 4%.5'),
     'nvim terminal-colors.lua uses the same MIN_CONTRAST'

@@ -11,13 +11,13 @@ shell_integration = true
 
 [secondary_prompt]
   template = '❯❯ '
-  foreground = '#a6e3a1'
+  foreground = '#7dce8b'
   background = 'transparent'
 
 [transient_prompt]
   template = '❯ '
   background = 'transparent'
-  foreground_templates = ['{{if gt .Code 0}}#ffb4ab{{end}}', '{{if eq .Code 0}}#a6e3a1{{end}}']
+  foreground_templates = ['{{if gt .Code 0}}#ff6b6b{{end}}', '{{if eq .Code 0}}#7dce8b{{end}}']
 
 [[blocks]]
   type = 'prompt'
@@ -26,7 +26,7 @@ shell_integration = true
 
   [[blocks.segments]]
     template = '{{ .Path }}'
-    foreground = '#eac16c'
+    foreground = '#2dd4bf'
     background = 'transparent'
     type = 'path'
     style = 'plain'
@@ -41,7 +41,7 @@ shell_integration = true
 
   [[blocks.segments]]
     template = '{{ .FormattedMs }}'
-    foreground = '#b1cfa8'
+    foreground = '#f2d97a'
     background = 'transparent'
     type = 'executiontime'
     style = 'plain'
@@ -60,7 +60,7 @@ shell_integration = true
     background = 'transparent'
     type = 'text'
     style = 'plain'
-    foreground_templates = ['{{if gt .Code 0}}#ffb4ab{{end}}', '{{if eq .Code 0}}#a6e3a1{{end}}']
+    foreground_templates = ['{{if gt .Code 0}}#ff6b6b{{end}}', '{{if eq .Code 0}}#7dce8b{{end}}']
 
     [blocks.segments.properties]
       cache_duration = 'none'

@@ -1,11 +1,15 @@
--- lazy.nvim is provisioned by install.sh — the only place allowed to do
--- network I/O. Never fetch at runtime; fail fast with an actionable message.
-local lazypath = vim.env.LAZY or (vim.fn.stdpath 'data' .. '/lazy/lazy.nvim')
+-- lazy.nvim and every plugin are vendored in the repo at <config>/vendor.
+-- No network I/O at runtime: point lazy's root at the vendor dir so it treats
+-- all plugins as already installed instead of trying to clone missing ones.
+local vendor = vim.fn.stdpath 'config' .. '/vendor'
+local lazypath = vim.env.LAZY or (vendor .. '/lazy.nvim')
 if not (vim.uv or vim.loop).fs_stat(lazypath) then
   error(
     'lazy.nvim not found at '
       .. lazypath
-      .. '. Run install.sh to provision it, or set $LAZY to a valid lazy.nvim path.'
+      .. '. Expected vendored plugins at '
+      .. vendor
+      .. ' (or set $LAZY to a valid lazy.nvim path).'
   )
 end
 vim.opt.rtp:prepend(lazypath)
@@ -74,6 +78,11 @@ require('lazy').setup({
     { import = 'plugins.util.mini-hipatterns' },
   },
   defaults = {},
+  -- Use the vendored plugin sources directly; nothing is fetched at runtime.
+  root = vendor,
+  -- No :Lazy update in this workflow, so disable the background checker's
+  -- `git ls-remote` fan-out across all plugins (also keeps startup offline).
+  checker = { enabled = false },
   performance = {
     rtp = {
       disabled_plugins = {
@@ -86,9 +95,6 @@ require('lazy').setup({
     },
   },
 }, {
-  -- No :Lazy update in this workflow, so the background checker's `git
-  -- ls-remote` fan-out across 65 plugins is pure startup latency.
-  checker = { enabled = false },
   ui = {
     -- If you are using a Nerd Font: set icons to an empty table which will use the
     -- default lazy.nvim defined Nerd Font icons, otherwise define a unicode icons table

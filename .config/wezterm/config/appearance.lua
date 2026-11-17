@@ -1,5 +1,3 @@
-local gpu_adapters = require('utils.gpu-adapter')
-local backdrops = require('utils.backdrops')
 local colors = require('colors.custom')
 local wezterm = require('wezterm')
 
@@ -20,9 +18,8 @@ return {
    -- else
    --    webgpu_power_preference = 'LowPower'
    -- end
-   webgpu_preferred_adapter = gpu_adapters:pick_best(),
-   -- webgpu_preferred_adapter = gpu_adapters:pick_manual('Dx12', 'IntegratedGpu'),
-   -- webgpu_preferred_adapter = gpu_adapters:pick_manual('Gl', 'Other'),
+   -- GPU adapter is left to wezterm's own selection. The explicit
+   -- enumerate_gpus() probe cost ~55ms at every config load.
    underline_thickness = '1.5pt',
 
    -- cursor
@@ -44,24 +41,9 @@ return {
    pane_select_fg_color = colors.background,
    pane_select_bg_color = colors.ansi[5],
 
-   -- background: pass in `true` if you want wezterm to start with focus mode on (no bg images)
-   background = backdrops:initial_options({ no_img = false }),
-   -- Baseline window alpha. Read from the BackDrops singleton, which loads
-   -- ~/.cache/wezterm-opacity at init (falling back to 1.0 when there is no
-   -- cache yet). It has to come from there, not a literal: this is the ONLY
-   -- thing that applies opacity to the first window — from_cache_or_random()
-   -- runs without a Window and so never calls _apply — so a hardcoded 1.0
-   -- here silently discarded the saved choice and every restart came back
-   -- solid no matter what the user had set with SUPER+y / SUPER+Shift+y.
-   -- 1.0 = solid, lower = fades toward whatever the COMPOSITOR has behind
-   -- the window (Hyprland's background, not wezterm's background.image).
-   -- awww-daemon is the wallpaper backend here (NOT hyprpaper — ml4w sets
-   -- wallpapers through awww, and `awww query` confirms one is set on eDP-1),
-   -- so lowering this genuinely reveals the desktop artwork. Artwork alpha
-   -- inside the window is a separate lever: the frost wash, SUPER+u. tmux
-   -- and nvim have no window-level alpha of their own, so any window-wide
-   -- translucency comes from this setting.
-   window_background_opacity = backdrops.opacity,
+   -- Solid background: no backdrop image, no window alpha. colors.background
+   -- is the default terminal bg and wezterm defaults to 1.0 opacity.
+   -- Edge layers (image, wash, opacity) were stripped to cut config load time.
 
    -- scrollbar (disabled for clean, distraction-free zero-mouse keyboard terminal)
    enable_scroll_bar = false,

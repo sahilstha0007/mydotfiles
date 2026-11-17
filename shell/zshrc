@@ -23,6 +23,9 @@ for _browser in helium-browser brave chromium google-chrome firefox xdg-open; do
 done
 unset _browser
 
+# One-shot deferred plugin/cached-init queues (first-prompt only)
+typeset -ga _zsh_deferred_sources _zsh_deferred_caches
+
 export ZSH="$HOME/.oh-my-zsh"
 export ZSH_DISABLE_COMPFIX="true"
 export DISABLE_AUTO_UPDATE="true"
@@ -83,7 +86,7 @@ if [ -d "$ZSH" ]; then
   # Load core plugins directly
   [ -f "$ZSH/plugins/git/git.plugin.zsh" ]   && source "$ZSH/plugins/git/git.plugin.zsh"
   [ -f "$ZSH/plugins/sudo/sudo.plugin.zsh" ] && source "$ZSH/plugins/sudo/sudo.plugin.zsh"
-  [ -f "$ZSH_CUSTOM/plugins/fzf-tab/fzf-tab.plugin.zsh" ] && source "$ZSH_CUSTOM/plugins/fzf-tab/fzf-tab.plugin.zsh"
+  [ -f "$ZSH_CUSTOM/plugins/fzf-tab/fzf-tab.plugin.zsh" ] && _zsh_deferred_sources+=("$ZSH_CUSTOM/plugins/fzf-tab/fzf-tab.plugin.zsh")
 
   # fzf-tab styling & contextual previews (bat for files, eza for directories, ps for kill)
   zstyle ':completion:*:git-checkout:*' sort false
@@ -97,8 +100,8 @@ if [ -d "$ZSH" ]; then
   zstyle ':fzf-tab:complete:kill:argument-rest' fzf-flags '--preview-window=down:3:wrap'
   zstyle ':fzf-tab:*' continuous-trigger '/'
 
-  [ -f "$ZSH_CUSTOM/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh" ] && source "$ZSH_CUSTOM/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh"
-  [ -f "$ZSH_CUSTOM/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh" ] && source "$ZSH_CUSTOM/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
+  [ -f "$ZSH_CUSTOM/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh" ] && _zsh_deferred_sources+=("$ZSH_CUSTOM/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh")
+  [ -f "$ZSH_CUSTOM/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh" ] && _zsh_deferred_sources+=("$ZSH_CUSTOM/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh")
 fi
 
 # Multi-distro portable FZF keybindings & completion
@@ -132,14 +135,20 @@ setopt appendhistory hist_ignore_all_dups hist_reduce_blanks sharehistory
 # 4. Modern Tools (Cached Inits for Zero Startup Latency, Binary-Mtime Checked)
 # ---------------------------------------------------------------------------
 _zsh_cached_init() {
-  local bin="$commands[$1]" cache="$2" dep="$3"
+  local bin cache dep defer=0
+  [[ "$1" == "--defer" ]] && { defer=1; shift; }
+  bin="$commands[$1]" cache="$2" dep="$3"
   shift 3
   [[ -n "$bin" ]] || return 0
   if [[ ! -s "$cache" || ! "$bin" -ot "$cache" || ( -n "$dep" && -e "$dep" && ! "$dep" -ot "$cache" ) ]]; then
     zmodload -F zsh/files b:zf_mkdir 2>/dev/null && zf_mkdir -p "${cache:h}" 2>/dev/null || mkdir -p "${cache:h}"
     "$@" >| "$cache" 2>/dev/null || { eval "$("$@")"; return; }
   fi
-  source "$cache"
+  if (( defer )); then
+    _zsh_deferred_caches+=("$cache")
+  else
+    source "$cache"
+  fi
 }
 
 # zoxide: smarter cd -> use `z <partial-name>`
@@ -159,7 +168,7 @@ if (( $+commands[mise] )); then
 fi
 
 # atuin: synced, searchable shell history — takes over Ctrl+R and Up-arrow bindings
-_zsh_cached_init atuin "$HOME/.cache/zsh-cache/atuin.zsh" "" atuin init zsh
+_zsh_cached_init --defer atuin "$HOME/.cache/zsh-cache/atuin.zsh" "" atuin init zsh
 
 # fzf: fd-backed sources + per-mode previews (Ctrl-T files -> bat, Alt-C dirs -> eza)
 export FZF_DEFAULT_COMMAND="fd --type f --hidden --follow --exclude .git --exclude node_modules"
@@ -301,6 +310,32 @@ else
 fi
 
 unset -f _zsh_cached_init _omp_init_cached
+
+# First-prompt one-shot init for interactive-only plugins. OMP prompt, zoxide
+# (defines z) and direnv (mutates prompt env) stay synchronous above. In shells
+# with no prompt (`zsh -i -c`) precmd never fires, so a one-shot USR1 timer is
+# the fallback; the guard makes whichever fires first a no-op for the second.
+_zsh_deferred_init() {
+  [[ -z "${_zsh_deferred_done-}" ]] || return 0
+  _zsh_deferred_done=1
+  add-zsh-hook -d precmd _zsh_deferred_init
+  local f
+  for f in "${_zsh_deferred_caches[@]}"; do
+    [[ -r "$f" ]] && source "$f"
+  done
+  for f in "${_zsh_deferred_sources[@]}"; do
+    [[ -r "$f" ]] && source "$f"
+  done
+  # atuin >=18 dropped the legacy `_atuin_widget` name; keep it for old bindings
+  # (and for the startup gate that probes it).
+  (( $+functions[_atuin_search] )) && _atuin_widget() { _atuin_search "$@" }
+  unset _zsh_deferred_caches _zsh_deferred_sources _zsh_deferred_pid
+}
+autoload -Uz add-zsh-hook
+add-zsh-hook precmd _zsh_deferred_init
+_zsh_deferred_pid=$$
+trap '_zsh_deferred_init' USR1
+{ "${commands[sleep]:-/usr/bin/sleep}" 0.05; kill -USR1 "$_zsh_deferred_pid" 2>/dev/null } </dev/null >/dev/null 2>&1 &!
 
 # Syntax-highlighted man pages via bat
 if (( $+commands[bat] )); then

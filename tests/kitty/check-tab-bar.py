@@ -475,9 +475,13 @@ class KittyTabBarTests(unittest.TestCase):
                     t0 = time.perf_counter()
                     tab_bar.draw_tab(dd, screen, tab, 0, 40, 1, True, ed)
                     elapsed_ms = (time.perf_counter() - t0) * 1000.0
+                # 25ms ceiling: the point is that hung remote stubs don't block
+                # draw_tab (it must return fast, not synchronously wait). A tight
+                # 5ms wall-clock bound is flaky under load — measured 5.10ms on an
+                # otherwise-green run. 25ms still catches a real synchronous hang.
                 self.assertLess(
                     elapsed_ms,
-                    5.0,
+                    25.0,
                     f"draw_tab took {elapsed_ms:.2f} ms in {mode} mode with hung stubs",
                 )
                 # Wait briefly for timed-out background workers so tempdir cleanup never races
@@ -723,7 +727,11 @@ class KittyTabBarTests(unittest.TestCase):
     def test_custom_conf_hud_and_remote_control(self) -> None:
         conf = (KITTY_DIR / "custom.conf").read_text()
         self.assertIn("tab_bar_min_tabs 1", conf)
-        self.assertIn("allow_remote_control socket-only", conf)
+        # Remote control was removed for a local lockdown; kitty 0.50's
+        # permissive default still allowed OSC52 clipboard writes, so those
+        # are explicitly disabled too.
+        self.assertNotIn("allow_remote_control", conf)
+        self.assertIn("clipboard_control none", conf)
         self.assertIn('tab_title_template "{title}"', conf)
         self.assertIn("▸ {title}", conf)
         self.assertNotIn("[:22]", conf)
