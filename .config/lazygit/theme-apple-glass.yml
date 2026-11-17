@@ -1,0 +1,19 @@
+# Apple Dark Glass theme overlay for lazygit (used when TERMINAL_STACK_PROFILE=kitty)
+git:
+  diffRenderers:
+    - colorArg: always
+      command: delta --dark --paging=never --syntax-theme=ansi
+gui:
+  border: rounded
+  theme:
+    activeBorderColor:
+      - '#0a84ff'
+      - bold
+    inactiveBorderColor:
+      - '#6e6e73'
+    selectedLineBgColor:
+      - '#2c2c2e'
+    selectedRangeBgColor:
+      - '#2c2c2e'
+    optionsTextColor:
+      - '#0a84ff'

@@ -775,70 +775,11 @@ end
 local host_terminal
 
 -- Re-run theme setup + colorscheme with the current profile and palette.
--- Under Kitty: uses Kanagawa (wave) — matches the Kitty/tmux/prompt Kanagawa
---   coding profile. Falls back to Nightfox, then Catppuccin.
--- Under WezTerm: uses Catppuccin with live wallpaper overrides.
+-- Both profiles now use the terminal-adopting Catppuccin path: the terminal's
+-- ANSI colors are read from Kitty's include chain (themes/apple-glass.conf) or
+-- WezTerm's palette file and mapped onto Catppuccin's semantic slots, so nvim
+-- follows whatever the coding-profile theme is — no per-theme hardcoding.
 local function apply()
-  local host = host_terminal()
-  if host == 'kitty' then
-    local ok, err = pcall(function()
-      local ok_k, kanagawa = pcall(require, 'kanagawa')
-      if ok_k and kanagawa then
-        -- Transparent floats + Kanagawa-blue borders, mirroring the old
-        -- Nightfox group overrides. crystalBlue = #7E9CD8 (the wave blue).
-        kanagawa.setup {
-          transparent = true,
-          terminalColors = true,
-          dimInactive = false,
-          theme = 'wave',
-          overrides = function(colors)
-            local blue = colors.palette.crystalBlue
-            return {
-              Normal = { bg = 'NONE' },
-              NormalNC = { bg = 'NONE' },
-              NormalFloat = { bg = 'NONE' },
-              FloatBorder = { fg = blue, bg = 'NONE' },
-              FloatTitle = { fg = blue, bg = 'NONE', bold = true },
-              LazyGitFloat = { bg = 'NONE' },
-              LazyGitBorder = { fg = blue, bg = 'NONE' },
-              SnacksNormal = { bg = 'NONE' },
-              SnacksNormalNC = { bg = 'NONE' },
-              SnacksBackdrop = { bg = 'NONE' },
-              SnacksPicker = { bg = 'NONE' },
-              SnacksPickerBorder = { fg = blue, bg = 'NONE' },
-              Pmenu = { bg = 'NONE' },
-              PmenuSel = { bg = 'NONE', fg = blue, bold = true, underline = true },
-              BlinkCmpMenu = { bg = 'NONE' },
-              BlinkCmpMenuBorder = { fg = blue, bg = 'NONE' },
-              BlinkCmpDoc = { bg = 'NONE' },
-              BlinkCmpDocBorder = { fg = blue, bg = 'NONE' },
-            }
-          end,
-        }
-        vim.cmd.colorscheme 'kanagawa'
-      else
-        local ok_nf, nightfox = pcall(require, 'nightfox')
-        if ok_nf and nightfox then
-          nightfox.setup {
-            options = { transparent = true, terminal_colors = true, dim_inactive = false },
-          }
-          vim.cmd.colorscheme 'nightfox'
-        else
-          local opts = catppuccin_opts()
-          require('catppuccin').setup(opts)
-          vim.cmd.colorscheme 'catppuccin'
-        end
-      end
-    end)
-    if not ok then
-      vim.notify(
-        'terminal-colors (kitty): ' .. tostring(err),
-        vim.log.levels.ERROR
-      )
-    end
-    return
-  end
-
   local opts = catppuccin_opts()
   local ok, err = pcall(function()
     require('catppuccin').setup(opts)
@@ -847,6 +788,7 @@ local function apply()
   if not ok then
     vim.notify('terminal-colors: ' .. tostring(err), vim.log.levels.ERROR)
   end
+  return
 end
 
 local apply_timer
@@ -1402,12 +1344,6 @@ return {
   {
     'EdenEast/nightfox.nvim',
     name = 'nightfox',
-    lazy = false,
-    priority = 1000,
-  },
-  {
-    'rebelot/kanagawa.nvim',
-    name = 'kanagawa',
     lazy = false,
     priority = 1000,
   },

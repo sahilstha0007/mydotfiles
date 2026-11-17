@@ -1,0 +1,12 @@
+# Apple Dark Glass theme for lazydocker (used when TERMINAL_STACK_PROFILE=kitty)
+gui:
+  border: rounded
+  theme:
+    activeBorderColor:
+      - '#0a84ff'
+      - bold
+    inactiveBorderColor:
+      - '#6e6e73'
+    selectedLineBgColor:
+      - reverse
+reporting: local
