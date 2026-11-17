@@ -44,6 +44,10 @@ expect() {
 
 # --- fixture HOME -------------------------------------------------------------
 HOME="$TMP"; export HOME
+# Isolate the runtime dir: real nvim sockets in /run/user/1000 would make the
+# cascade spawn background reassert jobs that inherit the flock fd, hanging
+# this test on a later run. The fixture must never see ambient sockets.
+XDG_RUNTIME_DIR="$TMP/runtime"; export XDG_RUNTIME_DIR; mkdir -p "$XDG_RUNTIME_DIR"
 H="$TMP/.config"
 CACHE="$TMP/.cache"
 PAL="$H/wezterm/colors/matugen.lua"

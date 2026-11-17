@@ -221,6 +221,9 @@ touch "$HOME/.config/wezterm/wezterm.lua"
 # without stalling this script.
 for sock in "${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"/nvim.*.0; do
    [ -S "$sock" ] || continue
-   (nvim --server "$sock" --remote-send "<Cmd>lua require('utils.terminal-colors').reassert()<CR>" >/dev/null 2>&1 || true) &
+   # Close the flock fd (9) in the background child: it inherits fd 9 from
+   # `exec 9>"$lock"`, and a slow/dead nvim would otherwise keep the lock held
+   # after this script exits, blocking the next wallpaper sync indefinitely.
+   (exec 9>&-; nvim --server "$sock" --remote-send "<Cmd>lua require('utils.terminal-colors').reassert()<CR>" >/dev/null 2>&1 || true) &
 done
 exit 0

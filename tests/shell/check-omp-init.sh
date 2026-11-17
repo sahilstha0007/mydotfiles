@@ -17,6 +17,7 @@ no()  { printf '  FAIL  %s\n' "$1"; fail=$((fail + 1)); }
 printf '\nOMP init correctness\n'
 
 # (1/4) every config referenced by _omp_init_cached in zshrc must exist
+# shellcheck disable=SC2016  # regex literal, $HOME is matched not expanded
 refs="$(grep -oE '_omp_init_cached "\$HOME/\.config/ohmyposh/[^"]+"' "$ZSHRC" \
   | sed -E 's|.*ohmyposh/||; s|"$||' | sort -u)"
 [ -n "$refs" ] || no "no _omp_init_cached config references found in zshrc"
@@ -85,7 +86,8 @@ if bad:
     sys.exit(1)
 print(f'  ok    no foreground==background in {len(files)} config file(s)')
 PY
-[ $? -eq 0 ] && pass=$((pass + 1)) || fail=$((fail + 1))
+py_status=$?
+if [ "$py_status" -eq 0 ]; then pass=$((pass + 1)); else fail=$((fail + 1)); fi
 
 printf 'RESULT: %d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]
