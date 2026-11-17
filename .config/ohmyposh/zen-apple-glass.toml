@@ -3,6 +3,7 @@
 console_title_template = '{{ .Shell }} in {{ .Folder }}'
 version = 3
 final_space = true
+shell_integration = true
 
 [secondary_prompt]
   template = '❯❯ '
