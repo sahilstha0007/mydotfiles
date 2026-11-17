@@ -73,9 +73,11 @@ PY
 fi
 
 # 4. the static kitty palette include exists (v12: matugen/sanitizer removed)
-[ -s "$HOME/.config/kitty/themes/apple-glass.conf" ] \
-  && ok "kitty static apple-glass palette present" \
-  || no "kitty themes/apple-glass.conf missing — static include dead"
+if [ -s "$HOME/.config/kitty/themes/apple-glass.conf" ]; then
+  ok "kitty static apple-glass palette present"
+else
+  no "kitty themes/apple-glass.conf missing — static include dead"
+fi
 
 printf '\nresult: %s passed, %s failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ] || exit 1
