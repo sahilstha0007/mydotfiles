@@ -4,7 +4,7 @@
 States verified:
   1. empty_tmp             -- fresh empty TMPDIR, standard XDG_RUNTIME_DIR, empty .zshrc.local
   2. populated_tmp         -- TMPDIR pre-populated with probe_repo and leak decoys (assert zero interference/leaks)
-  3. fresh_matugen         -- sandbox matugen + cascade generators (incl. /* */ kitty comment + sanitizer)
+  3. fresh_matugen         -- sandbox static-palette regeneration (wezterm palette + kept reassert scripts)
   4. missing_zshrc_local   -- $HOME/.zshrc.local absent
   5. unset_xdg_runtime_dir -- XDG_RUNTIME_DIR unset
 
@@ -167,30 +167,12 @@ def prepare_state(state: str, st_repo: pathlib.Path, st_home: pathlib.Path, st_d
     elif state == "fresh_matugen":
         wall = st_repo / "tests/wezterm/fixtures/wall-a.png"
         wez_tpl = st_repo / "tests/wezterm/fixtures/wezterm-colors.lua"
-        kit_tpl = st_dir / "kitty-colors.tpl"
-        kit_tpl.write_text(
-            "cursor {{colors.on_surface.default.hex}}\n"
-            "cursor_text_color {{colors.on_surface_variant.default.hex}}\n"
-            "foreground {{colors.on_surface.default.hex}}\n"
-            "background {{colors.surface.default.hex}}\n"
-            "selection_foreground {{colors.on_secondary.default.hex}}\n"
-            "selection_background {{colors.secondary_fixed_dim.default.hex}}\n"
-            "url_color {{colors.primary.default.hex}}\n"
-            "# blue\n"
-            "/* color4 #8f8aac */\n"
-            "color4 {{colors.primary.default.hex}}\n"
-            "color5 {{colors.error.default.hex}}\n",
-            encoding="utf-8",
-        )
         m_toml = st_dir / "matugen.toml"
         m_toml.write_text(
             "[config]\n"
             "[templates.wezterm]\n"
             f"input_path = '{wez_tpl}'\n"
-            f"output_path = '{st_home / '.config/wezterm/colors/matugen.lua'}'\n"
-            "[templates.kitty]\n"
-            f"input_path = '{kit_tpl}'\n"
-            f"output_path = '{st_home / '.config/kitty/colors-matugen.conf'}'\n",
+            f"output_path = '{st_home / '.config/wezterm/colors/matugen.lua'}'\n",
             encoding="utf-8",
         )
         subprocess.run(
@@ -203,19 +185,6 @@ def prepare_state(state: str, st_repo: pathlib.Path, st_home: pathlib.Path, st_d
         subprocess.run(["bash", str(st_home / ".config/tmux/colors-from-matugen.sh")], env=env, check=True, capture_output=True)
         subprocess.run(["bash", str(st_home / ".config/ohmyposh/omp-palette.sh")], env=env, check=True, capture_output=True)
         subprocess.run(["bash", str(st_home / ".config/wezterm/utils/zsh-highlight-sync.sh")], env=env, check=True, capture_output=True)
-        subprocess.run(
-            [
-                str(st_repo / "bin/kitty-colors-sanitize"),
-                "--sync-in",
-                "--in",
-                str(st_home / ".config/kitty/colors-matugen.conf"),
-                "--out",
-                str(st_home / ".config/kitty/colors-matugen.validated.conf"),
-            ],
-            env=env,
-            check=True,
-            capture_output=True,
-        )
     elif state == "missing_zshrc_local":
         (st_home / ".zshrc.local").unlink(missing_ok=True)
     elif state == "unset_xdg_runtime_dir":
@@ -263,7 +232,7 @@ def run_state_checks(state: str, st_repo: pathlib.Path, st_home: pathlib.Path, s
     ]
     heavy_specs = [
         ("nvim_keymaps", ["make", "-C", str(st_repo / ".config/nvim"), "keymaps"], st_repo, None),
-        ("kitty_sanitize", ["bash", str(st_repo / "tests/kitty/check-colors-sanitize.sh")], st_repo / ".config/kitty", None),
+        ("kitty_palette", ["bash", str(st_repo / "tests/kitty/check-colors-sanitize.sh")], st_repo / ".config/kitty", None),
         ("kitty_parse", kitty_parse_cmd, st_repo / ".config/kitty", lambda p, ms: ((not p.stderr.strip()), p.stderr.strip() or f"{ms:.0f}ms")),
         ("wezterm_theme", ["luajit", str(st_repo / "tests/wezterm/check_theme_source.lua"), str(st_repo / ".config/wezterm")], st_repo / ".config/wezterm", None),
         ("tmux_reload", ["bash", str(st_repo / "tests/tmux/check-reload-idempotency.sh")], st_repo, None),

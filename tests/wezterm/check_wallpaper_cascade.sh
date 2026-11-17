@@ -1,38 +1,20 @@
 #!/bin/sh
 # Validates the STATIC terminal-stack palette design.
 #
-# utils/sync-wallpaper.sh used to regenerate a matugen palette from the
-# wallpaper and fan out to tmux, oh-my-posh and a wezterm reload. That cascade
-# is removed: the stack now uses committed static Apple Dark Glass palettes,
-# and the script is kept only as a deterministic no-op so existing callers stay
-# valid. This test proves:
-#   1. sync-wallpaper.sh exits 0 with no args or with a wallpaper path, every
-#      run, and does not fork a generator, write a file or print anything;
-#   2. its source is a bare `exit 0` with no derivation logic left;
-#   3. the committed static palettes are present and agree across wezterm,
-#      kitty, tmux and oh-my-posh (including a real omp generator dry run).
-#
-# Everything runs against a throwaway HOME with generator CLI stubs on PATH,
-# so a regression that reintroduces the cascade is caught without touching the
-# live session.
-#
-# Usage: bash tests/wezterm/check_wallpaper_cascade.sh [path/to/sync-wallpaper.sh]
-# The script under test is overridable so a forking copy can be run through the
-# same assertions to prove the test actually catches the regression.
+# The wallpaper-driven palette cascade is gone: the stack uses committed static
+# Apple Dark Glass palettes. This test proves the committed palettes are
+# present and agree across wezterm, kitty, tmux and oh-my-posh, including a real
+# oh-my-posh generator dry run into a throwaway HOME.
 set -u
 
 TESTS_WEZTERM_DIR=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
 REPO_ROOT=$(CDPATH='' cd -- "$TESTS_WEZTERM_DIR/../.." && pwd)
 SRC_DIR=$(CDPATH='' cd -- "$TESTS_WEZTERM_DIR/../../.config/wezterm" && pwd)
-SYNC=${1:-$SRC_DIR/utils/sync-wallpaper.sh}
 
 pass=0
 fail=0
 ok()  { printf '  ok    %s\n' "$1"; pass=$((pass + 1)); }
 no()  { printf '  FAIL  %s\n' "$1"; fail=$((fail + 1)); }
-# Invoked indirectly by expect "$@":
-# shellcheck disable=SC2329
-has() { case "$2" in *"$1"*) return 0;; *) return 1;; esac; }
 expect() {
   _ok_msg="$1" _fail_msg="$2"; shift 2
   if "$@"; then ok "$_ok_msg"; else no "$_fail_msg"; fi
@@ -44,76 +26,13 @@ in_both() { grep -qF "$1" "$2" 2>/dev/null && grep -qF "$1" "$3" 2>/dev/null; }
 TMP=$(mktemp -d)
 trap 'chmod -R u+w "$TMP" 2>/dev/null; rm -rf "$TMP"' EXIT
 
-# --- fixture HOME + fork tripwires -------------------------------------------
+# --- fixture HOME (generator dry run must not touch the live session) --------
 HOME="$TMP/home"; export HOME
 XDG_RUNTIME_DIR="$TMP/runtime"; export XDG_RUNTIME_DIR
-mkdir -p "$HOME" "$XDG_RUNTIME_DIR" "$TMP/bin"
+mkdir -p "$HOME" "$XDG_RUNTIME_DIR"
 
-# Any generator that a regressed sync-wallpaper.sh might call logs itself here.
-for cmd in matugen tmux herdr wezterm kitty omp-palette.sh \
-           colors-from-matugen.sh obsidian-palette.sh; do
-   printf '#!/bin/sh\nprintf "%%s\\n" "%s" >> "%s/fork.log"\nexit 0\n' \
-      "$cmd" "$TMP" > "$TMP/bin/$cmd"
-   chmod +x "$TMP/bin/$cmd"
-done
-PATH="$TMP/bin:$PATH"; export PATH
-
-# A snapshot of the whole fixture HOME: any created or modified file shows up.
-snapshot() {
-   (cd "$HOME" && {
-      find . -type d | sort
-      find . -type f -exec cksum {} + | sort
-   })
-}
-
-run_sync() {
-   : > "$TMP/fork.log"
-   : > "$TMP/stdout"
-   : > "$TMP/stderr"
-   sh "$SYNC" "$@" > "$TMP/stdout" 2> "$TMP/stderr"
-   RC=$?
-   FORKED=$(tr '\n' ' ' < "$TMP/fork.log" | sed 's/ *$//')
-}
-
-IMG_A=$TESTS_WEZTERM_DIR/fixtures/wall-a.png
-IMG_B=$TESTS_WEZTERM_DIR/fixtures/wall-b.png
-
-# --- 1. deterministic no-op behaviour ---------------------------------------
-printf '\n1. sync-wallpaper.sh exits 0 and does nothing, every run\n'
-before=$(snapshot)
-
-run_sync
-expect "exit 0 with no args"                 "non-zero exit with no args: $RC" [ "$RC" -eq 0 ]
-expect "silent on stdout"                    "wrote to stdout: $(cat "$TMP/stdout")" [ ! -s "$TMP/stdout" ]
-expect "silent on stderr"                    "wrote to stderr: $(cat "$TMP/stderr")" [ ! -s "$TMP/stderr" ]
-expect "no generator invoked"                "forked something: $FORKED" [ -z "$FORKED" ]
-expect "wrote nothing to HOME"               "fixture HOME changed" [ "$(snapshot)" = "$before" ]
-
-run_sync "$IMG_A"
-expect "exit 0 with a wallpaper path"        "non-zero exit with a wallpaper: $RC" [ "$RC" -eq 0 ]
-expect "still no generator invoked"          "forked something: $FORKED" [ -z "$FORKED" ]
-expect "no palette file written"             "palette reappeared" [ ! -e "$HOME/.config/wezterm/colors/matugen.lua" ]
-expect "no .synced marker written"           "synced marker reappeared" [ ! -e "$HOME/.cache/wezterm-wallpaper.synced" ]
-
-run_sync "$IMG_B"
-expect "exit 0 with a second wallpaper"      "non-zero exit on 2nd wallpaper: $RC" [ "$RC" -eq 0 ]
-expect "2nd wallpaper forks nothing"         "2nd wallpaper forked: $FORKED" [ -z "$FORKED" ]
-expect "HOME unchanged across different wallpapers" "HOME changed on 2nd wallpaper" \
-   [ "$(snapshot)" = "$before" ]
-
-run_sync "$IMG_A"
-expect "exit 0 on repeat (deterministic)"    "repeat run failed: $RC" [ "$RC" -eq 0 ]
-expect "repeat forks nothing"                "repeat forked: $FORKED" [ -z "$FORKED" ]
-
-# --- 2. source is a bare no-op ------------------------------------------------
-printf '\n2. no derivation logic left in sync-wallpaper.sh\n'
-body=$(grep -v '^#' "$SYNC" | tr -d '[:space:]')
-expect "body is just 'exit 0'"               "unexpected code: $body" [ "$body" = 'exit0' ]
-expect "no cascade tokens in code"           "derivation logic is back in code" \
-   [ -z "$(grep -v '^#' "$SYNC" | grep -E 'matugen|tmux|herdr')" ]
-
-# --- 3. committed static palettes are present and consistent -----------------
-printf '\n3. static palettes agree across wezterm / kitty / tmux / omp\n'
+# --- 1. committed static palettes are present and consistent -----------------
+printf '\n1. static palettes agree across wezterm / kitty / tmux / omp\n'
 CUSTOM=$SRC_DIR/colors/custom.lua
 MATUGEN=$SRC_DIR/colors/matugen.lua
 KITTY=$REPO_ROOT/.config/kitty/themes/apple-glass.conf
@@ -180,5 +99,5 @@ expect "omp output has no leftover tokens" "omp left substitution tokens behind"
 # --- result -------------------------------------------------------------------
 printf '\n%s\n' "result: $pass passed, $fail failed"
 [ "$fail" -eq 0 ] || exit 1
-printf 'PASS  static palettes consistent; sync-wallpaper is a no-op\n\n'
+printf 'PASS  static palettes consistent across wezterm / kitty / tmux / omp\n\n'
 exit 0

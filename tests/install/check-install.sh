@@ -23,8 +23,8 @@ fi
 echo "  PASS  install.sh run 2 is completely idempotent"
 
 # Verify F1 ignored-but-needed defaults were provisioned on fresh clone
-if [ ! -f "$SB_REPO/.config/kitty/colors-matugen.conf" ] || [ ! -f "$SB_REPO/.config/btop/themes/matugen.theme" ]; then
-  echo "FAIL F1: install.sh did not initialize colors-matugen.conf / matugen.theme" >&2
+if [ ! -f "$SB_REPO/.config/btop/themes/matugen.theme" ]; then
+  echo "FAIL F1: install.sh did not initialize matugen.theme" >&2
   exit 1
 fi
 

@@ -92,20 +92,11 @@ else
   echo "  [SKIP] no active tmux server under current TMUX_TMPDIR"
 fi
 
-SELF_PATH=$(readlink -f -- "${BASH_SOURCE[0]}")
-REPO_ROOT=$(cd -- "$(dirname -- "$SELF_PATH")/.." && pwd -P)
-
 # Wallpaper-driven theming is gone: no matugen config re-assert on reload.
 # ~/.config/matugen is still owned by install.sh's doctor check, not by this script.
 
-# 2. Kitty live instances (sanitize the static include before reload + socket-only RC + SIGUSR1 fallback)
+# 2. Kitty live instances (static palette; no sanitizer/matugen chain in v12)
 if command -v kitty >/dev/null 2>&1; then
-  SANITIZER=$(command -v kitty-colors-sanitize 2>/dev/null || printf '%s' "$REPO_ROOT/bin/kitty-colors-sanitize")
-  if [ -x "$SANITIZER" ] && [ -f "$HOME/.config/kitty/colors-matugen.conf" ]; then
-    run_or_echo "$SANITIZER" --sync-in \
-      --in "$HOME/.config/kitty/colors-matugen.conf" \
-      --out "$HOME/.config/kitty/colors-matugen.validated.conf" >/dev/null || true
-  fi
   kitty_reloaded=0
   kitty_reloaded_pids=()
   if [ -r /proc/net/unix ]; then

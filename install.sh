@@ -36,7 +36,7 @@ run_doctor() {
   echo "==> Running dotfiles symlink and permission doctor..."
 
   # 1. Verify every repo-managed symlink target exists and resolves into $repo
-  for name in nvim tmux wezterm kitty ohmyposh bat yazi lazygit lazydocker btop fastfetch atuin matugen; do
+  for name in nvim tmux wezterm kitty ohmyposh bat yazi lazygit lazydocker btop fastfetch atuin; do
     local src="$repo/.config/$name" dst="$HOME/.config/$name"
     [ -d "$src" ] || continue
     if [ ! -L "$dst" ] || [ ! -e "$dst" ] || [ "$(readlink -f "$dst" 2>/dev/null || true)" != "$(readlink -f "$src")" ]; then
@@ -179,7 +179,7 @@ echo "==> Deploying portable dotfiles from $repo..."
 
 # 1. Standard config directories (~/.config/<name>)
 mkdir -p "$HOME/.config"
-for name in nvim tmux wezterm kitty ohmyposh bat yazi lazygit lazydocker btop fastfetch atuin matugen; do
+for name in nvim tmux wezterm kitty ohmyposh bat yazi lazygit lazydocker btop fastfetch atuin; do
   src="$repo/.config/$name"
   dst="$HOME/.config/$name"
 
@@ -195,11 +195,6 @@ for name in nvim tmux wezterm kitty ohmyposh bat yazi lazygit lazydocker btop fa
 
   if [ -L "$dst" ]; then
     # Already a symlink pointing elsewhere or broken — update cleanly.
-    # matugen used to point into the external ML4W repo; rm -f removes only
-    # the link, never the target's data.
-    if [ "$name" = "matugen" ]; then
-      echo "  [INFO]  replacing existing matugen symlink -> $(readlink "$dst") (target left untouched)"
-    fi
     rm -f "$dst"
   elif [ -e "$dst" ]; then
     mkdir -p "$backup"
@@ -316,20 +311,6 @@ if [ -d "$bin_src" ]; then
 fi
 
 # 5. Ensure gitignored generated theme includes exist on a fresh clone
-if [ ! -f "$repo/.config/kitty/colors-matugen.conf" ] && [ -f "$repo/.config/kitty/themes/nightfox.conf" ]; then
-  cp "$repo/.config/kitty/themes/nightfox.conf" "$repo/.config/kitty/colors-matugen.conf"
-  echo "  [INIT]   $repo/.config/kitty/colors-matugen.conf (from nightfox default)"
-fi
-if [ -x "$repo/bin/kitty-colors-sanitize" ] && [ -f "$repo/.config/kitty/colors-matugen.conf" ] && command -v kitty >/dev/null 2>&1; then
-  if [ ! -s "$repo/.config/kitty/colors-matugen.validated.conf" ] || \
-     [ "$repo/.config/kitty/colors-matugen.conf" -nt "$repo/.config/kitty/colors-matugen.validated.conf" ] || \
-     ! "$repo/bin/kitty-colors-sanitize" --check --in "$repo/.config/kitty/colors-matugen.validated.conf" >/dev/null 2>&1; then
-    "$repo/bin/kitty-colors-sanitize" --sync-in \
-      --in "$repo/.config/kitty/colors-matugen.conf" \
-      --out "$repo/.config/kitty/colors-matugen.validated.conf" >/dev/null
-    echo "  [INIT]   $repo/.config/kitty/colors-matugen.validated.conf (sanitized & validated)"
-  fi
-fi
 if [ ! -f "$repo/.config/btop/themes/matugen.theme" ] && [ -f "$repo/.config/btop/themes/nightfox.theme" ]; then
   cp "$repo/.config/btop/themes/nightfox.theme" "$repo/.config/btop/themes/matugen.theme"
   echo "  [INIT]   $repo/.config/btop/themes/matugen.theme (from nightfox default)"

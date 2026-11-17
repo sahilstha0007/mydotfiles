@@ -19,7 +19,7 @@
 # conditional in pane-active-border-style to survive as a live format, and a bare
 # `set -g` on a colour option containing a format is rejected outright. But it
 # does mean the palette file alone is not enough: tmux.conf must be re-sourced
-# too, which is what sync-wallpaper.sh does. This test asserts that end to end.
+# too. This test asserts that end to end.
 # (Verified on tmux 3.7c: with -gF, a palette-only source leaves the option at
 # the old hex; with plain -g the option text is unchanged and re-expands live.)
 #
@@ -138,7 +138,7 @@ if [[ $(tmux -L "$sock" show-options -gv popup-style) == *"#ff0000"* ]]; then
   echo "      the -gF premise this test rests on has changed. tmux $(tmux -V | awk '{print $2}')."
 fi
 
-# The reload under test — the tmux-side half of what sync-wallpaper.sh does.
+# The reload under test — the tmux-side palette propagation.
 # (The wezterm half is another layer's job and is not exercised here.)
 tmux -L "$sock" source-file "$work/tmux/tmux.conf" 2>/dev/null
 sleep 2

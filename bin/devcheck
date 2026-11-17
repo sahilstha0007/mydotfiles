@@ -148,8 +148,6 @@ EXPECTED_GATES=(
   "kitty: config parse"
   "kitty: full profile"
   "kitty: collisions"
-  "kitty: sanitize"
-  "kitty: matugen hook"
   "kitty: tab_bar specs"
   "zsh: syntax"
   "zsh: startup <= 120ms"
@@ -313,10 +311,6 @@ if [ -f "$KITTY_CUSTOM" ] && require_cmd kitty && require_cmd python3; then
 import pathlib, subprocess, sys
 kitty_dir = pathlib.Path(".")
 targets = [kitty_dir / "custom.conf", kitty_dir / "themes" / "nightfox.conf"]
-for extra in ("colors-matugen.validated.conf", "colors-matugen.conf"):
-    p = kitty_dir / extra
-    if p.is_file():
-        targets.append(p)
 script = (
     "import sys; from kitty.config import load_config; "
     "bad=[]; load_config(sys.argv[1], accumulate_bad_lines=bad); "
@@ -368,7 +362,7 @@ if tmux_root.returncode == 0:
     steals = sorted(tmux_m & kitty_alt)
     if steals:
         sys.exit("Kitty bare alt+ steals tmux root M-: " + ", ".join(steals))
-for target in ("kitty.conf", "themes/nightfox.conf", "colors-matugen.conf", "colors-matugen.validated.conf"):
+for target in ("kitty.conf", "themes/nightfox.conf"):
     import pathlib
     if not pathlib.Path(target).is_file():
         continue
@@ -386,25 +380,6 @@ for target in ("kitty.conf", "themes/nightfox.conf", "colors-matugen.conf", "col
 else
   fail "kitty: full profile" "missing kitty.conf, kitty, or python3"
   fail "kitty: collisions" "missing kitty.conf, kitty, or python3"
-fi
-
-KITTY_SAN_TEST="$REPO_ROOT/tests/kitty/check-colors-sanitize.sh"
-if [ -x "$KITTY_SAN_TEST" ] && require_cmd kitty && require_cmd python3; then
-  run "kitty: sanitize" "$KITTY_DIR" bash "$KITTY_SAN_TEST"
-else
-  fail "kitty: sanitize" "missing executable check-colors-sanitize.sh, kitty, or python3"
-fi
-
-KITTY_HOOK_TEST="$REPO_ROOT/tests/kitty/check-matugen-hook.sh"
-MATUGEN_CFG_PATH="${MATUGEN_CONFIG:-$HOME/.config/matugen/config.toml}"
-if [ -x "$KITTY_HOOK_TEST" ] && [ -f "$MATUGEN_CFG_PATH" ] && require_cmd python3; then
-  run "kitty: matugen hook" "$REPO_ROOT" bash "$KITTY_HOOK_TEST"
-elif { [ "${DEVCHECK_IN_CLEAN_CLONE:-0}" = "1" ] || [ "${CI:-false}" = "true" ]; } && [ ! -f "$MATUGEN_CFG_PATH" ]; then
-  skip "kitty: matugen hook" "external ML4W matugen config absent in clean-clone"
-elif [ ! -x "$KITTY_HOOK_TEST" ]; then
-  fail "kitty: matugen hook" "missing executable $KITTY_HOOK_TEST"
-else
-  fail "kitty: matugen hook" "missing $MATUGEN_CFG_PATH or python3"
 fi
 
 # Invoked indirectly via `run "kitty: tab_bar specs" ... run_kitty_tab_specs`.
@@ -451,7 +426,7 @@ fi
 # --- bin & repo lint/fmt gates ----------------------------------------------
 if require_cmd python3; then
   run "bin: python syntax" "$REPO_ROOT" \
-    python3 -m py_compile "$REPO_ROOT/bin/project-task" "$REPO_ROOT/bin/terminal-cheatsheet" "$REPO_ROOT/bin/sync-keybindings" "$REPO_ROOT/bin/kitty-colors-sanitize"
+    python3 -m py_compile "$REPO_ROOT/bin/project-task" "$REPO_ROOT/bin/terminal-cheatsheet" "$REPO_ROOT/bin/sync-keybindings"
 else
   fail "bin: python syntax" "python3 not installed"
 fi
@@ -637,7 +612,7 @@ if [ "$RUN_ALL" -eq 1 ]; then
       clean_start=$(date +%s%N)
       if ( cd "$REPO_ROOT" && bash "$CLEAN_TEST" ) > "$DEVCHECK_LOG" 2>&1; then
         clean_ms=$(( ($(date +%s%N) - clean_start) / 1000000 ))
-        clean_skips=$(grep -cE 'external (Atlas vault|ML4W matugen config) absent in clean-clone' "$DEVCHECK_LOG" || true)
+        clean_skips=$(grep -cE 'external Atlas vault absent in clean-clone' "$DEVCHECK_LOG" || true)
         clean_summary=$(sed -n 's/^all gates pass[[:space:]]*dims: \([0-9]\+\) run, \([0-9]\+\) skipped.*/\1 passed, \2 skipped/p' "$DEVCHECK_LOG" | tail -n 1)
         clean_total_skips=$(sed -n 's/^all gates pass[[:space:]]*dims: [0-9]\+ run, \([0-9]\+\) skipped.*/\1/p' "$DEVCHECK_LOG" | tail -n 1)
         if [ "${clean_total_skips:-0}" -ne "${clean_skips:-0}" ]; then
