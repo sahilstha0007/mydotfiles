@@ -171,7 +171,7 @@ export FZF_CTRL_T_OPTS="--preview 'bat --color=always --style=numbers --line-ran
 export FZF_ALT_C_OPTS="--preview 'eza --tree --level=2 --icons=always --color=always {}'"
 
 # ---------------------------------------------------------------------------
-# 5. Dual Profile Architecture: Kitty Primary (Kanagawa) vs WezTerm Fallback (Matugen)
+# 5. Dual Profile Architecture: Kitty Primary (Apple Dark Glass) vs WezTerm Fallback (Matugen)
 # ---------------------------------------------------------------------------
 # Explicit TERMINAL_STACK_PROFILE wins first so attaching to a shared tmux
 # server from a different terminal is never hijacked by stale KITTY_WINDOW_ID /

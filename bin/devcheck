@@ -608,6 +608,13 @@ if [ "$RUN_ALL" -eq 1 ]; then
     fail "zsh: runtime matrix" "missing $ZSH_RT or zsh"
   fi
 
+  OMP_INIT="$REPO_ROOT/tests/shell/check-omp-init.sh"
+  if [ -f "$OMP_INIT" ] && require_cmd oh-my-posh; then
+    run "shell: omp-init" "$REPO_ROOT" bash "$OMP_INIT"
+  elif [ -f "$OMP_INIT" ]; then
+    skip "shell: omp-init" "oh-my-posh not installed"
+  fi
+
   INST_TEST="$REPO_ROOT/tests/install/check-install.sh"
   if [ -f "$INST_TEST" ]; then
     run "install: idempotency & backup" "$REPO_ROOT" bash "$INST_TEST"
