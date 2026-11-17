@@ -355,16 +355,14 @@ do
       string.format('restarted at %s, expected %s', tostring(restarted.opacity), tostring(chosen))
    )
 
-   -- and the config seeds from the SAME cache, so the very first paint matches
+   -- v10 static design: appearance.lua no longer seeds a startup opacity (the
+   -- chrome-strip removed it). Assert it does NOT hardcode a value, so the
+   -- runtime/persisted opacity from backdrops is not fought by a stale seed.
    local cs = require('config.appearance')
    check(
-      'config.appearance seeds opacity from the cache, not a hardcoded 1.0',
-      cs.window_background_opacity == chosen,
-      string.format(
-         'config seeds %s, cache holds %s',
-         tostring(cs.window_background_opacity),
-         tostring(chosen)
-      )
+      'config.appearance does not hardcode window_background_opacity',
+      cs.window_background_opacity == nil,
+      string.format('unexpected startup opacity seed: %s', tostring(cs.window_background_opacity))
    )
    package.loaded['utils.backdrops'] = bd
 end

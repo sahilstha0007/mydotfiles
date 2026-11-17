@@ -117,8 +117,9 @@ case "$ctl" in
             "   so every mutant result below is meaningless."; note_fail ;;
 esac
 
-mutate "M1 revert the appearance.lua seed fix" 1 config/appearance.lua \
-  sed -i 's/window_background_opacity = backdrops\.opacity,/window_background_opacity = 1.0,/'
+# M1 (revert appearance.lua seed fix) removed in v10: the chrome-strip deleted
+# the startup window_background_opacity seed, so that mutation can no longer
+# land. check_opacity.lua now asserts the seed is absent instead.
 
 mutate "M2 remove the clamp" 9 utils/backdrops.lua \
   sed -i 's/next_op = math\.max(OPACITY_MIN, math\.min(OPACITY_MAX, next_op))/next_op = next_op/'

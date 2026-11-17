@@ -464,6 +464,9 @@ run_repo_shellcheck() {
   mapfile -t candidates < <(git ls-files "*.sh" "install.sh" "bin/*")
   for f in "${candidates[@]}"; do
     [ -f "$f" ] || continue
+    # Vendored third-party plugin scripts are not our code; their lint is
+    # upstream's concern, and shellcheck them would fail on their style.
+    case "$f" in .config/nvim/vendor/*|*/.config/nvim/vendor/*) continue ;; esac
     first=$(head -n 1 "$f")
     case "$f" in
       *.sh) scripts+=("$f") ;;
