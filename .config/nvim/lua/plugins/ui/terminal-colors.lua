@@ -452,20 +452,28 @@ end
 local function build_overrides()
   local D = is_light_bg() and LATTE_DEFAULTS or MOCHA_DEFAULTS
   local A = pick_accents()
-  -- guarantee FULL functional variation: synthesize any accent the terminal
-  -- palette couldn't provide (monochromatic wallpaper case), hue-spaced
-  -- around the primary so no two code roles share a color
-  derive_accents(A, A.blue, D)
-  -- Normalize EVERY accent (adopted + derived) to the same softness target:
-  -- s55 / l78 HSLUV. Adopted ones keep their natural hue but lose any neon
-  -- oversaturation — all 10 roles render at the same gentle chroma (user:
-  -- saturation was too bright). Dark themes only; light themes keep
-  -- guard-checked tokens as-is.
+  -- Only synthesize the missing hues when the terminal palette is genuinely
+  -- monochromatic (few hue-distinct accents adopted). On a diverse palette,
+  -- synthesizing all 14 roles by rotating from A.blue drags syntax colors into
+  -- one hue family — e.g. a teal accent made Function/Number/String land within
+  -- ~38deg of each other. Leave gaps unfilled there so accent() falls back to
+  -- catppuccin's spread-out defaults and code stays readable.
+  -- Seed derivation from catppuccin's own blue, NOT the terminal accent. With
+  -- a teal accent (hue ~175), rotating syntax roles from it mapped peach->green
+  -- and teal->lavender, crossing slots and collapsing code colors. Deriving
+  -- from D.blue keeps the offsets anchored to a known-good spread palette.
+  derive_accents(A, D.blue, D)
+  -- Cap accent saturation at s55 (user: neon was too bright) but KEEP each
+  -- slot's natural lightness. Forcing every role to l78 flattened the palette
+  -- so Function/Number/String collapsed onto nearly the same green-teal at
+  -- 67% lightness — code lost its color variation. Retaining natural l keeps
+  -- the hue AND brightness spread that makes syntax roles distinguishable.
   if not is_light_bg() then
     for slot, hex in pairs(A) do
       local h = hsluv_hue(hex)
       if h >= 0 then
-        A[slot] = hsluv.hsluv_to_hex { h, 55, 78 }
+        local _, s, l = unpack(hsluv.hex_to_hsluv(hex))
+        A[slot] = hsluv.hsluv_to_hex { h, math.min(s, 55), l }
       end
     end
   end
