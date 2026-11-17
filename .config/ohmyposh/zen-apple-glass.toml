@@ -21,7 +21,7 @@ final_space = true
 
   [[blocks.segments]]
     template = '{{ .Path }}'
-    foreground = '#0a84ff'
+    foreground = '#6c8cff'
     background = 'transparent'
     type = 'path'
     style = 'plain'
