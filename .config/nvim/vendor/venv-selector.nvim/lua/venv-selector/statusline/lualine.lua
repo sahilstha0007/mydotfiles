@@ -1,0 +1,35 @@
+require("venv-selector.types")
+
+local M = {}
+
+
+function M.render() -- call this function from lualine
+    if vim.bo.filetype ~= "python" then
+        return ""
+    end
+
+    local statusline_func = require("venv-selector.config").user_settings.options.statusline_func.lualine
+    if statusline_func ~= nil then
+        return statusline_func()
+    end
+
+    ---@type any
+    local vs = require("venv-selector")
+    ---@cast vs venv-selector.API
+    local venv_path = vs.venv()
+    
+
+    if not venv_path or venv_path == "" then
+        return ""
+    end
+
+    local venv_name = vim.fn.fnamemodify(venv_path, ":t")
+    if not venv_name then
+        return ""
+    end
+
+    local output = "󰈺 " .. venv_name .. " "
+    return output
+end
+
+return M

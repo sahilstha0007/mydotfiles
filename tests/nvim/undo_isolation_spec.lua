@@ -1,10 +1,16 @@
 -- Undo isolation across an agent write.
 --
--- The behaviour under test is native Vim (':earlier 1f'): when an agent writes
--- to disk behind an autoread buffer, only ':earlier 1f' reaches my last save.
--- The keymap that exposed it (<leader>uf/uF) lived in the now-deleted undotree
--- plugin, so this spec pins only the measurement -- if it ever stops being true
--- we find out why rather than discovering it at 2am with an agent mid-run.
+-- The behaviour under test is native Vim (':earlier 1f'), and the keymap that
+-- exposes it. That makes this spec two jobs:
+--
+--   1. Pin the measurement, so if it ever stops being true we find out why
+--      rather than discovering it at 2am with an agent mid-run.
+--   2. Pin the KEYMAP. A keymap is trivially deletable and the cost of its
+--      absence is invisible until you need it, so the keymap itself needs a
+--      test. `require('undo-isolation')` used to be what this file checked --
+--      that module was written around 'u_sync', an option Vim does not have
+--      (E5113 on setlocal), and was deleted. Asserting on a non-existent
+--      module would have been a test that passes forever and checks nothing.
 
 local failures = {}
 
@@ -25,6 +31,14 @@ end
 -- this spec read the LIVE tree even when run against a copy, so it passed on
 -- a clone that had none of the code under test. Same pattern as
 -- tests/minimal_init.lua.
+local _src = debug.getinfo(1, 'S').source:sub(2)
+local _cand = vim.fn.fnamemodify(_src, ':p:h:h')
+local root = vim.env.NVIM_CONFIG_ROOT
+  or (
+    vim.fn.isdirectory(_cand .. '/lua') == 1 and _cand
+    or (vim.fn.fnamemodify(_cand, ':h') .. '/.config/nvim')
+  )
+
 -- --- 1. the mechanism, measured -------------------------------------------
 
 -- Returns the buffer's first line, after setting up: two of my own saved
@@ -116,6 +130,64 @@ test(
     )
   end
 )
+
+-- --- 2. the keymap, pinned -----------------------------------------------
+
+-- Load the real plugin spec the way lazy would and fire the mapping.
+test('<leader>uf is bound to earlier 1f and reaches my last write', function()
+  local spec = dofile(root .. '/lua/plugins/editor/undotree.lua')
+  local found
+  for _, k in ipairs(spec.keys) do
+    if k[1] == '<leader>uf' then
+      found = k
+    end
+  end
+  check(found, '<leader>uf is not defined in undotree.lua')
+  check(
+    found[2]:find('earlier 1f', 1, true) ~= nil,
+    '<leader>uf does not run earlier 1f: ' .. tostring(found[2])
+  )
+  check(
+    found.desc ~= nil and #found.desc > 0,
+    '<leader>uf has no desc (invisible in which-key)'
+  )
+
+  -- Bind it for real and confirm the keystroke lands, not just the string.
+  local buf = agent_wrote(3)
+  vim.keymap.set('n', '<leader>uf', found[2], { buffer = buf, silent = true })
+  check(line_of(buf) == 'AGENT-3', 'setup failed')
+  vim.api.nvim_buf_call(buf, function()
+    vim.cmd 'normal \\uf'
+  end)
+  check(
+    line_of(buf) == 'MINE-2',
+    'pressing <leader>uf gave ' .. tostring(line_of(buf))
+  )
+end)
+
+test('revert key is reversible', function()
+  local spec = dofile(root .. '/lua/plugins/editor/undotree.lua')
+  local fwd
+  for _, k in ipairs(spec.keys) do
+    if k[1] == '<leader>uF' then
+      fwd = k
+    end
+  end
+  check(fwd, '<leader>uF is not defined in undotree.lua')
+  check(
+    fwd[2]:find('later 1f', 1, true) ~= nil,
+    '<leader>uF does not run later 1f'
+  )
+
+  local buf = agent_wrote(2)
+  vim.keymap.set('n', '<leader>uF', fwd[2], { buffer = buf, silent = true })
+  pcall(vim.cmd, 'silent earlier 1f')
+  check(line_of(buf) == 'MINE-2', 'setup failed')
+  vim.api.nvim_buf_call(buf, function()
+    vim.cmd 'normal \\uF'
+  end)
+  check(line_of(buf) == 'AGENT-2', '<leader>uF gave ' .. tostring(line_of(buf)))
+end)
 
 if #failures > 0 then
   error(table.concat(failures, '\n'), 0)
