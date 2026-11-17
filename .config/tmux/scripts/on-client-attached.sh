@@ -37,19 +37,19 @@ if [ -n "$detected" ]; then
     tmux set-environment -u WEZTERM_PANE 2>/dev/null || true
     tmux set-environment -u -g OPENCODE_TUI_CONFIG 2>/dev/null || true
     tmux set-environment -u OPENCODE_TUI_CONFIG 2>/dev/null || true
-    tmux source-file -q ~/.config/tmux/colors-nightfox.conf
+    tmux source-file -q ~/.config/tmux/colors-catppuccin.conf
     tmux set -gF popup-style "bg=default,fg=#{@thm_text}"
     tmux set -gF popup-border-style "fg=#{@thm_blue}"
     tmux set -g popup-border-lines rounded
     tmux set -gF pane-border-style "fg=#{@thm_surface_2}"
     tmux set -gF pane-active-border-style "fg=#{@thm_blue},bold"
     tmux set -gF clock-mode-colour "#{@thm_blue}"
-    tmux set-environment -g BAT_THEME "nightfox"
-    tmux set-environment BAT_THEME "nightfox"
-    tmux set-environment -g LG_CONFIG_FILE "$HOME/.config/lazygit/config.yml,$HOME/.config/lazygit/theme-nightfox.yml"
-    tmux set-environment -g CONFIG_DIR "$HOME/.config/lazydocker/nightfox"
-    tmux set-environment LG_CONFIG_FILE "$HOME/.config/lazygit/config.yml,$HOME/.config/lazygit/theme-nightfox.yml"
-    tmux set-environment CONFIG_DIR "$HOME/.config/lazydocker/nightfox"
+    tmux set-environment -g BAT_THEME "Catppuccin-mocha"
+    tmux set-environment BAT_THEME "Catppuccin-mocha"
+    tmux set-environment -g LG_CONFIG_FILE "$HOME/.config/lazygit/config.yml,$HOME/.config/lazygit/theme-catppuccin.yml"
+    tmux set-environment -g CONFIG_DIR "$HOME/.config/lazydocker/catppuccin"
+    tmux set-environment LG_CONFIG_FILE "$HOME/.config/lazygit/config.yml,$HOME/.config/lazygit/theme-catppuccin.yml"
+    tmux set-environment CONFIG_DIR "$HOME/.config/lazydocker/catppuccin"
   elif [ "$detected" = "wezterm" ]; then
     tmux set-environment -u -g KITTY_WINDOW_ID 2>/dev/null || true
     tmux set-environment -u KITTY_WINDOW_ID 2>/dev/null || true

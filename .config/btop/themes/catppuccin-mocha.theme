@@ -1,0 +1,74 @@
+# Catppuccin Mocha theme for btop (used when TERMINAL_STACK_PROFILE=kitty)
+
+# Main background, empty for terminal default / transparent background
+theme[main_bg]=""
+
+# Main text color
+theme[main_fg]="#CDD6F4"
+
+# Title color for boxes
+theme[title]="#89B4FA"
+
+# Highlight color for keyboard shortcuts
+theme[hi_fg]="#8fb2df"
+
+# Background color of selected item in processes box
+theme[selected_bg]="#45475A"
+
+# Foreground color of selected item in processes box
+theme[selected_fg]="#CDD6F4"
+
+# Color of inactive/disabled text
+theme[inactive_fg]="#6C7086"
+
+# Misc colors for processes box including mini cpu graphs, details memory graph and details status text
+theme[proc_misc]="#94E2D5"
+
+# Box outline colors
+theme[cpu_box]="#585B70"
+theme[mem_box]="#585B70"
+theme[net_box]="#585B70"
+theme[proc_box]="#585B70"
+
+# Box divider line and small boxes line color
+theme[div_line]="#585B70"
+
+# Temperature graph colors
+theme[temp_start]="#A6E3A1"
+theme[temp_mid]="#F9E2AF"
+theme[temp_end]="#F38BA8"
+
+# CPU graph colors
+theme[cpu_start]="#94E2D5"
+theme[cpu_mid]="#89B4FA"
+theme[cpu_end]="#CBA6F7"
+
+# Mem/Disk free meter
+theme[free_start]="#A6E3A1"
+theme[free_mid]=""
+theme[free_end]="#585B70"
+
+# Mem/Disk cached meter
+theme[cached_start]="#F9E2AF"
+theme[cached_mid]=""
+theme[cached_end]="#FAB387"
+
+# Mem/Disk available meter
+theme[available_start]="#94E2D5"
+theme[available_mid]=""
+theme[available_end]="#89B4FA"
+
+# Mem/Disk used meter
+theme[used_start]="#F38BA8"
+theme[used_mid]=""
+theme[used_end]="#CBA6F7"
+
+# Download graph colors
+theme[download_start]="#A6E3A1"
+theme[download_mid]="#94E2D5"
+theme[download_end]="#89B4FA"
+
+# Upload graph colors
+theme[upload_start]="#CBA6F7"
+theme[upload_mid]="#df97dc"
+theme[upload_end]="#FAB387"

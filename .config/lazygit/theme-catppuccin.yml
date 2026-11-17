@@ -1,0 +1,19 @@
+# Catppuccin Mocha theme overlay for lazygit (used when TERMINAL_STACK_PROFILE=kitty)
+git:
+  diffRenderers:
+    - colorArg: always
+      command: delta --dark --paging=never --syntax-theme=catppuccin-mocha
+gui:
+  border: rounded
+  theme:
+    activeBorderColor:
+      - '#CBA6F7'
+      - bold
+    inactiveBorderColor:
+      - '#6C7086'
+    selectedLineBgColor:
+      - '#313244'
+    selectedRangeBgColor:
+      - '#313244'
+    optionsTextColor:
+      - '#89B4FA'
