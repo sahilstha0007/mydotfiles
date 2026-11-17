@@ -195,9 +195,9 @@ if [[ "$_is_kitty" -eq 1 ]]; then
 
   export BAT_THEME="ansi"
   export FZF_DEFAULT_OPTS="--height=45% --layout=reverse --border=rounded --info=inline \
-    --color=bg+:#2c2c2e,bg:-1,spinner:#0a84ff,hl:#0a84ff \
-    --color=fg:#f5f5f7,header:#0a84ff,info:#a1a1a6,pointer:#0a84ff \
-    --color=marker:#7dce8b,fg+:#f5f5f7,prompt:#0a84ff,hl+:#0a84ff,border:#0a84ff \
+    --color=bg+:#2c2c2e,bg:-1,spinner:#4e8eca,hl:#4e8eca \
+    --color=fg:#f5f5f7,header:#4e8eca,info:#a1a1a6,pointer:#4e8eca \
+    --color=marker:#7dce8b,fg+:#f5f5f7,prompt:#4e8eca,hl+:#4e8eca,border:#4e8eca \
     --bind 'ctrl-/:toggle-preview'"
   export LG_CONFIG_FILE="$HOME/.config/lazygit/config.yml,$HOME/.config/lazygit/theme-apple-glass.yml"
   export CONFIG_DIR="$HOME/.config/lazydocker/apple-glass"
