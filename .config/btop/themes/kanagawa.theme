@@ -1,0 +1,74 @@
+# Kanagawa theme for btop (used when TERMINAL_STACK_PROFILE=kitty)
+
+# Main background, empty for terminal default / transparent background
+theme[main_bg]=""
+
+# Main text color
+theme[main_fg]="#dcd7ba"
+
+# Title color for boxes
+theme[title]="#7e9cd8"
+
+# Highlight color for keyboard shortcuts
+theme[hi_fg]="#8fb2df"
+
+# Background color of selected item in processes box
+theme[selected_bg]="#2d4f67"
+
+# Foreground color of selected item in processes box
+theme[selected_fg]="#dcd7ba"
+
+# Color of inactive/disabled text
+theme[inactive_fg]="#727169"
+
+# Misc colors for processes box including mini cpu graphs, details memory graph and details status text
+theme[proc_misc]="#7aa89f"
+
+# Box outline colors
+theme[cpu_box]="#54546d"
+theme[mem_box]="#54546d"
+theme[net_box]="#54546d"
+theme[proc_box]="#54546d"
+
+# Box divider line and small boxes line color
+theme[div_line]="#54546d"
+
+# Temperature graph colors
+theme[temp_start]="#76946a"
+theme[temp_mid]="#e6c384"
+theme[temp_end]="#e82424"
+
+# CPU graph colors
+theme[cpu_start]="#7aa89f"
+theme[cpu_mid]="#7e9cd8"
+theme[cpu_end]="#957fb8"
+
+# Mem/Disk free meter
+theme[free_start]="#76946a"
+theme[free_mid]=""
+theme[free_end]="#54546d"
+
+# Mem/Disk cached meter
+theme[cached_start]="#e6c384"
+theme[cached_mid]=""
+theme[cached_end]="#ffa066"
+
+# Mem/Disk available meter
+theme[available_start]="#7aa89f"
+theme[available_mid]=""
+theme[available_end]="#7e9cd8"
+
+# Mem/Disk used meter
+theme[used_start]="#e82424"
+theme[used_mid]=""
+theme[used_end]="#957fb8"
+
+# Download graph colors
+theme[download_start]="#76946a"
+theme[download_mid]="#7aa89f"
+theme[download_end]="#7e9cd8"
+
+# Upload graph colors
+theme[upload_start]="#957fb8"
+theme[upload_mid]="#df97dc"
+theme[upload_end]="#ffa066"

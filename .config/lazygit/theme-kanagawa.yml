@@ -1,0 +1,19 @@
+# Kanagawa theme overlay for lazygit (used when TERMINAL_STACK_PROFILE=kitty)
+git:
+  diffRenderers:
+    - colorArg: always
+      command: delta --dark --paging=never --syntax-theme=kanagawa
+gui:
+  border: rounded
+  theme:
+    activeBorderColor:
+      - '#7e9cd8'
+      - bold
+    inactiveBorderColor:
+      - '#727169'
+    selectedLineBgColor:
+      - '#16161d'
+    selectedRangeBgColor:
+      - '#16161d'
+    optionsTextColor:
+      - '#7e9cd8'

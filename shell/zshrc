@@ -164,7 +164,7 @@ export FZF_CTRL_T_OPTS="--preview 'bat --color=always --style=numbers --line-ran
 export FZF_ALT_C_OPTS="--preview 'eza --tree --level=2 --icons=always --color=always {}'"
 
 # ---------------------------------------------------------------------------
-# 5. Dual Profile Architecture: Kitty Primary (Nightfox) vs WezTerm Fallback (Matugen)
+# 5. Dual Profile Architecture: Kitty Primary (Kanagawa) vs WezTerm Fallback (Matugen)
 # ---------------------------------------------------------------------------
 # Explicit TERMINAL_STACK_PROFILE wins first so attaching to a shared tmux
 # server from a different terminal is never hijacked by stale KITTY_WINDOW_ID /
@@ -190,23 +190,23 @@ _omp_init_cached() {
 }
 
 if [[ "$_is_kitty" -eq 1 ]]; then
-  # --- KITTY DEV PROFILE (Nightfox) ---
-  _omp_init_cached "$HOME/.config/ohmyposh/zen-nightfox.toml" "$HOME/.cache/zsh-cache/omp-nightfox.zsh"
+  # --- KITTY DEV PROFILE (Kanagawa) ---
+  _omp_init_cached "$HOME/.config/ohmyposh/zen-kanagawa.toml" "$HOME/.cache/zsh-cache/omp-kanagawa.zsh"
 
-  export BAT_THEME="nightfox"
+  export BAT_THEME="ansi"
   export FZF_DEFAULT_OPTS="--height=45% --layout=reverse --border=rounded --info=inline \
-    --color=bg+:#212e3f,bg:-1,spinner:#719cd6,hl:#719cd6 \
-    --color=fg:#cdcecf,header:#719cd6,info:#828f9f,pointer:#719cd6 \
-    --color=marker:#81b29a,fg+:#cdcecf,prompt:#719cd6,hl+:#719cd6,border:#719cd6 \
+    --color=bg+:#2d4f67,bg:-1,spinner:#7e9cd8,hl:#7e9cd8 \
+    --color=fg:#dcd7ba,header:#7e9cd8,info:#a8a19f,pointer:#7e9cd8 \
+    --color=marker:#98bb6c,fg+:#dcd7ba,prompt:#7e9cd8,hl+:#7e9cd8,border:#7e9cd8 \
     --bind 'ctrl-/:toggle-preview'"
-  export LG_CONFIG_FILE="$HOME/.config/lazygit/config.yml,$HOME/.config/lazygit/theme-nightfox.yml"
-  export CONFIG_DIR="$HOME/.config/lazydocker/nightfox"
+  export LG_CONFIG_FILE="$HOME/.config/lazygit/config.yml,$HOME/.config/lazygit/theme-kanagawa.yml"
+  export CONFIG_DIR="$HOME/.config/lazydocker/kanagawa"
 
-  # Nightfox theme for btop under Kitty when no explicit -c/--config is passed
+  # Kanagawa theme for btop under Kitty when no explicit -c/--config is passed
   btop() {
     case " $* " in
       *" -c "*|*" --config "*) command btop "$@" ;;
-      *) command btop -c "$HOME/.config/btop/btop-nightfox.conf" "$@" ;;
+      *) command btop -c "$HOME/.config/btop/btop-kanagawa.conf" "$@" ;;
     esac
   }
 

@@ -1,7 +1,7 @@
 # =============================================================================
 # Kitty Custom Tab Bar: Modern Floating Rounded Pills HUD
 # Features:
-#   - Floating rounded pill tabs ( ... ) harmonized with Nightfox palette
+#   - Floating rounded pill tabs ( ... ) harmonized with the coding-theme palette
 #   - Dynamic process badges ( nvim,  lazygit, 󰇥 yazi, 󰓅 btop,  tmux, 󰡨 docker, 󰚩 ai)
 #   - Floating right-aligned status pills: Tmux, AI Agents, Containers, Git, CWD, Battery, Clock
 #   - Adaptive width folding: gracefully drops breadcrumb/battery/containers on narrow screens

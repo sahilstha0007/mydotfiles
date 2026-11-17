@@ -1,0 +1,12 @@
+# Kanagawa theme for lazydocker (used when TERMINAL_STACK_PROFILE=kitty)
+gui:
+  border: rounded
+  theme:
+    activeBorderColor:
+      - '#7e9cd8'
+      - bold
+    inactiveBorderColor:
+      - '#727169'
+    selectedLineBgColor:
+      - reverse
+reporting: local
