@@ -27,9 +27,19 @@ return {
 
   {
     'WhoIsSethDaniel/mason-tool-installer.nvim',
+    -- VeryLazy keeps the installer out of startup (~70ms regression otherwise).
+    -- Re-wire run_on_start here: the plugin's own VimEnter autocmd is sourced
+    -- after VimEnter when loaded this way, so it would never fire on its own.
+    event = 'VeryLazy',
+    dependencies = { 'williamboman/mason.nvim' },
     opts = {
       ensure_installed = { 'js-debug-adapter' },
     },
+    config = function(_, opts)
+      local mti = require 'mason-tool-installer'
+      mti.setup(opts)
+      mti.run_on_start()
+    end,
   },
 
   {
