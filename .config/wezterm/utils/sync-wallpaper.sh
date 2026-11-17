@@ -109,8 +109,51 @@ matugen_log=$("$(command -v matugen || echo /usr/bin/matugen)" -c "$HOME/.config
 if [ "$matugen_rc" -ne 0 ] || [ -n "$matugen_log" ] || [ ! -s "$wez_palette" ]; then
    echo "sync-wallpaper: matugen failed (rc=$matugen_rc) for $work" >&2
    [ -n "$matugen_log" ] && printf '%s\n' "$matugen_log" >&2
-   echo "sync-wallpaper: palette NOT regenerated; leaving $t un-synced so it retries" >&2
-   exit 1
+   # Graceful degradation: a fresh clone may have no matugen at all, or it may
+   # fail on an image. Seed a valid default so wezterm/tmux still theme. Prefer
+   # the vendored default; if absent, derive one from the TRACKED apple-glass
+   # kitty theme. Only when we actually wrote a default do we continue to the
+   # cascade below (so tmux + the other consumers derive from it); every other
+   # failure keeps the original exit-1-and-retry behaviour. A later successful
+   # matugen run simply overwrites the default.
+   seeded_default=0
+   if [ ! -s "$wez_palette" ]; then
+      default_palette="$HOME/.config/matugen/default-colors.lua"
+      tracked_theme="$HOME/.config/kitty/themes/apple-glass.conf"
+      if [ -s "$default_palette" ]; then
+         cp "$default_palette" "$wez_palette"
+         seeded_default=1
+         echo "sync-wallpaper: using default palette $default_palette" >&2
+      elif [ -s "$tracked_theme" ]; then
+         kv() { awk -v k="$1" '$1==k {print $2; exit}' "$tracked_theme"; }
+         fg=$(kv foreground); bg=$(kv background)
+         if [ -n "$fg" ] && [ -n "$bg" ]; then
+            cat > "$wez_palette" <<EOF
+-- Fallback palette derived from tracked apple-glass.conf — do not edit.
+return {
+   foreground = "$fg",
+   background = "$bg",
+   primary = "$(kv cursor)",
+   secondary = "$(kv color5)",
+   tertiary = "$(kv color3)",
+   success = "$(kv color2)",
+   error = "$(kv color1)",
+   surface0 = "$(kv inactive_tab_background)",
+   surface1 = "$(kv color0)",
+   surface2 = "$(kv color8)",
+   outline = "$(kv inactive_tab_foreground)",
+   source_color = "$(kv cursor)",
+}
+EOF
+            seeded_default=1
+            echo "sync-wallpaper: derived default palette from $tracked_theme" >&2
+         fi
+      fi
+   fi
+   if [ "$seeded_default" -eq 0 ]; then
+      echo "sync-wallpaper: palette NOT regenerated; leaving $t un-synced so it retries" >&2
+      exit 1
+   fi
 fi
 
 # Only mark the image as synced once the palette is genuinely on disk, so a

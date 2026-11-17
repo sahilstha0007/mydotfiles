@@ -269,7 +269,7 @@ targets = [
     ("kitty", [repo / ".config/kitty/kitty.conf", repo / ".config/kitty/custom.conf", repo / ".config/kitty/tab_bar.py", repo / ".config/kitty/themes/nightfox.conf"], "stack-reload  (or restart Kitty for restart-only options like listen_on)"),
     ("wezterm", [repo / ".config/wezterm"], "stack-reload  (auto-reloads live wezterm-gui)"),
     ("nvim", [repo / ".config/nvim/init.lua", repo / ".config/nvim/lua"], "restart stale nvim session(s)"),
-    ("zsh", [repo / "shell/zshrc", repo / "shell/zshenv", repo / "shell/omni-aliases.zsh"], "exec zsh  (inside stale interactive shell(s))"),
+    ("zsh", [repo / "shell/zshrc", repo / "shell/zshenv"], "exec zsh  (inside stale interactive shell(s))"),
 ]
 
 ps = subprocess.run(

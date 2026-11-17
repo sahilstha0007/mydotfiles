@@ -16,7 +16,6 @@ EXPLICIT_SCRIPTS = {
     "shell/zshrc",
     "shell/zshenv",
     "shell/bashrc_custom",
-    "shell/omni-aliases.zsh",
 }
 SKIP_DIRS = {".git", "plugins", "fixtures", "__pycache__", ".cache"}
 

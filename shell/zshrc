@@ -54,7 +54,9 @@ export BUN_INSTALL="$HOME/.bun"
 path=($^path(N-/))
 
 # Podman (rootless) Docker socket
-export DOCKER_HOST="unix:///run/user/${EUID:-1000}/podman/podman.sock"
+if [ -S "/run/user/${EUID:-1000}/podman/podman.sock" ]; then
+  export DOCKER_HOST="unix:///run/user/${EUID:-1000}/podman/podman.sock"
+fi
 
 # ---------------------------------------------------------------------------
 # 2. Oh-My-Zsh Core & Pinned Plugins (Lean Native Loader)
@@ -102,16 +104,21 @@ fi
 # Multi-distro portable FZF keybindings & completion
 # Atuin (initialized below) owns Ctrl+R when installed; suppress FZF's redundant Ctrl+R widget
 # while preserving Ctrl+T (files) and Alt+C (cd into directory).
-(( $+commands[atuin] )) && FZF_CTRL_R_COMMAND=""
-for _fzf_dir in /usr/share/fzf /usr/local/opt/fzf/shell /opt/homebrew/opt/fzf/shell /usr/share/doc/fzf/examples "$HOME/.fzf/shell"; do
-  if [ -d "$_fzf_dir" ]; then
-    [ -f "$_fzf_dir/key-bindings.zsh" ] && source "$_fzf_dir/key-bindings.zsh"
-    [ -f "$_fzf_dir/completion.zsh" ]   && source "$_fzf_dir/completion.zsh"
-    break
-  fi
-done
-unset _fzf_dir
-(( $+commands[atuin] )) && unset FZF_CTRL_R_COMMAND
+# fzf's key-binding/completion scripts snapshot & restore every zsh option via
+# `options=(...)`, which fails on the unchangeable `zle` option when there is no
+# TTY (`zsh -i -c`, test harnesses). Widgets are only useful at a real terminal.
+if [[ -t 0 ]]; then
+  (( $+commands[atuin] )) && FZF_CTRL_R_COMMAND=""
+  for _fzf_dir in /usr/share/fzf /usr/local/opt/fzf/shell /opt/homebrew/opt/fzf/shell /usr/share/doc/fzf/examples "$HOME/.fzf/shell"; do
+    if [ -d "$_fzf_dir" ]; then
+      [ -f "$_fzf_dir/key-bindings.zsh" ] && source "$_fzf_dir/key-bindings.zsh"
+      [ -f "$_fzf_dir/completion.zsh" ]   && source "$_fzf_dir/completion.zsh"
+      break
+    fi
+  done
+  unset _fzf_dir
+  (( $+commands[atuin] )) && unset FZF_CTRL_R_COMMAND
+fi
 
 # ---------------------------------------------------------------------------
 # 3. Zsh History
@@ -377,10 +384,6 @@ if command -v tmux >/dev/null 2>&1; then
   alias ts='tmux-shutdown'
 fi
 
-# OmniRoute user-service aliases (loaded in interactive shells only, not ~/.zshenv)
-if ! alias omnion >/dev/null 2>&1; then
-  [ -f "$HOME/.omni-aliases.zsh" ] && source "$HOME/.omni-aliases.zsh"
-fi
 
 # Desktop / ML4W helper commands (graceful fallback if running in container / standard distro)
 if [ -d "$HOME/.config/ml4w" ]; then

@@ -36,7 +36,7 @@ run_doctor() {
   echo "==> Running dotfiles symlink and permission doctor..."
 
   # 1. Verify every repo-managed symlink target exists and resolves into $repo
-  for name in nvim tmux wezterm kitty ohmyposh bat yazi lazygit lazydocker btop fastfetch atuin; do
+  for name in nvim tmux wezterm kitty ohmyposh bat yazi lazygit lazydocker btop fastfetch atuin matugen; do
     local src="$repo/.config/$name" dst="$HOME/.config/$name"
     [ -d "$src" ] || continue
     if [ ! -L "$dst" ] || [ ! -e "$dst" ] || [ "$(readlink -f "$dst" 2>/dev/null || true)" != "$(readlink -f "$src")" ]; then
@@ -45,7 +45,7 @@ run_doctor() {
     fi
   done
 
-  for pair in "zshrc:.zshrc" "bashrc_custom:.bashrc_custom" "omni-aliases.zsh:.omni-aliases.zsh" "zshenv:.zshenv"; do
+  for pair in "zshrc:.zshrc" "bashrc_custom:.bashrc_custom" "zshenv:.zshenv"; do
     local src="$repo/shell/${pair%%:*}" dst="$HOME/${pair##*:}"
     [ -f "$src" ] || continue
     if [ ! -L "$dst" ] || [ ! -e "$dst" ] || [ "$(readlink -f "$dst" 2>/dev/null || true)" != "$(readlink -f "$src")" ]; then
@@ -179,7 +179,7 @@ echo "==> Deploying portable dotfiles from $repo..."
 
 # 1. Standard config directories (~/.config/<name>)
 mkdir -p "$HOME/.config"
-for name in nvim tmux wezterm kitty ohmyposh bat yazi lazygit lazydocker btop fastfetch atuin; do
+for name in nvim tmux wezterm kitty ohmyposh bat yazi lazygit lazydocker btop fastfetch atuin matugen; do
   src="$repo/.config/$name"
   dst="$HOME/.config/$name"
 
@@ -194,7 +194,12 @@ for name in nvim tmux wezterm kitty ohmyposh bat yazi lazygit lazydocker btop fa
   fi
 
   if [ -L "$dst" ]; then
-    # Already a symlink pointing elsewhere or broken — update cleanly
+    # Already a symlink pointing elsewhere or broken — update cleanly.
+    # matugen used to point into the external ML4W repo; rm -f removes only
+    # the link, never the target's data.
+    if [ "$name" = "matugen" ]; then
+      echo "  [INFO]  replacing existing matugen symlink -> $(readlink "$dst") (target left untouched)"
+    fi
     rm -f "$dst"
   elif [ -e "$dst" ]; then
     mkdir -p "$backup"
@@ -247,13 +252,12 @@ if [ -d "$code_src" ]; then
   done
 fi
 
-# 3. Shell Runtime Configurations (~/.zshrc, ~/.bashrc_custom, ~/.omni-aliases.zsh, ~/.zshenv)
+# 3. Shell Runtime Configurations (~/.zshrc, ~/.bashrc_custom, ~/.zshenv)
 shell_src="$repo/shell"
 if [ -d "$shell_src" ]; then
   declare -A shell_map=(
     ["zshrc"]="$HOME/.zshrc"
     ["bashrc_custom"]="$HOME/.bashrc_custom"
-    ["omni-aliases.zsh"]="$HOME/.omni-aliases.zsh"
     ["zshenv"]="$HOME/.zshenv"
   )
 
@@ -339,6 +343,25 @@ echo "==> Setting executable permissions on scripts..."
 find "$repo/.config" -type f -name "*.sh" -exec chmod +x {} + 2>/dev/null || true
 find "$repo/.config" -type f -name "*.py" -exec chmod +x {} + 2>/dev/null || true
 find "$repo/bin" -type f -exec chmod +x {} + 2>/dev/null || true
+
+# 6b. Provision lazy.nvim (nvim's plugin manager) here — the single place allowed
+#     to do network I/O. lazy-init.lua deliberately does NOT bootstrap at runtime.
+#     Pinned to the stable release commit (annotated tag 'stable' = v11.17.5).
+lazy_nvim_dir="${XDG_DATA_HOME:-$HOME/.local/share}/nvim/lazy/lazy.nvim"
+if [ -d "$lazy_nvim_dir/.git" ]; then
+  echo "  [OK]     lazy.nvim already installed at $lazy_nvim_dir"
+elif [ -e "$lazy_nvim_dir" ]; then
+  echo "  [WARN]   $lazy_nvim_dir exists but is not a git checkout — skipping (nvim may fail)" >&2
+else
+  echo "  [INSTALL] cloning pinned lazy.nvim -> $lazy_nvim_dir"
+  mkdir -p "$(dirname "$lazy_nvim_dir")"
+  if git clone --filter=blob:none --branch=stable https://github.com/folke/lazy.nvim.git "$lazy_nvim_dir" \
+      && git -C "$lazy_nvim_dir" checkout --detach 85c7ff3711b730b4030d03144f6db6375044ae82; then
+    echo "  [OK]     lazy.nvim pinned at $(git -C "$lazy_nvim_dir" rev-parse --short HEAD)"
+  else
+    echo "  [WARN]   lazy.nvim provision failed (offline?). Re-run install.sh with network to fix nvim." >&2
+  fi
+fi
 
 # 7. Rebuild bat theme cache if bat is installed (idempotent: only rebuild if missing or older than themes)
 if command -v bat >/dev/null 2>&1 && [ -d "$HOME/.config/bat/themes" ]; then
@@ -436,11 +459,11 @@ if [ -d "$ml4w_installer_cfg" ]; then
     ".config/btop"
     ".config/fastfetch"
     ".config/atuin"
+    ".config/matugen"
     ".zshrc"
     ".zshrc_custom"
     ".zshenv"
     ".bashrc_custom"
-    ".omni-aliases.zsh"
   )
   for profile_dir in "$ml4w_installer_cfg"/*/; do
     [ -d "$profile_dir" ] || continue

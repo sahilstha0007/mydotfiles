@@ -49,7 +49,7 @@ wezterm_env=$(TMUX_TMPDIR="$work/w" tmux -L p show-environment -g TERMINAL_STACK
   exit 1
 }
 
-# 2. Start Kitty Nightfox profile and verify pane-border-status auto-toggle
+# 2. Start Kitty Apple Glass profile and verify pane-border-status auto-toggle
 env -u TMUX -u TMUX_PANE -u WEZTERM_PANE TMUX_TMPDIR="$work/k" \
   TERMINAL_STACK_PROFILE="kitty" KITTY_WINDOW_ID="1" \
   tmux -L p -f "$conf" new-session -d -s "kitty-probe"
@@ -60,9 +60,9 @@ for _ in {1..30}; do
   [[ -n "$kitty_blue" ]] && break
   sleep 0.1
 done
-expected_kitty_blue=$(grep '^set -g @thm_blue ' "$conf_dir/colors-nightfox.conf" | tail -1 | sed -E 's/.*"(#[0-9a-fA-F]{6})".*/\1/')
+expected_kitty_blue=$(grep '^set -g @thm_blue ' "$conf_dir/colors-apple-glass.conf" | tail -1 | sed -E 's/.*"(#[0-9a-fA-F]{6})".*/\1/')
 [[ "$kitty_blue" == "$expected_kitty_blue" ]] || {
-  echo "FAIL: Kitty tmux should use Nightfox ($expected_kitty_blue), got '$kitty_blue'" >&2
+  echo "FAIL: Kitty tmux should use Apple Glass ($expected_kitty_blue), got '$kitty_blue'" >&2
   exit 1
 }
 
@@ -141,4 +141,4 @@ hit_out=$(PATH="$work/bin:$PATH" XDG_RUNTIME_DIR="$work/runtime" \
   exit 1
 }
 
-echo "PASS: Kitty Nightfox + WezTerm Matugen profiles, split-only pane borders, and status-right cache consistency verified"
+echo "PASS: Kitty Apple Glass + WezTerm Matugen profiles, split-only pane borders, and status-right cache consistency verified"

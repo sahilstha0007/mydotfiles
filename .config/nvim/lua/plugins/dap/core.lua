@@ -111,6 +111,9 @@ return {
   -- fancy UI for the debugger
   {
     'rcarriga/nvim-dap-ui',
+    -- Already a dependency of nvim-dap above; without lazy=true this spec had
+    -- no trigger, so it loaded at boot and its config() required('dap') eagerly.
+    lazy = true,
     dependencies = { 'nvim-neotest/nvim-nio' },
     opts = {
       controls = {

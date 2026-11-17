@@ -43,7 +43,6 @@ def scan_shell(repo_root: pathlib.Path, home: pathlib.Path) -> list[str]:
         repo_root / "shell" / "zshrc",
         repo_root / "shell" / "zshenv",
         repo_root / "shell" / "bashrc_custom",
-        repo_root / "shell" / "omni-aliases.zsh",
     ]
     builtins_or_special = {
         "cd",

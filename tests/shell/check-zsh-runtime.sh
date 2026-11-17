@@ -49,6 +49,11 @@ fi
 # Fresh install pre-warms bat, zsh caches, and compdump cleanly
 sandbox_install >/dev/null
 
+# sandbox_init cloned HEAD, so $SB_HOME/.zshrc points at the committed snapshot.
+# Repoint at the working-tree file under remediation so these checks exercise the
+# real zshrc (F16 fzf/zle fix) instead of a stale copy.
+ln -sfn "$REPO_ROOT/shell/zshrc" "$SB_HOME/.zshrc"
+
 # D1: startup succeeds cleanly without ~/.zshrc.local and with a mock ~/.zshrc.local
 out_no_local=$(env -i HOME="$SB_HOME" TERM=xterm-kitty KITTY_WINDOW_ID=1 PATH="$PATH" /usr/bin/zsh -i -c exit </dev/null 2>&1)
 if [ -n "$out_no_local" ]; then

@@ -7,13 +7,13 @@
 -- wezterm that require ALWAYS raises — so the function returned false on every
 -- call for as long as it existed, and read_terminal_palette() silently fell
 -- through to kitty's file instead. At the time wezterm and kitty were themed
--- from DIFFERENT wallpapers (wezterm = the dev-stack cascade, kitty = ml4w's
--- desktop path), so the editor wore one wallpaper's palette while the tmux bar
+-- from DIFFERENT sources (wezterm = the dev-stack cascade, kitty = its own
+-- fixed theme file), so the editor wore one palette while the tmux bar
 -- and the chrome around it wore another. Nothing errored. Nothing logged.
 --
 -- The two terminal profiles maintain clear boundaries:
 -- - WezTerm uses the dev stack's custom wallpaper cascade (~/.config/wezterm/colors/custom.lua).
--- - Kitty (daily driver) uses ML4W's palette (~/.config/kitty/colors-matugen.conf).
+-- - Kitty (daily driver) uses the fixed Apple Dark Glass palette (~/.config/kitty/themes/apple-glass.conf).
 -- Both profiles resolve their own palette independently, and neither overwrites the other.
 --
 -- The existing terminal_colors_spec.lua could not catch this: it tests the
@@ -43,10 +43,11 @@ local ROOT = config_root()
 local SRC = ROOT .. '/lua/plugins/ui/terminal-colors.lua'
 local HOME = vim.env.HOME or ''
 local WEZ_CUSTOM = HOME .. '/.config/wezterm/colors/custom.lua'
-local KITTY_NIGHTFOX = HOME .. '/.config/kitty/themes/nightfox.conf'
-local KITTY_CONF = (vim.uv or vim.loop).fs_stat(KITTY_NIGHTFOX)
-    and KITTY_NIGHTFOX
-  or (HOME .. '/.config/kitty/colors-matugen.conf')
+-- Kitty is pinned to the fixed Apple Dark Glass palette through
+-- kitty.conf -> custom.conf -> themes/apple-glass.conf. That included file is
+-- the one that supplies the ANSI colors, so it is the path palette_file() must
+-- record for the watcher.
+local KITTY_CONF = HOME .. '/.config/kitty/themes/apple-glass.conf'
 
 local passed, failed = 0, 0
 local function check(cond, msg, detail)
@@ -160,8 +161,8 @@ do
 end
 
 -- ---------------------------------------------------------------------------
--- CHECK 4: kitty's reader SUCCEEDS on its ML4W-managed config.
--- Kitty is the daily driver and reads ~/.config/kitty/colors-matugen.conf,
+-- CHECK 4: kitty's reader SUCCEEDS on its fixed Apple Dark Glass config.
+-- Kitty is the daily driver and reads ~/.config/kitty/themes/apple-glass.conf,
 -- maintaining clear boundaries from WezTerm's wallpaper cascade.
 -- ---------------------------------------------------------------------------
 do
@@ -174,7 +175,7 @@ do
     local ok = Mk.read_kitty_palette()
     check(
       ok == true,
-      'read_kitty_palette() parses colors-matugen.conf successfully',
+      'read_kitty_palette() parses apple-glass.conf successfully',
       'returned ' .. tostring(ok)
     )
 
@@ -201,7 +202,7 @@ end
 
 -- ---------------------------------------------------------------------------
 -- CHECK 5: explicit terminal profile selects the palette policy even inside tmux.
--- WezTerm reads the WezTerm custom cascade, while Kitty reads its own ML4W kitty config.
+-- WezTerm reads the WezTerm custom cascade, while Kitty reads its own Apple Dark Glass palette.
 -- Only an unknown terminal stays on the stock palette. Every env var touched is restored.
 -- ---------------------------------------------------------------------------
 do
@@ -246,7 +247,7 @@ do
     local mk = build()
     check(
       mk.read_terminal_palette() == true and mk.palette_file() == KITTY_CONF,
-      'kitty profile reads its own ML4W palette file, even inside tmux',
+      'kitty profile reads its own Apple Dark Glass palette file, even inside tmux',
       tostring(mk.palette_file())
     )
 
