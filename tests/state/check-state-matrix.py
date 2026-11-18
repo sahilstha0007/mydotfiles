@@ -192,7 +192,6 @@ def prepare_state(state: str, st_repo: pathlib.Path, st_home: pathlib.Path, st_d
         )
         subprocess.run(["bash", str(st_home / ".config/tmux/colors-from-matugen.sh")], env=env, check=True, capture_output=True)
         subprocess.run(["bash", str(st_home / ".config/ohmyposh/omp-palette.sh")], env=env, check=True, capture_output=True)
-        subprocess.run(["bash", str(st_home / ".config/wezterm/utils/zsh-highlight-sync.sh")], env=env, check=True, capture_output=True)
     elif state == "missing_zshrc_local":
         (st_home / ".zshrc.local").unlink(missing_ok=True)
     elif state == "unset_xdg_runtime_dir":

@@ -139,7 +139,6 @@ EXPECTED_GATES=(
   "wezterm: lint"
   "wezterm: fmt"
   "keys: wezterm vs tmux"
-  "tmux: colour prop"
   "tmux: profiles"
   "tmux: scripts syntax"
   "tmux: keymap dump"
@@ -257,12 +256,6 @@ fi
 # --- tmux -------------------------------------------------------------------
 TMUX_DIR="$REPO_ROOT/.config/tmux"
 TMUX_TESTS="$REPO_ROOT/tests/tmux"
-if [ -x "$TMUX_TESTS/check-colour-propagation.sh" ] && require_cmd tmux; then
-  run "tmux: colour prop" "$TMUX_DIR" bash "$TMUX_TESTS/check-colour-propagation.sh"
-else
-  fail "tmux: colour prop" "missing check-colour-propagation.sh or tmux"
-fi
-
 if [ -x "$TMUX_TESTS/check-terminal-profiles.sh" ] && require_cmd tmux; then
   run "tmux: profiles" "$TMUX_DIR" bash "$TMUX_TESTS/check-terminal-profiles.sh"
 else
@@ -275,7 +268,6 @@ if [ -f "$TMUX_DIR/scripts/on-client-attached.sh" ] && [ -f "$TMUX_DIR/scripts/s
     "$TMUX_DIR/scripts/status-right.sh" \
     "$TMUX_DIR/scripts/auto-save-session.sh" \
     "$TMUX_DIR/colors-from-matugen.sh" \
-    "$TMUX_DIR/colors-from-kitty.sh" \
     "$TMUX_DIR/keymap-dump.sh" \
     "$TMUX_DIR/project-task.sh" \
     "$TMUX_DIR/session-switcher.sh"

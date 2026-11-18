@@ -398,13 +398,6 @@ if command -v oh-my-posh >/dev/null 2>&1; then
       oh-my-posh init zsh --config "$HOME/.config/ohmyposh/zen.toml"
 fi
 
-if [ -x "$HOME/.config/wezterm/utils/zsh-highlight-sync.sh" ] && [ -f "$HOME/.config/wezterm/colors/matugen.lua" ]; then
-  if [ ! -s "$HOME/.cache/zsh-wallpaper.zsh" ] || [ "$HOME/.config/wezterm/colors/matugen.lua" -nt "$HOME/.cache/zsh-wallpaper.zsh" ]; then
-    bash "$HOME/.config/wezterm/utils/zsh-highlight-sync.sh" >/dev/null 2>&1 || true
-    echo "  [WARM]   $HOME/.cache/zsh-wallpaper.zsh"
-  fi
-fi
-
 if command -v zsh >/dev/null 2>&1; then
   zcomp_warm=$(zsh -fc '
     dump="$HOME/.zcompdump-${HOST}-${ZSH_VERSION}"

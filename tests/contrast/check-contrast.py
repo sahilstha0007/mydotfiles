@@ -417,22 +417,6 @@ def audit_zsh(aud: Auditor) -> None:
     for key, fg in _parse_zsh_styles(wz_block):
         aud.check_against_effective("zsh", "wezterm_static", key, fg, "#1f1f28")
 
-    # Static design: zsh-highlight-sync.sh reads the committed Apple Glass
-    # palette (no wallpaper). Verify its generated styles are legible on the
-    # palette's own background, including the translucent glass extremes.
-    mat_lua = CONFIG_ROOT / "wezterm" / "colors" / "matugen.lua"
-    m_bg = re.search(r"^\s*background\s*=\s*['\"](#[0-9A-Fa-f]{6})['\"]", mat_lua.read_text(encoding="utf-8"), re.M)
-    if not m_bg:
-        raise RuntimeError("no background in committed matugen.lua")
-    with tempfile.TemporaryDirectory(prefix="contrast-zsh-") as tmp:
-        out = Path(tmp) / "zsh-wallpaper.zsh"
-        subprocess.run(
-            ["bash", str(CONFIG_ROOT / "wezterm" / "utils" / "zsh-highlight-sync.sh"), str(mat_lua), str(out)],
-            check=True,
-        )
-        for key, fg in _parse_zsh_styles(out.read_text(encoding="utf-8")):
-            aud.check_against_effective("zsh", "apple_glass", key, fg, m_bg.group(1))
-
 
 # ---------------------------------------------------------------------------
 # 5. Kitty

@@ -27,7 +27,7 @@ The stack consists of five tightly orchestrated execution layers:
 1. **Compositor & Display Server:** Hyprland Wayland compositor (`hyprland.lua`, `custom.lua`).
 2. **Terminal Emulators (Dual-Engine):**
    - **Kitty (0.50.0):** Primary daily driver (`SUPER+RETURN`), Apple Dark Glass palette (`themes/apple-glass.conf`), IPC socket control, custom Python tab bar HUD (`tab_bar.py`).
-   - **WezTerm:** GPU dev workstation (`SUPER+SHIFT+RETURN`), WebGPU backend, Matugen dynamic wallpaper cascade writer, modal key tables.
+   - **WezTerm:** GPU dev workstation (`SUPER+SHIFT+RETURN`), WebGPU backend, static committed palette, modal key tables.
 3. **Terminal Multiplexer:** Tmux (3.8 persistent user daemon via systemd), `C-a` prefix, floating popup tooling hubs, OSC52 clipboard bridge.
 4. **Editor:** Neovim (0.12.6), native `vim.loader` bytecode cache, modular plugin architecture (`opts_extend`), single-picker Snacks architecture, zero-latency window navigation.
 5. **Interactive Shell:** Zsh (~56ms cached startup, measured with `hyperfine 'zsh -i -c exit'`), Oh-My-Posh prompts, Atuin SQLite history, and unified task dispatchers (`project-hub`, `project-task`).
@@ -43,7 +43,7 @@ The stack consists of five tightly orchestrated execution layers:
                         v                                                     v
 +-----------------------------------------------+     +-----------------------------------------------+
 |             KITTY TERMINAL (0.50.0)           |     |                    WEZTERM                    |
-|  * Profile: Dev Daily Driver (Apple Glass)    |     |  * Profile: Workstation (Matugen Cascade)     |
+|  * Profile: Dev Daily Driver (Apple Glass)    |     |  * Profile: Workstation (Static Apple Glass) |
 |  * Rendering: OpenGL / 60Hz VSync             |     |  * Rendering: WebGPU LowPower (Rust engine)   |
 |  * IPC: Unix Domain Sockets (@kitty-{pid})    |     |  * Input: Leader Key (Ctrl+Alt+Space)         |
 |  * Chrome: tab_bar.py Rounded Pills HUD       |     |  * Chrome: Dynamic Lua Right-Status HUD       |
@@ -64,7 +64,7 @@ The stack consists of five tightly orchestrated execution layers:
 +-------------------------------------------------------------------------------------------------------+
 |                                        NEOVIM EDITOR (0.12.6)                                         |
 |  * Core: init.lua -> vim.loader.enable() -> globals.lua -> options.lua -> lazy.nvim                  |
-|  * Colorscheme: OSC4 / File-polling terminal adapter (Catppuccin Mocha / Nightfox AA-contrast)       |
+|  * Colorscheme: OSC4 / file-polling reader of the active terminal's committed palette                |
 |  * LSP: 13 Language Servers (native vim.lsp.enable, blink.cmp capabilities, file watcher disabled)  |
 |  * Navigation: snacks.picker (unified telescope replacement), flash.nvim (s/S), oil.nvim (-)         |
 +-------------------------------------------------------------------------------------------------------+
@@ -146,7 +146,7 @@ To prevent overlap, double chrome, and conflicting hotkeys, each layer owns a st
 |---|---|---|---|
 | **OS Windowing & Tiling** | **Hyprland** | `hyprctl`, `windowrule = workspace`, `border_size = 0` | Resizing OS windows inside terminal configs. |
 | **GPU Rasterization & Fonts** | **Terminal Emulator** | WebGPU (WezTerm) / OpenGL (Kitty), HarfBuzz, FontConfig | Software rendering, terminal font emulations in editor. |
-| **Desktop Wallpaper Cascade** | **WezTerm** | `utils/backdrops.lua` -> `colors/custom.lua` -> Matugen CLI | Multiple tools writing wallpapers concurrently. |
+| **Theme Palette** | **Committed config** | `kitty/themes/apple-glass.conf` is the source; each tool's palette file is static | Regenerating a palette from a wallpaper or running a theme daemon. |
 | **Terminal Host Signals** | **Terminal Emulator** | WezTerm Right-Status (`events/right-status.lua`), Kitty Status | Repeating CPU/RAM/Battery metrics in Tmux or Neovim. |
 | **Process Multiplexing** | **Tmux** | `systemd --user tmux.service`, persistent server socket | Spawning nested terminals instead of Tmux windows. |
 | **Working Project Context** | **Tmux Status Right** | `status-right.sh`: Git branch/dirty, coding agents, containers | Duplicating Git info when Neovim Lualine is focused. |
@@ -264,11 +264,12 @@ The shell is layer 5, and its visible surface is the Oh-My-Posh prompt. Prompt s
 
 ---
 
-## 7. Static Theme Palette (post-v12)
+## 7. Static Theme Palette (v10, 2026-11-17)
 
-The stack no longer derives colors from the wallpaper. In v10/v12 the entire
-matugen/sanitizer/sync-wallpaper chain was removed: wallpaper-driven recoloring traded
-away for a committed, static Apple Glass palette and faster startup.
+The stack no longer derives colors from the wallpaper. Commit `3cf0f9b` (v10) removed the
+entire matugen/sanitizer/sync-wallpaper chain: wallpaper-driven recoloring traded away
+for a committed, static Apple Glass palette and faster startup. No wallpaper change
+propagates to any terminal layer.
 
 - **Single source of truth:** `~/.config/kitty/themes/apple-glass.conf` holds the
   canonical hexes (bg `#1c1c1e`, fg `#f5f5f7`, accent `#2dd4bf`). `custom.conf` includes

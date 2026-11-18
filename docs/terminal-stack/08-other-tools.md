@@ -174,12 +174,12 @@ review.
   overlay (`.config/kitty/custom.conf:179-180`). Inside nvim, the
   `<leader>gg` float is `Snacks.lazygit.open()` (`.config/nvim/lua/plugins/editor/snacks.lua:871`,
   `.config/nvim/lua/plugins/editor/snacks-extras.lua:66`, enabled at `:38`).
-- **Theme regeneration.** On the WezTerm side,
-  `.config/wezterm/utils/lazygit-lazydocker-palette.sh:50-78` rewrites the
-  lazygit config from the matugen wallpaper palette while templating around the
-  non-theme settings (delta renderer, quit behaviour) so they are preserved
-  (comment at `:17-19`). lazygit reads its config at launch; there is no live
-  reload (`:13-15`).
+- **Static palette application.** On the WezTerm side,
+  `.config/wezterm/utils/lazygit-lazydocker-palette.sh` rewrites the lazygit
+  config from the committed static `colors/matugen.lua` table (Apple Glass hexes,
+  not wallpaper-derived) while templating around the non-theme settings (delta
+  renderer, quit behaviour) so they are preserved. lazygit reads its config at
+  launch; there is no live reload.
 
 **Role.** Primary git interaction surface, reachable as a float from the shell's
 tmux, from Kitty, and from nvim.
@@ -234,7 +234,7 @@ directly and as the pager/previewer for other tools.
 - **lazygit (verified, in-repo).** `delta --dark --paging=never` is the git
   diff renderer in `.config/lazygit/config.yml:4`; the Apple-Glass overlay adds
   `--syntax-theme=ansi` at `.config/lazygit/theme-apple-glass.yml:5`. The
-  palette regeneration script writes the same command at
+  static palette reader writes the same command at
   `.config/wezterm/utils/lazygit-lazydocker-palette.sh:60`.
 - **git pager (outside this repo).** No git config file is committed in the
   repo, so there is no in-repo `core.pager = delta` setting to cite. The user's
@@ -324,7 +324,7 @@ Both cached-init functions are unset after setup at `shell/zshrc:312`.
 ## 5. Cross-references and verification
 
 - **Architecture:** [00 — Master Index & The 5-Layer Ecosystem Architecture](00-ecosystem-architecture.md), especially the navigation index (§5) and the prompt layer (§6, owned by A1). This doc 08 elaborates the shell-utility layer that 00 indexes.
-- **Reload behaviour:** [07 — Live Reload Runbook](07-live-reload-runbook.md). Note that `stack-reload` does **not** re-exec zsh: the cached inits documented above (zoxide, direnv, atuin) are only regenerated when a shell starts, and the runbook's rule is to run `exec zsh` per shell. Palette regeneration of the lazygit theme (§2.6) is a launch-time read, not a live reload.
+- **Reload behaviour:** [07 — Live Reload Runbook](07-live-reload-runbook.md). Note that `stack-reload` does **not** re-exec zsh: the   cached inits documented above (zoxide, direnv, atuin) are only regenerated when a shell starts, and the runbook's rule is to run `exec zsh` per shell. The lazygit theme (§2.6) is a launch-time read of a committed static palette, not a live reload.
 - **Incidents:** [06 — Hardware, Compositor & Troubleshooting Runbook](06-troubleshooting-runbook.md) for the quality gates and reload mechanics.
 - **Master index:** [README.md](README.md) lists docs 00-08.
 

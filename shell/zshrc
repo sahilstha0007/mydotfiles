@@ -258,7 +258,7 @@ if [[ "$_is_kitty" -eq 1 ]]; then
   ZSH_HIGHLIGHT_STYLES[cursor-matchingbracket]="fg=#90b2df,bold"
 
 elif [[ "$_is_wezterm" -eq 1 ]]; then
-  # --- WEZTERM IMMERSION PROFILE (Matugen Dynamic) ---
+  # --- WEZTERM IMMERSION PROFILE (static palette) ---
   _omp_init_cached "$HOME/.config/ohmyposh/zen.toml" "$HOME/.cache/zsh-cache/omp-zen.zsh"
 
   # OSC 7 directory reporting: keeps new WezTerm tabs/splits in the current directory
@@ -301,7 +301,6 @@ elif [[ "$_is_wezterm" -eq 1 ]]; then
   ZSH_HIGHLIGHT_STYLES[bracket-error]="fg=#ffb4ab,bold"
   ZSH_HIGHLIGHT_STYLES[cursor-matchingbracket]="fg=#ede0d4,bold"
 
-  [ -f "$HOME/.cache/zsh-wallpaper.zsh" ] && source "$HOME/.cache/zsh-wallpaper.zsh"
   export FZF_DEFAULT_OPTS="$FZF_DEFAULT_OPTS --color=bg:-1,gutter:-1,preview-bg:-1"
 
 else
