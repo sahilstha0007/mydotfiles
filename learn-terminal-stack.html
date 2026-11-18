@@ -1,1253 +1,692 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Terminal Stack Master Guide — WezTerm, Kitty, Tmux &amp; Neovim</title>
-<meta name="description" content="The definitive visual and interactive guide to Sahil's unified development stack: WezTerm, Kitty, Tmux, and Neovim 0.12. From core concepts to advanced muscle-memory workflows.">
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Terminal Stack — WezTerm · Kitty · Tmux · Neovim</title>
+<meta name="description" content="A working guide to a five-layer terminal stack: WezTerm, Kitty, tmux, zsh and Neovim 0.12 — verified against the running system." />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter+Tight:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
-/* ------------------------------------------------------------------ *
- *  Terminal & Editor Ecosystem — Master Visual Interactive Guide
- *  Palette based on Nightfox & Catppuccin Mocha frosted theme
- * ------------------------------------------------------------------ */
-:root {
-  --bg: #0e1015;
-  --surface: #151922;
-  --surface-raised: #1c2230;
-  --border: #262e3f;
-  --border-glow: #38455e;
-  --text: #e7e4dc;
-  --text-muted: #97a0b3;
-  --text-dim: #6b7487;
-  --accent-blue: #719cd6;
-  --accent-cyan: #7dcfff;
-  --accent-green: #81b29a;
-  --accent-yellow: #e0af68;
-  --accent-orange: #f4a261;
-  --accent-red: #e56b6f;
-  --accent-purple: #bb9af7;
-  --mono: "JetBrains Mono", "JetBrainsMono Nerd Font", ui-monospace, Menlo, Consolas, monospace;
-  --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --sidebar-w: 260px;
-  --header-h: 52px;
-}
+  :root{
+    --ground:#0B0C0E;
+    --raise:#111317;
+    --raise-2:#171A1F;
+    --line:#24282F;
+    --line-soft:#1B1F25;
+    --ink:#ECEAE4;
+    --ink-dim:#A8ADB6;
+    --ink-faint:#767C87;
+    --amber:#D9A441;
+    --amber-soft:#F0C877;
+    --ice:#8FB3C9;
+    --serif:"Instrument Serif",Iowan Old Style,Charter,Georgia,serif;
+    --sans:"Inter Tight",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+    --rail:264px;
+    --maxw:1180px;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto} *{animation:none!important;transition:none!important}}
+  body{
+    margin:0;background:var(--ground);color:var(--ink);
+    font-family:var(--sans);font-weight:300;font-size:16.5px;line-height:1.65;
+    -webkit-font-smoothing:antialiased;
+    background-image:radial-gradient(1200px 600px at 78% -8%,rgba(217,164,65,.075),transparent 70%),
+                     radial-gradient(900px 500px at 8% 4%,rgba(143,179,201,.05),transparent 65%);
+    background-attachment:fixed;
+  }
+  ::selection{background:var(--amber);color:#12100A}
+  a{color:var(--amber-soft);text-decoration:none;border-bottom:1px solid rgba(217,164,65,.35)}
+  a:hover{border-bottom-color:var(--amber)}
+  code,kbd,.mono{font-family:var(--mono);font-variant-ligatures:none}
 
-* { box-sizing: border-box; margin: 0; padding: 0; }
-html { scroll-behavior: smooth; font-size: 15px; }
-body {
-  background: var(--bg);
-  color: var(--text);
-  font-family: var(--sans);
-  line-height: 1.65;
-  -webkit-font-smoothing: antialiased;
-}
+  /* ---------- top progress ---------- */
+  #prog{position:fixed;top:0;left:0;height:2px;width:0;background:linear-gradient(90deg,var(--amber),var(--ice));z-index:90;transition:width .08s linear}
 
-/* Scrollbar */
-::-webkit-scrollbar { width: 8px; height: 8px; }
-::-webkit-scrollbar-track { background: var(--bg); }
-::-webkit-scrollbar-thumb { background: var(--surface-raised); border-radius: 4px; border: 1px solid var(--border); }
-::-webkit-scrollbar-thumb:hover { background: var(--border-glow); }
+  /* ---------- layout ---------- */
+  .shell{display:grid;grid-template-columns:var(--rail) minmax(0,1fr);max-width:var(--maxw);margin:0 auto;gap:0}
+  @media (max-width:980px){.shell{grid-template-columns:1fr}}
 
-::selection { background: var(--accent-blue); color: #0e1015; }
-a { color: var(--accent-cyan); text-decoration: none; transition: color 0.15s ease; }
-a:hover { color: var(--accent-blue); text-decoration: underline; }
-code, kbd, .mono { font-family: var(--mono); }
+  /* ---------- rail ---------- */
+  .rail{position:sticky;top:0;height:100vh;padding:30px 22px 26px 26px;border-right:1px solid var(--line-soft);display:flex;flex-direction:column;gap:18px;overflow-y:auto}
+  @media (max-width:980px){.rail{position:static;height:auto;border-right:0;border-bottom:1px solid var(--line-soft);padding:22px}}
+  .mark{display:flex;align-items:baseline;gap:9px}
+  .mark .dot{width:7px;height:7px;border-radius:50%;background:var(--amber);box-shadow:0 0 0 3px rgba(217,164,65,.15);flex:none;align-self:center}
+  .mark b{font-weight:500;font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-dim)}
+  .rail h1{font-family:var(--serif);font-size:27px;line-height:1.08;font-weight:400;margin:0;letter-spacing:-.01em}
+  .rail h1 em{font-style:italic;color:var(--amber-soft)}
+  .railnav{display:flex;flex-direction:column;gap:1px;margin-top:4px}
+  .railnav a{display:grid;grid-template-columns:26px 1fr;gap:8px;align-items:baseline;padding:6px 8px 6px 4px;border:0;border-radius:4px;color:var(--ink-faint);font-size:13.5px;line-height:1.3;transition:color .18s,background .18s}
+  .railnav a .n{font-family:var(--mono);font-size:10.5px;color:#4E545E;letter-spacing:.04em;padding-top:1px}
+  .railnav a:hover{color:var(--ink);background:rgba(255,255,255,.025)}
+  .railnav a.on{color:var(--ink)}
+  .railnav a.on .n{color:var(--amber)}
+  .railnav a.on::before{content:"";position:absolute}
+  .railnote{margin-top:auto;padding-top:16px;border-top:1px solid var(--line-soft);font-family:var(--mono);font-size:10.5px;line-height:1.75;color:var(--ink-faint);letter-spacing:.01em}
+  .railnote b{color:var(--ink-dim);font-weight:500}
 
-/* Keyboard Badges */
-kbd {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-family: var(--mono);
-  font-size: 0.82em;
-  font-weight: 600;
-  padding: 2px 6px;
-  min-width: 22px;
-  height: 22px;
-  background: var(--surface-raised);
-  color: #f1f0ea;
-  border: 1px solid #3c465d;
-  border-bottom: 2px solid #232a39;
-  border-radius: 4px;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.4);
-  vertical-align: baseline;
-  margin: 0 2px;
-}
+  /* ---------- main ---------- */
+  main{padding:0 clamp(20px,4vw,54px) 0}
+  section{padding:clamp(52px,7vw,88px) 0;border-top:1px solid var(--line-soft);scroll-margin-top:28px}
+  section:first-of-type{border-top:0}
 
-/* Header HUD */
-#hud-header {
-  position: fixed;
-  top: 0; left: 0; right: 0;
-  height: var(--header-h);
-  background: rgba(14, 16, 21, 0.88);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border-bottom: 1px solid var(--border);
-  z-index: 100;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 24px;
-}
-.hud-left { display: flex; align-items: center; gap: 14px; }
-.hud-chip {
-  font-family: var(--mono);
-  font-size: 11px;
-  font-weight: 700;
-  padding: 3px 10px;
-  border-radius: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  background: rgba(113, 156, 214, 0.15);
-  color: var(--accent-blue);
-  border: 1px solid rgba(113, 156, 214, 0.3);
-}
-.hud-title { font-weight: 600; font-size: 14px; color: var(--text); }
-.hud-right { display: flex; align-items: center; gap: 16px; font-family: var(--mono); font-size: 12px; color: var(--text-dim); }
-.hud-dot { color: var(--accent-green); animation: pulse 2s infinite; }
-@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
-#progress-bar {
-  position: absolute;
-  bottom: 0; left: 0; height: 2px;
-  background: linear-gradient(90deg, var(--accent-blue), var(--accent-cyan));
-  width: 0%;
-  transition: width 0.1s ease-out;
-}
+  .eyebrow{font-family:var(--mono);font-size:10.5px;letter-spacing:.22em;text-transform:uppercase;color:var(--ink-faint);display:flex;align-items:center;gap:10px;margin:0 0 14px}
+  .eyebrow::after{content:"";height:1px;flex:1;background:var(--line)}
+  h2{font-family:var(--serif);font-weight:400;font-size:clamp(30px,4.1vw,46px);line-height:1.04;letter-spacing:-.02em;margin:0 0 14px;text-wrap:balance}
+  h3{font-size:13px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-dim);margin:34px 0 12px}
+  h3:first-child{margin-top:0}
+  p{max-width:70ch;margin:0 0 14px;color:var(--ink-dim)}
+  p strong,li strong{color:var(--ink);font-weight:500}
+  .lede{font-size:clamp(17px,1.5vw,19.5px);line-height:1.6;color:var(--ink-dim);max-width:62ch}
 
-/* Layout */
-.container {
-  display: grid;
-  grid-template-columns: var(--sidebar-w) 1fr;
-  max-width: 1440px;
-  margin: 0 auto;
-  padding-top: var(--header-h);
-}
+  /* ---------- hero ---------- */
+  .hero{padding:clamp(46px,7vw,86px) 0 clamp(30px,4vw,52px)}
+  .hero .kicker{font-family:var(--mono);font-size:11px;letter-spacing:.24em;text-transform:uppercase;color:var(--amber);margin-bottom:20px}
+  .hero h1{font-family:var(--serif);font-weight:400;font-size:clamp(45px,7.6vw,92px);line-height:.92;letter-spacing:-.035em;margin:0 0 22px;max-width:15ch}
+  .hero h1 em{font-style:italic;color:var(--amber-soft)}
+  .hero .sub{max-width:56ch;font-size:17px;color:var(--ink-dim)}
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(126px,1fr));gap:1px;background:var(--line-soft);border:1px solid var(--line-soft);margin-top:44px}
+  .stat{background:var(--ground);padding:15px 16px 13px}
+  .stat b{display:block;font-family:var(--mono);font-size:22px;font-weight:500;letter-spacing:-.02em;color:var(--ink)}
+  .stat span{display:block;font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-faint);margin-top:5px}
+  .verify{margin-top:16px;font-family:var(--mono);font-size:11px;color:var(--ink-faint)}
+  .verify b{color:#7FB07F;font-weight:500}
 
-/* Sidebar */
-aside.sidebar {
-  position: sticky;
-  top: var(--header-h);
-  height: calc(100vh - var(--header-h));
-  overflow-y: auto;
-  padding: 24px 16px 40px 20px;
-  border-right: 1px solid var(--border);
-}
-.sidebar-section { margin-bottom: 24px; }
-.sidebar-title {
-  font-size: 11px;
-  font-family: var(--mono);
-  font-weight: 700;
-  text-transform: uppercase;
-  color: var(--text-dim);
-  letter-spacing: 1px;
-  margin-bottom: 8px;
-  padding-left: 8px;
-}
-.sidebar-nav { list-style: none; }
-.sidebar-nav li { margin-bottom: 3px; }
-.sidebar-nav a {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 6px 10px;
-  border-radius: 6px;
-  font-size: 13px;
-  color: var(--text-muted);
-  transition: all 0.15s ease;
-}
-.sidebar-nav a:hover {
-  background: var(--surface);
-  color: var(--text);
-  text-decoration: none;
-}
-.sidebar-nav a.active {
-  background: rgba(113, 156, 214, 0.12);
-  color: var(--accent-blue);
-  font-weight: 600;
-  border-left: 3px solid var(--accent-blue);
-}
-.sidebar-num {
-  font-family: var(--mono);
-  font-size: 11px;
-  color: var(--text-dim);
-  min-width: 16px;
-}
-.badge-tool {
-  font-size: 9px;
-  font-family: var(--mono);
-  font-weight: 700;
-  padding: 1px 6px;
-  border-radius: 4px;
-  margin-left: auto;
-  text-transform: uppercase;
-}
-.tool-wezterm { background: rgba(187, 154, 247, 0.15); color: var(--accent-purple); border: 1px solid rgba(187, 154, 247, 0.3); }
-.tool-kitty { background: rgba(229, 107, 111, 0.15); color: var(--accent-red); border: 1px solid rgba(229, 107, 111, 0.3); }
-.tool-tmux { background: rgba(129, 178, 154, 0.15); color: var(--accent-green); border: 1px solid rgba(129, 178, 154, 0.3); }
-.tool-nvim { background: rgba(113, 156, 214, 0.15); color: var(--accent-blue); border: 1px solid rgba(113, 156, 214, 0.3); }
-.tool-all { background: rgba(224, 175, 104, 0.15); color: var(--accent-yellow); border: 1px solid rgba(224, 175, 104, 0.3); }
+  /* ---------- layer diagram ---------- */
+  .layers{border:1px solid var(--line);margin:6px 0 4px}
+  .layer{display:grid;grid-template-columns:44px 128px 1fr;gap:0;border-bottom:1px solid var(--line-soft);transition:background .18s}
+  .layer:last-child{border-bottom:0}
+  .layer:hover{background:var(--raise)}
+  .layer .idx{font-family:var(--mono);font-size:11px;color:var(--ink-faint);padding:15px 0 15px 14px;border-right:1px solid var(--line-soft)}
+  .layer .name{font-family:var(--mono);font-size:12px;color:var(--amber);padding:15px 10px;letter-spacing:.02em}
+  .layer .desc{padding:14px 16px;font-size:14px;color:var(--ink-dim);line-height:1.5}
+  .layer .desc b{color:var(--ink);font-weight:500}
+  @media (max-width:620px){.layer{grid-template-columns:34px 1fr}.layer .name{padding-left:10px}.layer .desc{grid-column:2/-1;padding-top:0}}
 
-/* Main Content */
-main.content {
-  padding: 36px 48px 80px 48px;
-  max-width: 1040px;
-}
+  /* ---------- keycaps ---------- */
+  kbd{display:inline-block;background:var(--raise-2);border:1px solid #2C313A;border-bottom-width:2px;border-radius:4px;padding:1px 6px 1.5px;font-size:12px;color:var(--ink);white-space:nowrap;line-height:1.5}
+  .keys{display:flex;flex-wrap:wrap;gap:4px;align-items:center}
+  .plus{color:#575D67;font-family:var(--mono);font-size:10px}
 
-/* Hero Section */
-.hero {
-  padding-bottom: 36px;
-  border-bottom: 1px solid var(--border);
-  margin-bottom: 40px;
-}
-.hero-tag {
-  display: inline-block;
-  font-family: var(--mono);
-  font-size: 12px;
-  color: var(--accent-cyan);
-  background: rgba(125, 207, 255, 0.1);
-  padding: 4px 10px;
-  border-radius: 6px;
-  border: 1px solid rgba(125, 207, 255, 0.2);
-  margin-bottom: 14px;
-}
-.hero h1 {
-  font-size: 38px;
-  font-weight: 800;
-  line-height: 1.2;
-  margin-bottom: 12px;
-  letter-spacing: -0.5px;
-}
-.hero h1 span.gradient {
-  background: linear-gradient(135deg, var(--accent-blue), var(--accent-cyan) 60%, var(--accent-green));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-.hero-lede {
-  font-size: 16px;
-  color: var(--text-muted);
-  max-width: 820px;
-  line-height: 1.6;
-}
+  /* ---------- tables ---------- */
+  .tw{overflow-x:auto;border:1px solid var(--line-soft);margin:0 0 6px}
+  table{width:100%;border-collapse:collapse;font-size:14px;min-width:520px}
+  th{text-align:left;font-family:var(--mono);font-size:9.5px;letter-spacing:.15em;text-transform:uppercase;color:var(--ink-faint);font-weight:500;padding:11px 14px;border-bottom:1px solid var(--line);background:var(--raise);position:sticky;top:0}
+  td{padding:10px 14px;border-bottom:1px solid var(--line-soft);vertical-align:top;color:var(--ink-dim)}
+  tr:last-child td{border-bottom:0}
+  tbody tr:hover{background:rgba(255,255,255,.02)}
+  td:first-child{white-space:nowrap;width:1%}
+  td code{font-size:12.5px;color:var(--ink);background:none}
+  .why{color:var(--ink-faint);font-size:13px}
 
-/* Mockup Terminal */
-.mockup-term {
-  background: #090a0d;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  overflow: hidden;
-  margin: 24px 0;
-  box-shadow: 0 12px 32px rgba(0,0,0,0.5);
-}
-.mockup-header {
-  background: #12151d;
-  padding: 8px 14px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  border-bottom: 1px solid var(--border);
-}
-.mockup-dots { display: flex; gap: 6px; }
-.mockup-dot { width: 10px; height: 10px; border-radius: 50%; }
-.dot-red { background: #e56b6f; }
-.dot-yellow { background: #e0af68; }
-.dot-green { background: #81b29a; }
-.mockup-title { font-family: var(--mono); font-size: 11px; color: var(--text-dim); }
-.mockup-body {
-  padding: 16px 20px;
-  font-family: var(--mono);
-  font-size: 13px;
-  line-height: 1.6;
-  color: #ced4df;
-  overflow-x: auto;
-}
+  /* ---------- callout ---------- */
+  .note{border-left:2px solid var(--amber);background:linear-gradient(90deg,rgba(217,164,65,.06),transparent 65%);padding:14px 18px;margin:22px 0;max-width:76ch}
+  .note .t{font-family:var(--mono);font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--amber);margin-bottom:6px}
+  .note p{margin:0;font-size:14.5px;color:var(--ink-dim)}
+  .note.warn{border-left-color:#C4675A;background:linear-gradient(90deg,rgba(196,103,90,.07),transparent 65%)}
+  .note.warn .t{color:#D98273}
 
-/* Chapters */
-.chapter {
-  margin-bottom: 60px;
-  scroll-margin-top: calc(var(--header-h) + 20px);
-}
-.chapter-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 18px;
-}
-.chapter-num {
-  font-family: var(--mono);
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--accent-blue);
-  background: rgba(113, 156, 214, 0.1);
-  padding: 2px 8px;
-  border-radius: 4px;
-  border: 1px solid rgba(113, 156, 214, 0.25);
-}
-.chapter h2 {
-  font-size: 26px;
-  font-weight: 700;
-  letter-spacing: -0.3px;
-}
-.chapter-desc {
-  font-size: 15px;
-  color: var(--text-muted);
-  margin-bottom: 22px;
-}
-.chapter h3 {
-  font-size: 18px;
-  font-weight: 600;
-  margin: 28px 0 12px;
-  color: #f1f0ea;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
+  /* ---------- group grid ---------- */
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(238px,1fr));gap:1px;background:var(--line-soft);border:1px solid var(--line-soft)}
+  .cell{background:var(--ground);padding:15px 16px}
+  .cell:hover{background:var(--raise)}
+  .cell .k{font-family:var(--mono);font-size:12px;color:var(--amber);margin-bottom:7px}
+  .cell .d{font-size:13.5px;color:var(--ink-dim);line-height:1.5}
+  .cell .d b{color:var(--ink);font-weight:500}
 
-/* Callouts */
-.callout {
-  padding: 16px 20px;
-  border-radius: 8px;
-  margin: 18px 0;
-  border-left: 4px solid var(--accent-blue);
-  background: rgba(21, 25, 34, 0.7);
-  font-size: 14px;
-}
-.callout-title {
-  font-weight: 700;
-  margin-bottom: 6px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-family: var(--mono);
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-.callout-tip { border-left-color: var(--accent-green); background: rgba(129, 178, 154, 0.08); }
-.callout-tip .callout-title { color: var(--accent-green); }
-.callout-warning { border-left-color: var(--accent-orange); background: rgba(244, 162, 97, 0.08); }
-.callout-warning .callout-title { color: var(--accent-orange); }
-.callout-info { border-left-color: var(--accent-cyan); background: rgba(125, 207, 255, 0.08); }
-.callout-info .callout-title { color: var(--accent-cyan); }
+  /* ---------- playbooks ---------- */
+  .drill{border:1px solid var(--line-soft);padding:20px 22px;margin-bottom:12px;background:var(--raise)}
+  .drill h4{margin:0 0 4px;font-family:var(--serif);font-size:22px;font-weight:400;letter-spacing:-.01em}
+  .drill .goal{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:14px}
+  .steps{list-style:none;margin:0;padding:0;counter-reset:s}
+  .steps li{counter-increment:s;position:relative;padding:7px 0 7px 30px;border-top:1px solid var(--line-soft);font-size:14px;color:var(--ink-dim)}
+  .steps li:first-child{border-top:0}
+  .steps li::before{content:counter(s);position:absolute;left:0;top:8px;font-family:var(--mono);font-size:10px;color:var(--amber);border:1px solid #33383F;border-radius:50%;width:18px;height:18px;display:grid;place-items:center}
 
-/* Tables */
-.table-wrap {
-  overflow-x: auto;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  margin: 18px 0;
-  background: var(--surface);
-}
-table.data-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 13.5px;
-  text-align: left;
-}
-table.data-table th {
-  background: var(--surface-raised);
-  padding: 10px 14px;
-  font-family: var(--mono);
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  color: var(--text-dim);
-  border-bottom: 1px solid var(--border);
-}
-table.data-table td {
-  padding: 10px 14px;
-  border-bottom: 1px solid var(--border);
-  color: var(--text);
-  vertical-align: middle;
-}
-table.data-table tr:last-child td { border-bottom: none; }
-table.data-table tr:hover td { background: rgba(28, 34, 48, 0.5); }
-td.keys-cell { font-family: var(--mono); white-space: nowrap; width: 220px; }
-td.tool-cell { width: 90px; text-align: center; }
+  /* ---------- catalog ---------- */
+  .filter{display:flex;flex-wrap:wrap;gap:7px;margin:22px 0 14px;align-items:center}
+  .chip{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;padding:6px 12px;border:1px solid var(--line);background:transparent;color:var(--ink-faint);border-radius:2px;cursor:pointer;transition:.16s}
+  .chip:hover{color:var(--ink);border-color:#3A4049}
+  .chip[aria-pressed="true"]{background:var(--amber);border-color:var(--amber);color:#14110A;font-weight:500}
+  #q{flex:1;min-width:180px;background:transparent;border:0;border-bottom:1px solid var(--line);color:var(--ink);font-family:var(--mono);font-size:13px;padding:8px 2px;outline:none}
+  #q:focus{border-bottom-color:var(--amber)}
+  #q::placeholder{color:#5A6069}
+  .count{font-family:var(--mono);font-size:10.5px;color:var(--ink-faint);letter-spacing:.08em}
 
-/* Grid Cards */
-.grid-cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 16px;
-  margin: 20px 0;
-}
-.card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 18px;
-  transition: transform 0.15s ease, border-color 0.15s ease;
-}
-.card:hover {
-  transform: translateY(-2px);
-  border-color: var(--border-glow);
-}
-.card-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 10px;
-}
-.card-title { font-weight: 600; font-size: 15px; }
-.card p { font-size: 13px; color: var(--text-muted); line-height: 1.5; }
+  /* ---------- commands ---------- */
+  .cmd{display:flex;justify-content:space-between;gap:14px;align-items:center;border:1px solid var(--line-soft);background:var(--raise);padding:11px 14px;margin-bottom:7px;font-family:var(--mono);font-size:12.5px;color:var(--ice);cursor:pointer;transition:.16s}
+  .cmd:hover{border-color:#33383F;background:var(--raise-2)}
+  .cmd code{color:inherit}
+  .cmd .hint{font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:#565C66}
+  .cmd.done .hint{color:#7FB07F}
 
-/* Interactive Keymap Search Engine */
-.search-controls {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 16px;
-  margin: 20px 0;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-.search-input-wrap {
-  position: relative;
-  width: 100%;
-}
-.search-input {
-  width: 100%;
-  padding: 10px 14px 10px 38px;
-  background: var(--surface-raised);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  color: var(--text);
-  font-family: var(--sans);
-  font-size: 14px;
-  outline: none;
-  transition: border-color 0.15s ease;
-}
-.search-input:focus { border-color: var(--accent-blue); box-shadow: 0 0 0 2px rgba(113, 156, 214, 0.2); }
-.search-icon {
-  position: absolute;
-  top: 50%; left: 12px;
-  transform: translateY(-50%);
-  color: var(--text-dim);
-  font-size: 14px;
-}
-.filter-pills {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-.filter-pill {
-  background: var(--surface-raised);
-  border: 1px solid var(--border);
-  color: var(--text-muted);
-  font-family: var(--mono);
-  font-size: 11px;
-  font-weight: 600;
-  padding: 4px 12px;
-  border-radius: 14px;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-.filter-pill:hover { color: var(--text); border-color: var(--border-glow); }
-.filter-pill.active {
-  background: var(--accent-blue);
-  color: #0e1015;
-  border-color: var(--accent-blue);
-}
-.search-count {
-  font-family: var(--mono);
-  font-size: 11px;
-  color: var(--text-dim);
-  align-self: flex-end;
-}
+  footer{border-top:1px solid var(--line);padding:30px 0 56px;display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between;font-family:var(--mono);font-size:11px;color:var(--ink-faint)}
 
-/* Footer */
-footer {
-  margin-top: 80px;
-  padding: 30px 0;
-  border-top: 1px solid var(--border);
-  font-family: var(--mono);
-  font-size: 12px;
-  color: var(--text-dim);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-/* Responsive */
-@media (max-width: 900px) {
-  .container { grid-template-columns: 1fr; }
-  aside.sidebar { display: none; }
-  main.content { padding: 24px 20px; }
-  #hud-header { padding: 0 16px; }
-}
+  @media print{
+    body{background:#fff;color:#111}
+    .rail,#prog,.filter,#q{display:none}
+    .shell{display:block}
+    section{page-break-inside:avoid;border-top:1px solid #ddd}
+    th{background:#f4f4f4;color:#333}
+    td{color:#222}
+    a{color:#111;border:0}
+  }
 </style>
 </head>
 <body>
+<div id="prog"></div>
 
-<!-- ============ HUD HEADER ============ -->
-<header id="hud-header">
-  <div class="hud-left">
-    <div class="hud-chip" id="hud-chip">ECOSYSTEM</div>
-    <div class="hud-title" id="hud-title">Terminal &amp; Editor Master Guide</div>
-  </div>
-  <div class="hud-right">
-    <span class="hud-dot">●</span>
-    <span id="hud-status">Wayland · Hyprland · 60fps</span>
-    <span id="hud-clock">--:--</span>
-  </div>
-  <div id="progress-bar"></div>
-</header>
+<div class="shell">
+  <aside class="rail">
+    <div class="mark"><span class="dot"></span><b>Terminal stack</b></div>
+    <h1>Five layers,<br><em>one keyboard.</em></h1>
 
-<div class="container">
+    <nav class="railnav" id="nav">
+      <a href="#overview"><span class="n">00</span><span>Overview</span></a>
+      <a href="#contracts"><span class="n">01</span><span>Shared contracts</span></a>
+      <a href="#wezterm"><span class="n">02</span><span>WezTerm</span></a>
+      <a href="#kitty"><span class="n">03</span><span>Kitty</span></a>
+      <a href="#tmux"><span class="n">04</span><span>tmux</span></a>
+      <a href="#neovim"><span class="n">05</span><span>Neovim</span></a>
+      <a class="ext" href=".config/nvim/learn-nvim.html"><span class="n">→</span><span>Learn Neovim</span></a>
+      <a href="#playbooks"><span class="n">06</span><span>Playbooks</span></a>
+      <a href="#catalog"><span class="n">07</span><span>Live catalog</span></a>
+      <a href="#verify"><span class="n">08</span><span>Verify it</span></a>
+    </nav>
 
-<!-- ============ SIDEBAR TOC ============ -->
-<aside class="sidebar">
-  <div class="sidebar-section">
-    <div class="sidebar-title">Foundation</div>
-    <ul class="sidebar-nav">
-      <li><a href="#intro" class="active"><span class="sidebar-num">00</span>Ecosystem Overview <span class="badge-tool tool-all">all</span></a></li>
-      <li><a href="#navigation"><span class="sidebar-num">01</span>Universal Navigation <span class="badge-tool tool-all">all</span></a></li>
-    </ul>
-  </div>
+    <div class="railnote">
+      <b>Verified live</b><br>
+      2026-11-15<br>
+      nvim 0.12.6 · tmux 3.8<br>
+      wezterm 20261010<br>
+      kitty 0.49.2
+    </div>
+  </aside>
 
-  <div class="sidebar-section">
-    <div class="sidebar-title">Terminals</div>
-    <ul class="sidebar-nav">
-      <li><a href="#wezterm"><span class="sidebar-num">02</span>WezTerm &amp; Key Tables <span class="badge-tool tool-wezterm">wz</span></a></li>
-      <li><a href="#kitty"><span class="sidebar-num">03</span>Kitty, Tabs &amp; Kittens <span class="badge-tool tool-kitty">kit</span></a></li>
-    </ul>
-  </div>
+  <main>
+    <!-- ================= HERO ================= -->
+    <header class="hero" id="overview">
+      <div class="kicker">Unified dev stack · 2026</div>
+      <h1>Your terminal is <em>an instrument.</em></h1>
+      <p class="sub">WezTerm and Kitty draw pixels. tmux owns sessions, windows and panes. zsh gets you places. Neovim edits. This page is how the five layers cooperate — and which one wins when two of them claim the same key.</p>
 
-  <div class="sidebar-section">
-    <div class="sidebar-title">Multiplexer</div>
-    <ul class="sidebar-nav">
-      <li><a href="#tmux"><span class="sidebar-num">04</span>Tmux Masterclass <span class="badge-tool tool-tmux">tmux</span></a></li>
-    </ul>
-  </div>
-
-  <div class="sidebar-section">
-    <div class="sidebar-title">Editor</div>
-    <ul class="sidebar-nav">
-      <li><a href="#neovim"><span class="sidebar-num">05</span>Neovim 0.12 Mastery <span class="badge-tool tool-nvim">nvim</span></a></li>
-    </ul>
-  </div>
-
-  <div class="sidebar-section">
-    <div class="sidebar-title">Workflows</div>
-    <ul class="sidebar-nav">
-      <li><a href="#playbooks"><span class="sidebar-num">06</span>High-Velocity Playbooks <span class="badge-tool tool-all">drills</span></a></li>
-      <li><a href="#cheatsheet"><span class="sidebar-num">07</span>Omni-Search Keymaps <span class="badge-tool tool-all">catalog</span></a></li>
-    </ul>
-  </div>
-</aside>
-
-<!-- ============ MAIN CONTENT ============ -->
-<main class="content">
-
-  <!-- ============ HERO ============ -->
-  <section class="hero" id="intro">
-    <div class="hero-tag">Unified Dev Stack Architecture · 2026 Edition</div>
-    <h1>Master Your <span class="gradient">Terminal Stack</span></h1>
-    <p class="hero-lede">A comprehensive visual and interactive tutorial for Sahil's development environment. This guide connects your GPU terminal emulators (<strong>WezTerm</strong> and <strong>Kitty</strong>), your multiplexer daemon (<strong>Tmux</strong>), and your editor (<strong>Neovim 0.12</strong>) into one unified, low-latency workflow.</p>
-
-    <!-- Visual Architecture Mockup -->
-    <div class="mockup-term">
-      <div class="mockup-header">
-        <div class="mockup-dots">
-          <div class="mockup-dot dot-red"></div>
-          <div class="mockup-dot dot-yellow"></div>
-          <div class="mockup-dot dot-green"></div>
-        </div>
-        <div class="mockup-title">architecture-flow.sh — 5-Layer Stack Hierarchy</div>
+      <div class="stats">
+        <div class="stat"><b>5</b><span>layers</span></div>
+        <div class="stat"><b>229</b><span>live bindings</span></div>
+        <div class="stat"><b>118</b><span>tmux prefix</span></div>
+        <div class="stat"><b>157</b><span>nvim leader</span></div>
+        <div class="stat"><b>74</b><span>kitty maps</span></div>
+        <div class="stat"><b>25</b><span>wez alt</span></div>
       </div>
-      <div class="mockup-body">
-┌────────────────────────────────────────────────────────────────────────┐
-│ <span style="color:var(--accent-purple)">LAYER 1: GPU Terminal</span>   Kitty / WezTerm (Wayland VSync, Frosted Glass)   │
-│ <span style="color:var(--accent-green)">LAYER 2: Multiplexer</span>    Tmux Server (Ctrl+a, Sessionizer, 90% Popups)    │
-│ <span style="color:var(--accent-yellow)">LAYER 3: Shell &amp; Prompt</span> Zsh + Oh My Posh + Zoxide (`z` directory jumps)  │
-│ <span style="color:var(--accent-blue)">LAYER 4: Editor</span>         Neovim v0.12.6 (Snacks, Oil, Flash, Native LSP)  │
-│ <span style="color:var(--accent-cyan)">LAYER 5: Terminal TUIs</span>  Lazygit, Lazydocker, Yazi, btop                  │
-└────────────────────────────────────────────────────────────────────────┘
+      <div class="verify">keybinding parity: <b>PASS</b> — 229 live bindings == cheatsheet == README · collisions: <b>none</b> (25 vs 21)</div>
+    </header>
+
+    <!-- ================= OVERVIEW ================= -->
+    <section>
+      <div class="eyebrow">00 · Overview</div>
+      <h2>What sits on what</h2>
+      <p class="lede">Read top to bottom: a keystroke enters at layer 1 and gets claimed by the outermost layer that binds it. Everything confusing about this setup follows from that one sentence.</p>
+
+      <div class="layers" role="table" aria-label="Stack layers">
+        <div class="layer"><div class="idx">01</div><div class="name">emulator</div><div class="desc"><b>Kitty</b> (daily driver, <code>SUPER+RETURN</code>) and <b>WezTerm</b> (dev workstation + theme writer, <code>SUPER+SHIFT+RETURN</code>). Wayland, GPU, fractional scaling.</div></div>
+        <div class="layer"><div class="idx">02</div><div class="name">multiplexer</div><div class="desc"><b>tmux 3.8</b>, prefix <code>C-a</code>, shared socket at <code>~/.cache/tmux</code> so both emulators attach to one server. Sessions survive the window.</div></div>
+        <div class="layer"><div class="idx">03</div><div class="name">shell</div><div class="desc"><b>zsh</b> + oh-my-posh + atuin + zoxide + fzf. ~66 ms startup, <code>z &lt;name&gt;</code> to jump, <code>Ctrl+R</code> for history.</div></div>
+        <div class="layer"><div class="idx">04</div><div class="name">editor</div><div class="desc"><b>Neovim 0.12.6</b> — lazy.nvim, snacks picker, native LSP, blink.cmp, and a tmux-backed code runner.</div></div>
+        <div class="layer"><div class="idx">05</div><div class="name">tuis</div><div class="desc"><b>lazygit · lazydocker · yazi · btop</b> — all reachable as 90% floating popups without leaving the current pane.</div></div>
       </div>
-    </div>
-  </section>
 
-  <!-- ============ 01 UNIVERSAL NAVIGATION ============ -->
-  <section class="chapter" id="navigation" data-tool="ECOSYSTEM">
-    <div class="chapter-header">
-      <span class="chapter-num">01</span>
-      <h2>Universal Navigation &amp; Shared Contracts</h2>
-    </div>
-    <p class="chapter-desc">Instead of having separate keys for terminal windows, multiplexer splits, and editor panes, your setup binds them to shared, universal signals.</p>
-
-    <h3>1. The Seamless Directional Jump (<kbd>Ctrl</kbd> + <kbd>h/j/k/l</kbd>)</h3>
-    <p>Your cursor travels across Kitty window splits, Tmux panes, and Neovim editor windows using the exact same muscle memory:</p>
-
-    <div class="table-wrap">
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>Shortcut</th>
-            <th>Boundary</th>
-            <th>Engine / Handler</th>
-            <th>Description</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td class="keys-cell"><kbd>Ctrl</kbd> + <kbd>h</kbd></td>
-            <td>Focus Left</td>
-            <td><code>pass_keys.py</code> / <code>tmux.nvim</code></td>
-            <td>Moves left across Neovim splits, jumping into Tmux/Kitty panes at boundaries.</td>
-          </tr>
-          <tr>
-            <td class="keys-cell"><kbd>Ctrl</kbd> + <kbd>j</kbd></td>
-            <td>Focus Down</td>
-            <td><code>pass_keys.py</code> / <code>tmux.nvim</code></td>
-            <td>Moves down into adjacent splits or terminal runner panes.</td>
-          </tr>
-          <tr>
-            <td class="keys-cell"><kbd>Ctrl</kbd> + <kbd>k</kbd></td>
-            <td>Focus Up</td>
-            <td><code>pass_keys.py</code> / <code>tmux.nvim</code></td>
-            <td>Moves up from terminals back into editor splits.</td>
-          </tr>
-          <tr>
-            <td class="keys-cell"><kbd>Ctrl</kbd> + <kbd>l</kbd></td>
-            <td>Focus Right</td>
-            <td><code>pass_keys.py</code> / <code>tmux.nvim</code></td>
-            <td>Moves right across editor splits.</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-
-    <div class="callout callout-tip">
-      <div class="callout-title">The Directional Fallback</div>
-      If an interactive TUI catches <kbd>Ctrl</kbd> chords, Kitty provides unconditional window navigation with <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>Arrows</kbd>, and Tmux provides <kbd>Prefix</kbd> + <kbd>H/J/K/L</kbd>.
-    </div>
-
-    <h3>2. Split Shape Symmetry</h3>
-    <p>The visual split line matches your key across all layers:</p>
-    <ul>
-      <li><kbd>Space</kbd><kbd>|</kbd> (Neovim) and <kbd>Prefix</kbd><kbd>|</kbd> (Tmux) create a <strong>vertical split</strong> (side-by-side).</li>
-      <li><kbd>Space</kbd><kbd>-</kbd> (Neovim) and <kbd>Prefix</kbd><kbd>-</kbd> (Tmux) create a <strong>horizontal split</strong> (stacked).</li>
-    </ul>
-  </section>
-
-  <!-- ============ 02 WEZTERM ============ -->
-  <section class="chapter" id="wezterm" data-tool="WEZTERM">
-    <div class="chapter-header">
-      <span class="chapter-num">02</span>
-      <h2>WezTerm &amp; Modal Key Tables</h2>
-      <span class="badge-tool tool-wezterm">wezterm</span>
-    </div>
-    <p class="chapter-desc">WezTerm operates with WebGPU hardware acceleration, fractional Wayland scaling, and specialized modal key tables.</p>
-
-    <div class="callout callout-info">
-      <div class="callout-title">WezTerm Leader Key</div>
-      Press <kbd>Alt</kbd> + <kbd>Ctrl</kbd> + <kbd>Space</kbd>. The Left HUD flashes a distinct amber pill indicating Leader mode is active!
-    </div>
-
-    <h3>Modal Key Tables</h3>
-    <div class="grid-cards">
-      <div class="card">
-        <div class="card-header">
-          <div class="card-title">Workspaces (<kbd>w</kbd>)</div>
-          <span class="badge-tool tool-wezterm">modal</span>
-        </div>
-        <p>Press <kbd>Leader</kbd> then <kbd>w</kbd>. An interactive fuzzy popup lets you switch between isolated workspace layouts.</p>
+      <div class="note">
+        <div class="t">The one rule</div>
+        <p>One leader per layer, and they never collide because they live at different depths: WezTerm <kbd>Alt</kbd>+<kbd>Ctrl</kbd>+<kbd>Space</kbd>, tmux <kbd>C-a</kbd>, nvim <kbd>Space</kbd>. Inside nvim, <kbd>Space</kbd> is always nvim's — the inner app beats the outer for a shared leader character.</p>
       </div>
-      <div class="card">
-        <div class="card-header">
-          <div class="card-title">Resize Pane (<kbd>r</kbd>)</div>
-          <span class="badge-tool tool-wezterm">modal</span>
-        </div>
-        <p>Press <kbd>Leader</kbd> then <kbd>r</kbd>. Tap <kbd>h</kbd>, <kbd>j</kbd>, <kbd>k</kbd>, <kbd>l</kbd> repeatedly to resize the active pane, then <kbd>Esc</kbd> to exit.</p>
+    </section>
+
+    <!-- ================= CONTRACTS ================= -->
+    <section id="contracts">
+      <div class="eyebrow">01 · Shared contracts</div>
+      <h2>Four keys that cross every boundary</h2>
+      <p class="lede">Instead of one navigation scheme per tool, the stack binds the same four motions at every layer. Learn them once.</p>
+
+      <div class="tw">
+        <table>
+          <thead><tr><th>Keys</th><th>Motion</th><th>Who resolves it</th><th class="why">Why it feels seamless</th></tr></thead>
+          <tbody>
+            <tr><td><span class="keys"><kbd>Ctrl</kbd><span class="plus">+</span><kbd>h</kbd></span></td><td>focus left</td><td><code>pass_keys.py</code> / <code>tmux.nvim</code></td><td class="why">Leaves an nvim split, enters a tmux pane at the boundary.</td></tr>
+            <tr><td><span class="keys"><kbd>Ctrl</kbd><span class="plus">+</span><kbd>j</kbd></span></td><td>focus down</td><td><code>tmux.nvim</code></td><td class="why">Drops from the editor into the runner pane below it.</td></tr>
+            <tr><td><span class="keys"><kbd>Ctrl</kbd><span class="plus">+</span><kbd>k</kbd></span></td><td>focus up</td><td><code>tmux.nvim</code></td><td class="why">Comes back from the terminal to the code.</td></tr>
+            <tr><td><span class="keys"><kbd>Ctrl</kbd><span class="plus">+</span><kbd>l</kbd></span></td><td>focus right</td><td><code>tmux.nvim</code></td><td class="why">tmux's <code>is_vim</code> guard decides who owns the key.</td></tr>
+            <tr><td><span class="keys"><kbd>Alt</kbd><span class="plus">+</span><kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd></span></td><td>resize</td><td>tmux root → <code>send-keys M-h</code></td><td class="why">Resizes the pane in a shell, the split in nvim.</td></tr>
+            <tr><td><span class="keys"><kbd>Alt</kbd><span class="plus">+</span><kbd>Ctrl</kbd><span class="plus">+</span><kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd></span></td><td>swap split</td><td><code>tmux.nvim</code></td><td class="why">Moves the whole split past its neighbour.</td></tr>
+          </tbody>
+        </table>
       </div>
-      <div class="card">
-        <div class="card-header">
-          <div class="card-title">Font Sizing (<kbd>f</kbd>)</div>
-          <span class="badge-tool tool-wezterm">modal</span>
-        </div>
-        <p>Press <kbd>Leader</kbd> then <kbd>f</kbd>. Tap <kbd>+</kbd> or <kbd>-</kbd> to dynamically scale font size for presentations.</p>
+
+      <h3>Split shape symmetry — the line is the key</h3>
+      <div class="grid">
+        <div class="cell"><div class="k">Space | · Prefix | · Ctrl+Shift+d</div><div class="d"><b>side-by-side</b> — vertical split. The key is drawn like the divider.</div></div>
+        <div class="cell"><div class="k">Space - · Prefix - · Ctrl+Shift+s</div><div class="d"><b>stacked</b> — horizontal split. Same symbol, same result, every layer.</div></div>
       </div>
-      <div class="card">
-        <div class="card-header">
-          <div class="card-title">QuickSelect (<kbd>Space</kbd>)</div>
-          <span class="badge-tool tool-wezterm">quickselect</span>
-        </div>
-        <p>Press <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>Space</kbd>. Hit the letter tags over URLs, hashes, or IPs to copy directly to clipboard.</p>
+
+      <div class="note warn">
+        <div class="t">If a TUI swallows the chord</div>
+        <p>Some full-screen apps grab <kbd>Ctrl</kbd> combinations. Kitty still gives you unconditional navigation with <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>←↑↓→</kbd>, and tmux with <kbd>Prefix</kbd> then <kbd>H</kbd>/<kbd>J</kbd>/<kbd>K</kbd>/<kbd>L</kbd>.</p>
       </div>
-    </div>
-  </section>
+    </section>
 
-  <!-- ============ 03 KITTY ============ -->
-  <section class="chapter" id="kitty" data-tool="KITTY">
-    <div class="chapter-header">
-      <span class="chapter-num">03</span>
-      <h2>Kitty, Custom Tab Bar &amp; Kittens</h2>
-      <span class="badge-tool tool-kitty">kitty</span>
-    </div>
-    <p class="chapter-desc">Kitty is your ultra-responsive GPU terminal profile, optimized for 60Hz tear-free Hyprland rendering, particle cursor physics, and Python micro-tools.</p>
+    <!-- ================= WEZTERM ================= -->
+    <section id="wezterm">
+      <div class="eyebrow">02 · Emulator</div>
+      <h2>WezTerm: tabs, key tables, wallpaper</h2>
+      <p class="lede">WezTerm owns <strong>tabs and chrome</strong>, never panes — that belongs to tmux. It is also the writer of the wallpaper → palette cascade, so <code>Alt+&gt;</code> re-themes the whole stack.</p>
 
-    <h3>Specialized Kittens &amp; Shortcuts</h3>
-    <div class="table-wrap">
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>Shortcut</th>
-            <th>Tool / Kitten</th>
-            <th>Description</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td class="keys-cell"><kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>p</kbd> &gt; <kbd>n</kbd></td>
-            <td><code>kitten hints (linenum)</code></td>
-            <td><strong>Traceback Jumper:</strong> Scans compiler errors in terminal and opens Neovim directly at <code>+{line} {path}</code>.</td>
-          </tr>
-          <tr>
-            <td class="keys-cell"><kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>h</kbd></td>
-            <td><code>nvim-scrollback-pager.sh</code></td>
-            <td><strong>Neovim Pager:</strong> Dumps 50,000 lines of scrollback into a floating Neovim buffer with full search &amp; yank.</td>
-          </tr>
-          <tr>
-            <td class="keys-cell"><kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>Space</kbd></td>
-            <td><code>kitten hints (word)</code></td>
-            <td><strong>QuickSelect:</strong> Copies any highlighted word directly to your OS clipboard.</td>
-          </tr>
-          <tr>
-            <td class="keys-cell"><kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>e</kbd></td>
-            <td><code>open_url_with_hints</code></td>
-            <td>Highlights all visible URLs on screen and opens selected link in browser.</td>
-          </tr>
-          <tr>
-            <td class="keys-cell"><kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>b</kbd></td>
-            <td><code>kitten broadcast</code></td>
-            <td><strong>Broadcast Typing:</strong> Sends keystrokes simultaneously to all split windows in active tab.</td>
-          </tr>
-          <tr>
-            <td class="keys-cell"><kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>o</kbd></td>
-            <td><code>project-hub.sh</code></td>
-            <td><strong>Project Hub:</strong> Interactive fuzzy launcher for active projects, sessions, and scratch pads.</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </section>
-
-  <!-- ============ 04 TMUX ============ -->
-  <section class="chapter" id="tmux" data-tool="TMUX">
-    <div class="chapter-header">
-      <span class="chapter-num">04</span>
-      <h2>Tmux Multiplexing Masterclass</h2>
-      <span class="badge-tool tool-tmux">tmux</span>
-    </div>
-    <p class="chapter-desc">Tmux hosts your persistent sessions, long-running processes, Docker containers, and test watchers across reboots.</p>
-
-    <div class="callout callout-info">
-      <div class="callout-title">Tmux Prefix: Ctrl+a</div>
-      Press <kbd>Ctrl</kbd> + <kbd>a</kbd>. Pressing <kbd>Ctrl</kbd> + <kbd>a</kbd> twice sends a literal <code>Ctrl-a</code> to your inner shell.
-    </div>
-
-    <h3>Floating Rounded Popups (90% Sizing Parity)</h3>
-    <div class="table-wrap">
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>Shortcut</th>
-            <th>Popup Tool</th>
-            <th>Description</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td class="keys-cell"><kbd>Prefix</kbd> + <kbd>f</kbd></td>
-            <td>Project Hub</td>
-            <td>85% popup over <code>~/Projects</code> and active sessions. Selecting a project switches instantly.</td>
-          </tr>
-          <tr>
-            <td class="keys-cell"><kbd>Prefix</kbd> + <kbd>e</kbd></td>
-            <td>Error Jumper</td>
-            <td>Scrapes terminal errors (e.g. <code>file.py:42</code>) and jumps into Neovim at that exact line.</td>
-          </tr>
-          <tr>
-            <td class="keys-cell"><kbd>Prefix</kbd> + <kbd>h</kbd></td>
-            <td>Scrollback Pager</td>
-            <td>Opens 5,000 lines of terminal output in a floating Neovim buffer with full Vim motions.</td>
-          </tr>
-          <tr>
-            <td class="keys-cell"><kbd>Prefix</kbd> + <kbd>g</kbd></td>
-            <td>Lazygit Popup</td>
-            <td>90% floating Git GUI scoped to the current pane's repository.</td>
-          </tr>
-          <tr>
-            <td class="keys-cell"><kbd>Prefix</kbd> + <kbd>d</kbd></td>
-            <td>Lazydocker Popup</td>
-            <td>Interactive container and volume manager.</td>
-          </tr>
-          <tr>
-            <td class="keys-cell"><kbd>Prefix</kbd> + <kbd>k</kbd></td>
-            <td>Omni-Keymap Search</td>
-            <td>Unified fzf search over all keybindings across Neovim, Tmux, WezTerm, and Kitty!</td>
-          </tr>
-          <tr>
-            <td class="keys-cell"><kbd>Prefix</kbd> + <kbd>Q</kbd></td>
-            <td>Safe Shutdown</td>
-            <td>Prompts confirmation, captures full session history via resurrect, and stops the tmux server.</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-
-    <h3>Vi Copy-Mode &amp; OSC52 Clipboard</h3>
-    <p>Press <kbd>Prefix</kbd> + <kbd>[</kbd> (or hit <kbd>PageUp</kbd>) to enter copy mode:</p>
-    <ul>
-      <li><kbd>v</kbd>: Character selection</li>
-      <li><kbd>V</kbd>: Line selection</li>
-      <li><kbd>Ctrl</kbd> + <kbd>v</kbd>: Block / rectangular selection</li>
-      <li><kbd>y</kbd>: Yank text directly to the OS clipboard via OSC52 and exit copy-mode.</li>
-    </ul>
-  </section>
-
-  <!-- ============ 05 NEOVIM ============ -->
-  <section class="chapter" id="neovim" data-tool="NEOVIM">
-    <div class="chapter-header">
-      <span class="chapter-num">05</span>
-      <h2>Neovim 0.12 Architecture &amp; Mastery</h2>
-      <span class="badge-tool tool-nvim">neovim</span>
-    </div>
-    <p class="chapter-desc">NVIM v0.12.6 with bytecode compilation (<code>vim.loader</code>), Rust-powered fuzzy completion (<code>blink.cmp</code>), unified picker (<code>snacks</code>), and integrated Tmux Code Runner.</p>
-
-    <h3>The 10 Leader Groups (<kbd>Space</kbd>)</h3>
-    <div class="grid-cards">
-      <div class="card">
-        <div class="card-header"><div class="card-title"><kbd>Space</kbd><kbd>f</kbd> Find</div><span class="badge-tool tool-nvim">snacks</span></div>
-        <p><kbd>ff</kbd> / <kbd>&lt;Space&gt;&lt;Space&gt;</kbd> Find files, <kbd>fg</kbd> Git files, <kbd>fb</kbd> Buffers, <kbd>fr</kbd> Recent file ring.</p>
+      <h3>Modal key tables</h3>
+      <p>Leader is <kbd>Alt</kbd>+<kbd>Ctrl</kbd>+<kbd>Space</kbd>. The tables auto-exit after one second, so you never get stuck in a mode.</p>
+      <div class="grid">
+        <div class="cell"><div class="k">Leader → w</div><div class="d"><b>workspaces</b> — fuzzy workspace switcher: <code>n</code> next · <code>r</code> rename · <code>d</code> delete · <code>q</code> exit</div></div>
+        <div class="cell"><div class="k">Leader → f</div><div class="d"><b>resize_font</b> — <code>k</code> bigger · <code>j</code> smaller · <code>r</code> reset · <code>Esc</code> exit</div></div>
+        <div class="cell"><div class="k">Leader → p</div><div class="d"><b>resize_pane</b> — <code>h/j/k/l</code> one cell per tap · <code>q</code> exit</div></div>
       </div>
-      <div class="card">
-        <div class="card-header"><div class="card-title"><kbd>Space</kbd><kbd>s</kbd> Search</div><span class="badge-tool tool-nvim">search</span></div>
-        <p><kbd>sg</kbd> Live grep, <kbd>sw</kbd> Grep word under cursor, <kbd>sr</kbd> Grug-far multi-file replace, <kbd>sk</kbd> Search keymaps.</p>
+
+      <h3>Tabs, windows, panes</h3>
+      <div class="tw">
+        <table>
+          <thead><tr><th>Keys</th><th>Action</th></tr></thead>
+          <tbody>
+            <tr><td><kbd>Alt</kbd>+<kbd>t</kbd></td><td>New tab in the default (zsh) domain</td></tr>
+            <tr><td><kbd>Alt</kbd>+<kbd>[</kbd> / <kbd>Alt</kbd>+<kbd>]</kbd></td><td>Previous / next tab</td></tr>
+            <tr><td><kbd>Alt</kbd>+<kbd>Ctrl</kbd>+<kbd>[</kbd> / <kbd>]</kbd></td><td>Move the tab along the bar</td></tr>
+            <tr><td><kbd>Alt</kbd>+<kbd>0</kbd> / <kbd>Alt</kbd>+<kbd>Ctrl</kbd>+<kbd>0</kbd></td><td>Rename tab / reset the title</td></tr>
+            <tr><td><kbd>Alt</kbd>+<kbd>Ctrl</kbd>+<kbd>9</kbd></td><td>Toggle the tab bar (moved off <code>Alt+9</code> — tmux owns <code>M-9</code>)</td></tr>
+            <tr><td><kbd>Alt</kbd>+<kbd>Ctrl</kbd>+<kbd>w</kbd></td><td>Close the current tab</td></tr>
+            <tr><td><kbd>Alt</kbd>+<kbd>Enter</kbd> / <kbd>Alt</kbd>+<kbd>Ctrl</kbd>+<kbd>x</kbd></td><td>Zoom pane / close pane (confirms)</td></tr>
+            <tr><td><kbd>Alt</kbd>+<kbd>Ctrl</kbd>+<kbd>s</kbd></td><td><strong>Project Hub in a new tab</strong> — the WezTerm ↔ tmux bridge</td></tr>
+            <tr><td><kbd>Alt</kbd>+<kbd>Ctrl</kbd>+<kbd>r</kbd></td><td>Project tasks (run/test/lint/format) in a new tab</td></tr>
+            <tr><td><kbd>Alt</kbd>+<kbd>Ctrl</kbd>+<kbd>p</kbd></td><td>Pane selector — type the number chip to swap</td></tr>
+          </tbody>
+        </table>
       </div>
-      <div class="card">
-        <div class="card-header"><div class="card-title"><kbd>Space</kbd><kbd>r</kbd> Run / REPL</div><span class="badge-tool tool-nvim">runner</span></div>
-        <p><kbd>rc</kbd>/<kbd>rf</kbd> Run file, <kbd>rl</kbd> Run line, <kbd>rs</kbd> Run selection, <kbd>rt</kbd> Toggle REPL in split tmux pane.</p>
+
+      <h3>Copy, search, symbols</h3>
+      <div class="grid">
+        <div class="cell"><div class="k">F1</div><div class="d"><b>copy mode</b> — <code>v</code> select, <code>y</code> copy+exit, <code>hjkl</code> move</div></div>
+        <div class="cell"><div class="k">Ctrl+Shift+Space</div><div class="d"><b>QuickSelect</b> — labels over hashes, hex colours, URLs, paths; hit a letter to copy</div></div>
+        <div class="cell"><div class="k">Alt+f</div><div class="d"><b>scrollback search</b>, case-insensitive</div></div>
+        <div class="cell"><div class="k">F6</div><div class="d"><b>CharSelect</b> — nerd icons, box drawing, emoji</div></div>
+        <div class="cell"><div class="k">F2 / F3 / F4 / F5</div><div class="d">command palette · launcher · tabs · workspaces</div></div>
+        <div class="cell"><div class="k">F12</div><div class="d">debug overlay — render backend, FPS, timings</div></div>
       </div>
-      <div class="card">
-        <div class="card-header"><div class="card-title"><kbd>Space</kbd><kbd>w</kbd> Window &amp; Zoom</div><span class="badge-tool tool-nvim">window</span></div>
-        <p><kbd>wd</kbd> Delete window, <kbd>wm</kbd> Zen zoom, <kbd>wz</kbd> Synchronized Zoom (zooms Neovim AND outer Tmux pane!).</p>
+
+      <h3>Wallpaper drives the theme</h3>
+      <div class="tw">
+        <table>
+          <thead><tr><th>Keys</th><th>Action</th></tr></thead>
+          <tbody>
+            <tr><td><kbd>Alt</kbd>+<kbd>,</kbd> / <kbd>.</kbd> / <kbd>/</kbd></td><td>Previous / next / random wallpaper</td></tr>
+            <tr><td><kbd>Alt</kbd>+<kbd>Ctrl</kbd>+<kbd>/</kbd></td><td>Fuzzy wallpaper list</td></tr>
+            <tr><td><kbd>Alt</kbd>+<kbd>p</kbd></td><td>Full-screen preview picker — <code>h/l</code> step, <kbd>Enter</kbd> apply, <kbd>Esc</kbd> cancel</td></tr>
+            <tr><td><kbd>Alt</kbd>+<kbd>b</kbd></td><td>Toggle wallpapers off (focus mode)</td></tr>
+            <tr><td><kbd>Alt</kbd>+<kbd>y</kbd> / <kbd>Y</kbd></td><td>Opacity up / down — a toast reports the value</td></tr>
+            <tr><td><kbd>Alt</kbd>+<kbd>u</kbd> / <kbd>U</kbd></td><td>Backdrop wash up / down</td></tr>
+          </tbody>
+        </table>
       </div>
-      <div class="card">
-        <div class="card-header"><div class="card-title"><kbd>Space</kbd><kbd>u</kbd> UI Toggles</div><span class="badge-tool tool-nvim">toggles</span></div>
-        <p><kbd>uw</kbd> Line wrap, <kbd>ul</kbd> Numbers, <kbd>ud</kbd> Diagnostics, <kbd>uh</kbd> Inlay hints, <kbd>us</kbd> Spell check.</p>
+      <p>Each of those fires one cascade: matugen → WezTerm chrome and glass, tmux status, the prompt, TUIs, and Neovim (~227 ms). Nothing is themed twice.</p>
+    </section>
+
+    <!-- ================= KITTY ================= -->
+    <section id="kitty">
+      <div class="eyebrow">03 · Emulator</div>
+      <h2>Kitty: the daily driver</h2>
+      <p class="lede">Kitty keeps <code>Alt</code> completely free for tmux by putting everything on the conventional <kbd>Ctrl</kbd>+<kbd>Shift</kbd> family. 74 live maps, a custom pill tab bar, and kittens for the things you would otherwise open a browser for.</p>
+
+      <h3>Splits &amp; tabs</h3>
+      <div class="tw">
+        <table>
+          <thead><tr><th>Keys</th><th>Action</th></tr></thead>
+          <tbody>
+            <tr><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>d</kbd></td><td>Split side-by-side (cwd inherited)</td></tr>
+            <tr><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>s</kbd></td><td>Split stacked (cwd inherited)</td></tr>
+            <tr><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>z</kbd></td><td>Toggle stack layout — Kitty's version of tmux zoom</td></tr>
+            <tr><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>l</kbd></td><td>Cycle layout</td></tr>
+            <tr><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>←↑↓→</kbd></td><td>Neighbouring window</td></tr>
+            <tr><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Alt</kbd>+<kbd>h/j/k/l</kbd></td><td>Resize window · <kbd>+r</kbd> resets</td></tr>
+            <tr><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>t</kbd> / <kbd>w</kbd></td><td>New tab / close tab</td></tr>
+            <tr><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>1</kbd>…<kbd>5</kbd></td><td>Jump to tab 1–5 · <kbd>[</kbd>/<kbd>]</kbd> step</td></tr>
+            <tr><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Tab</kbd></td><td>Fuzzy tab &amp; window switcher overlay</td></tr>
+          </tbody>
+        </table>
       </div>
-      <div class="card">
-        <div class="card-header"><div class="card-title"><kbd>Space</kbd><kbd>c</kbd> Code &amp; LSP</div><span class="badge-tool tool-nvim">lsp</span></div>
-        <p><kbd>cr</kbd> Rename symbol, <kbd>ca</kbd> Code action, <kbd>cf</kbd> Format buffer, <kbd>ck</kbd> Signature help, <kbd>cy</kbd> Yank diagnostic.</p>
+
+      <h3>Kittens &amp; overlays</h3>
+      <div class="tw">
+        <table>
+          <thead><tr><th>Keys</th><th>Tool</th><th class="why">What it solves</th></tr></thead>
+          <tbody>
+            <tr><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>p</kbd> → <kbd>n</kbd></td><td>hints · linenum</td><td class="why">Traceback jumper — opens Neovim at <code>+line file</code> from a compiler error.</td></tr>
+            <tr><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>h</kbd></td><td>scrollback pager</td><td class="why">Full pane history in a floating Neovim buffer with vim motions.</td></tr>
+            <tr><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>f</kbd></td><td>fzf scrollback</td><td class="why">Fuzzy search history without leaving the keyboard.</td></tr>
+            <tr><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Space</kbd></td><td>hints · word</td><td class="why">QuickSelect straight to the OS clipboard.</td></tr>
+            <tr><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>e</kbd></td><td>hints · url</td><td class="why">Open the visible link in the browser.</td></tr>
+            <tr><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>g</kbd></td><td>lazygit overlay</td><td class="why">Git without a new tab.</td></tr>
+            <tr><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>y</kbd></td><td>yazi overlay</td><td class="why">File manager, then hand the path back.</td></tr>
+            <tr><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>m</kbd></td><td>btop overlay</td><td class="why">System monitor in place.</td></tr>
+            <tr><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>o</kbd></td><td>Project Hub</td><td class="why">Same hub as tmux <code>Prefix f</code>.</td></tr>
+            <tr><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>b</kbd></td><td>broadcast</td><td class="why">Type into every split at once.</td></tr>
+            <tr><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>k</kbd></td><td>command palette</td><td class="why">Discover a binding you forgot.</td></tr>
+          </tbody>
+        </table>
       </div>
-    </div>
+    </section>
 
-    <h3>Filesystem as a Buffer: Oil.nvim</h3>
-    <p>Press <kbd>-</kbd> to open the parent directory or <kbd>Space</kbd><kbd>O</kbd> for a floating window. You can rename, copy, move, and delete files using standard Vim commands (like <code>ciw</code>, <code>dd</code>, <code>p</code>), then press <code>:w</code> to apply changes to the operating system!</p>
+    <!-- ================= TMUX ================= -->
+    <section id="tmux">
+      <div class="eyebrow">04 · Multiplexer</div>
+      <h2>tmux: sessions that outlive windows</h2>
+      <p class="lede">Prefix is <kbd>Ctrl</kbd>+<kbd>a</kbd>. Live tables: <strong>118</strong> prefix keys, <strong>54</strong> root keys, <strong>21</strong> of those root keys on <code>Alt</code>. State is snapshotted on detach and restored on attach.</p>
 
-    <h3>Quickfix Triage Queue</h3>
-    <p>After piping search results into the quickfix list (<kbd>Ctrl</kbd> + <kbd>q</kbd>):</p>
-    <ul>
-      <li>Use <kbd>]q</kbd> and <kbd>[q</kbd> to step through matches with automatic wrap-around.</li>
-      <li>Press <kbd>dd</kbd> (or select rows in visual mode and hit <kbd>d</kbd>) to delete items you don't want to edit.</li>
-      <li>Run <code>:Cfilter &lt;pattern&gt;</code> to filter matches, then run <code>:cfdo %s/old/new/ge | update</code> to perform atomic replacements across all files!</li>
-    </ul>
-  </section>
-
-  <!-- ============ 06 PLAYBOOKS ============ -->
-  <section class="chapter" id="playbooks" data-tool="WORKFLOWS">
-    <div class="chapter-header">
-      <span class="chapter-num">06</span>
-      <h2>Daily High-Velocity Playbooks (Muscle Memory Drills)</h2>
-      <span class="badge-tool tool-all">playbooks</span>
-    </div>
-    <p class="chapter-desc">Combine keystrokes across all layers into fluid muscle memory routines for common engineering scenarios.</p>
-
-    <div class="card" style="margin-bottom:16px;">
-      <h4 style="color:var(--accent-blue);margin-bottom:8px;">Drill 1: 5-Second Full-Stack Workspace Spin-Up</h4>
-      <p>1. Open terminal &rarr; Press <kbd>Prefix</kbd> + <kbd>f</kbd> (or <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>o</kbd> in Kitty) &rarr; Type project name &rarr; <kbd>Enter</kbd>.</p>
-      <p>2. Inside Neovim: Press <kbd>Space</kbd><kbd>Space</kbd> &rarr; Jump to file.</p>
-      <p>3. Create test split: Press <kbd>Prefix</kbd> + <kbd>-</kbd> &rarr; Run watcher &rarr; Press <kbd>Ctrl</kbd> + <kbd>k</kbd> to jump back to editor.</p>
-    </div>
-
-    <div class="card" style="margin-bottom:16px;">
-      <h4 style="color:var(--accent-green);margin-bottom:8px;">Drill 2: Error Jump &rarr; Blame &rarr; Test Run</h4>
-      <p>1. When a test fails: Press <kbd>Prefix</kbd> + <kbd>e</kbd> in Tmux (or <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>p</kbd>&gt;<kbd>n</kbd> in Kitty).</p>
-      <p>2. Select the error line from fzf preview &rarr; lands cursor right on that line in Neovim.</p>
-      <p>3. Press <kbd>gl</kbd> for floating diagnostic or <kbd>Space</kbd><kbd>gB</kbd> for full Git blame.</p>
-      <p>4. Fix issue &rarr; Press <kbd>Space</kbd><kbd>rc</kbd> to rerun file in tmux split!</p>
-    </div>
-
-    <div class="card">
-      <h4 style="color:var(--accent-purple);margin-bottom:8px;">Drill 3: Surgical AST Editing Without Arrows or Mouse</h4>
-      <p>1. 2D jump: Press <kbd>s</kbd> then 2 characters (Flash.nvim) to land on any target on screen.</p>
-      <p>2. Edit parameter: Press <kbd>cia</kbd> (Change Inside Argument) &rarr; type new type.</p>
-      <p>3. Hop delimiter: In insert mode, press <kbd>Ctrl</kbd> + <kbd>l</kbd> to skip past closing brackets/quotes without touching arrows.</p>
-      <p>4. Surround: In normal mode, press <kbd>gsaiw"</kbd> to wrap word in quotes, or <kbd>gsr"'</kbd> to swap double quotes to single quotes.</p>
-    </div>
-  </section>
-
-  <!-- ============ 07 CHEATSHEET ============ -->
-  <section class="chapter" id="cheatsheet" data-tool="CATALOG">
-    <div class="chapter-header">
-      <span class="chapter-num">07</span>
-      <h2>Master Omni-Search Keymap Catalog</h2>
-      <span class="badge-tool tool-all">all tools</span>
-    </div>
-    <p class="chapter-desc">Search, filter, and inspect every keybinding across WezTerm, Kitty, Tmux, and Neovim in real time.</p>
-
-    <!-- Interactive Search Bar -->
-    <div class="search-controls">
-      <div class="search-input-wrap">
-        <span class="search-icon">🔍</span>
-        <input type="text" id="omni-search" class="search-input" placeholder="Type any key, action or tool (e.g. 'split', 'zoom', 'repl', 'git', 'error', 'tmux')...">
+      <div class="note">
+        <div class="t">Send a literal Ctrl-a</div>
+        <p>Press <kbd>Ctrl</kbd>+<kbd>a</kbd> twice. That is <code>bind C-a send-prefix</code> — zsh's beginning-of-line still works, and nested tmux still works.</p>
       </div>
-      <div class="filter-pills">
-        <div class="filter-pill active" data-filter="all">All Tools</div>
-        <div class="filter-pill" data-filter="nvim">Neovim</div>
-        <div class="filter-pill" data-filter="tmux">Tmux</div>
-        <div class="filter-pill" data-filter="kitty">Kitty</div>
-        <div class="filter-pill" data-filter="wezterm">WezTerm</div>
+
+      <h3>Prefixless — fires with no prefix</h3>
+      <div class="tw">
+        <table>
+          <thead><tr><th>Keys</th><th>Action</th></tr></thead>
+          <tbody>
+            <tr><td><kbd>Alt</kbd>+<kbd>1</kbd>…<kbd>9</kbd></td><td>Jump to window 1–9</td></tr>
+            <tr><td><kbd>Alt</kbd>+<kbd>h/j/k/l</kbd></td><td>Resize pane in a shell; forwarded to nvim in an editor</td></tr>
+            <tr><td><kbd>Alt</kbd>+<kbd>Ctrl</kbd>+<kbd>h/j/k/l</kbd></td><td>Swap pane with its neighbour</td></tr>
+            <tr><td><kbd>PageUp</kbd></td><td>Copy mode, scrolling up — but not inside less/man/htop/vim, which get the key instead</td></tr>
+            <tr><td><kbd>Alt</kbd>+click</td><td>Context menu · wheel over the status line changes window</td></tr>
+          </tbody>
+        </table>
       </div>
-      <div class="search-count" id="search-count">Showing all bindings</div>
-    </div>
 
-    <!-- Master Table -->
-    <div class="table-wrap">
-      <table class="data-table" id="keymap-table">
-        <thead>
-          <tr>
-            <th style="width:70px;">Tool</th>
-            <th style="width:230px;">Key Combination</th>
-            <th>Category</th>
-            <th>Action &amp; Workflow Description</th>
-          </tr>
-        </thead>
-        <tbody id="keymap-tbody">
-          <!-- Navigation -->
-          <tr data-tool="all">
-            <td class="tool-cell"><span class="badge-tool tool-all">ALL</span></td>
-            <td class="keys-cell"><kbd>Ctrl</kbd> + <kbd>h/j/k/l</kbd></td>
-            <td>Navigation</td>
-            <td>Seamless split navigation across Neovim editor windows and Tmux/Kitty panes.</td>
-          </tr>
-          <tr data-tool="nvim">
-            <td class="tool-cell"><span class="badge-tool tool-nvim">NVIM</span></td>
-            <td class="keys-cell"><kbd>Space</kbd><kbd>|</kbd> / <kbd>-</kbd></td>
-            <td>Splits</td>
-            <td>Vertical split (side-by-side) / horizontal split (stacked). Matches Tmux convention.</td>
-          </tr>
-          <tr data-tool="tmux">
-            <td class="tool-cell"><span class="badge-tool tool-tmux">TMUX</span></td>
-            <td class="keys-cell"><kbd>Prefix</kbd> + <kbd>|</kbd> / <kbd>-</kbd></td>
-            <td>Splits</td>
-            <td>Vertical split (side-by-side) / horizontal split (stacked) in current directory.</td>
-          </tr>
-          <tr data-tool="kitty">
-            <td class="tool-cell"><span class="badge-tool tool-kitty">KITTY</span></td>
-            <td class="keys-cell"><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>d</kbd> / <kbd>s</kbd></td>
-            <td>Splits</td>
-            <td>Vertical split / horizontal split in current working directory.</td>
-          </tr>
-          <!-- Zooming -->
-          <tr data-tool="nvim">
-            <td class="tool-cell"><span class="badge-tool tool-nvim">NVIM</span></td>
-            <td class="keys-cell"><kbd>Space</kbd><kbd>wz</kbd></td>
-            <td>Zoom</td>
-            <td><strong>Synchronized Zoom:</strong> Maximizes Neovim window AND zooms the outer Tmux pane simultaneously.</td>
-          </tr>
-          <tr data-tool="nvim">
-            <td class="tool-cell"><span class="badge-tool tool-nvim">NVIM</span></td>
-            <td class="keys-cell"><kbd>Space</kbd><kbd>wm</kbd></td>
-            <td>Zoom</td>
-            <td>Toggle Zen zoom for the current Neovim window.</td>
-          </tr>
-          <tr data-tool="tmux">
-            <td class="tool-cell"><span class="badge-tool tool-tmux">TMUX</span></td>
-            <td class="keys-cell"><kbd>Prefix</kbd> + <kbd>z</kbd></td>
-            <td>Zoom</td>
-            <td>Toggle full-window zoom for the active Tmux pane.</td>
-          </tr>
-          <tr data-tool="kitty">
-            <td class="tool-cell"><span class="badge-tool tool-kitty">KITTY</span></td>
-            <td class="keys-cell"><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>z</kbd></td>
-            <td>Zoom</td>
-            <td>Toggle Stack layout (fullscreen zoom for active split).</td>
-          </tr>
-          <!-- Project Hub -->
-          <tr data-tool="tmux">
-            <td class="tool-cell"><span class="badge-tool tool-tmux">TMUX</span></td>
-            <td class="keys-cell"><kbd>Prefix</kbd> + <kbd>f</kbd></td>
-            <td>Hub</td>
-            <td><strong>Project Hub:</strong> 85% rounded popup over <code>~/Projects</code> and active sessions.</td>
-          </tr>
-          <tr data-tool="kitty">
-            <td class="tool-cell"><span class="badge-tool tool-kitty">KITTY</span></td>
-            <td class="keys-cell"><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>o</kbd></td>
-            <td>Hub</td>
-            <td><strong>Project Hub:</strong> Full overlay fzf launcher for projects and sessions.</td>
-          </tr>
-          <tr data-tool="wezterm">
-            <td class="tool-cell"><span class="badge-tool tool-wezterm">WZ</span></td>
-            <td class="keys-cell"><kbd>Leader</kbd> then <kbd>w</kbd></td>
-            <td>Hub</td>
-            <td><strong>Workspaces:</strong> Interactive picker for WezTerm multiplexer domains.</td>
-          </tr>
-          <!-- Error Jump -->
-          <tr data-tool="tmux">
-            <td class="tool-cell"><span class="badge-tool tool-tmux">TMUX</span></td>
-            <td class="keys-cell"><kbd>Prefix</kbd> + <kbd>e</kbd></td>
-            <td>Error Jump</td>
-            <td>Scrapes pane scrollback for compiler errors and jumps directly into Neovim at line.</td>
-          </tr>
-          <tr data-tool="kitty">
-            <td class="tool-cell"><span class="badge-tool tool-kitty">KITTY</span></td>
-            <td class="keys-cell"><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>p</kbd>&gt;<kbd>n</kbd></td>
-            <td>Error Jump</td>
-            <td>Kitten linenum hints: scans terminal errors and launches Neovim at <code>+{line} {path}</code>.</td>
-          </tr>
-          <!-- Scrollback Pager -->
-          <tr data-tool="tmux">
-            <td class="tool-cell"><span class="badge-tool tool-tmux">TMUX</span></td>
-            <td class="keys-cell"><kbd>Prefix</kbd> + <kbd>h</kbd></td>
-            <td>Scrollback</td>
-            <td>Captures 5,000 lines of scrollback into a floating Neovim buffer with syntax &amp; search.</td>
-          </tr>
-          <tr data-tool="kitty">
-            <td class="tool-cell"><span class="badge-tool tool-kitty">KITTY</span></td>
-            <td class="keys-cell"><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>h</kbd></td>
-            <td>Scrollback</td>
-            <td>Dumps 50,000 lines of terminal history into full Neovim scrollback pager.</td>
-          </tr>
-          <!-- Runner / REPL -->
-          <tr data-tool="nvim">
-            <td class="tool-cell"><span class="badge-tool tool-nvim">NVIM</span></td>
-            <td class="keys-cell"><kbd>Space</kbd><kbd>rc</kbd> / <kbd>rf</kbd></td>
-            <td>Runner</td>
-            <td>Run current file in adjacent Tmux runner split (Python, Go, Node, Bash).</td>
-          </tr>
-          <tr data-tool="nvim">
-            <td class="tool-cell"><span class="badge-tool tool-nvim">NVIM</span></td>
-            <td class="keys-cell"><kbd>Space</kbd><kbd>rl</kbd></td>
-            <td>Runner</td>
-            <td>Send current line to Tmux runner split or REPL.</td>
-          </tr>
-          <tr data-tool="nvim">
-            <td class="tool-cell"><span class="badge-tool tool-nvim">NVIM</span></td>
-            <td class="keys-cell"><kbd>Space</kbd><kbd>rs</kbd> <small>(or visual <kbd>Space</kbd><kbd>r</kbd>)</small></td>
-            <td>Runner</td>
-            <td>Send selected code block to Tmux runner split or REPL.</td>
-          </tr>
-          <tr data-tool="nvim">
-            <td class="tool-cell"><span class="badge-tool tool-nvim">NVIM</span></td>
-            <td class="keys-cell"><kbd>Space</kbd><kbd>rt</kbd></td>
-            <td>Runner</td>
-            <td>Toggle / spawn interactive REPL (IPython, Node, etc.) in runner split.</td>
-          </tr>
-          <tr data-tool="nvim">
-            <td class="tool-cell"><span class="badge-tool tool-nvim">NVIM</span></td>
-            <td class="keys-cell"><kbd>Space</kbd><kbd>rp</kbd> / <kbd>rk</kbd></td>
-            <td>Runner</td>
-            <td>Focus runner pane / kill runner process.</td>
-          </tr>
-          <!-- Git Popups -->
-          <tr data-tool="nvim">
-            <td class="tool-cell"><span class="badge-tool tool-nvim">NVIM</span></td>
-            <td class="keys-cell"><kbd>Space</kbd><kbd>gg</kbd></td>
-            <td>Git</td>
-            <td>Launch Lazygit floating overlay over current repository.</td>
-          </tr>
-          <tr data-tool="tmux">
-            <td class="tool-cell"><span class="badge-tool tool-tmux">TMUX</span></td>
-            <td class="keys-cell"><kbd>Prefix</kbd> + <kbd>g</kbd></td>
-            <td>Git</td>
-            <td>90% Lazygit popup matching Neovim sizing parity.</td>
-          </tr>
-          <tr data-tool="kitty">
-            <td class="tool-cell"><span class="badge-tool tool-kitty">KITTY</span></td>
-            <td class="keys-cell"><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>g</kbd></td>
-            <td>Git</td>
-            <td>Launch Lazygit in floating overlay pane.</td>
-          </tr>
-          <!-- File Management -->
-          <tr data-tool="nvim">
-            <td class="tool-cell"><span class="badge-tool tool-nvim">NVIM</span></td>
-            <td class="keys-cell"><kbd>-</kbd></td>
-            <td>Files</td>
-            <td><strong>Oil.nvim:</strong> Open parent directory and edit filesystem like a text buffer.</td>
-          </tr>
-          <tr data-tool="nvim">
-            <td class="tool-cell"><span class="badge-tool tool-nvim">NVIM</span></td>
-            <td class="keys-cell"><kbd>Space</kbd><kbd>O</kbd></td>
-            <td>Files</td>
-            <td>Open Oil.nvim directory editor in a floating modal.</td>
-          </tr>
-          <tr data-tool="nvim">
-            <td class="tool-cell"><span class="badge-tool tool-nvim">NVIM</span></td>
-            <td class="keys-cell"><kbd>Space</kbd><kbd>e</kbd></td>
-            <td>Files</td>
-            <td>Toggle nvim-tree sidebar on the right.</td>
-          </tr>
-          <!-- LSP & Code -->
-          <tr data-tool="nvim">
-            <td class="tool-cell"><span class="badge-tool tool-nvim">NVIM</span></td>
-            <td class="keys-cell"><kbd>C-k</kbd> <small>(insert)</small> / <kbd>Space</kbd><kbd>ck</kbd></td>
-            <td>LSP</td>
-            <td>Native clean signature help (auto-dismisses on cursor move, no sticky popup).</td>
-          </tr>
-          <tr data-tool="nvim">
-            <td class="tool-cell"><span class="badge-tool tool-nvim">NVIM</span></td>
-            <td class="keys-cell"><kbd>gl</kbd> / <kbd>Space</kbd><kbd>cy</kbd></td>
-            <td>LSP</td>
-            <td>Show line diagnostic float / yank diagnostic message to OS clipboard.</td>
-          </tr>
-          <tr data-tool="nvim">
-            <td class="tool-cell"><span class="badge-tool tool-nvim">NVIM</span></td>
-            <td class="keys-cell"><kbd>Space</kbd><kbd>cf</kbd></td>
-            <td>Format</td>
-            <td>Format buffer asynchronously via conform.nvim.</td>
-          </tr>
-          <!-- Toggles & Polish -->
-          <tr data-tool="nvim">
-            <td class="tool-cell"><span class="badge-tool tool-nvim">NVIM</span></td>
-            <td class="keys-cell"><kbd>Esc</kbd></td>
-            <td>Polish</td>
-            <td>Clears search highlights and sweeps away any lingering floating windows.</td>
-          </tr>
-          <tr data-tool="tmux">
-            <td class="tool-cell"><span class="badge-tool tool-tmux">TMUX</span></td>
-            <td class="keys-cell"><kbd>Prefix</kbd> + <kbd>Q</kbd></td>
-            <td>Server</td>
-            <td>Safe snapshot save and shutdown tmux server.</td>
-          </tr>
-          <tr data-tool="tmux">
-            <td class="tool-cell"><span class="badge-tool tool-tmux">TMUX</span></td>
-            <td class="keys-cell"><kbd>Alt</kbd> + <kbd>1..9</kbd></td>
-            <td>Windows</td>
-            <td>Direct window jump without prefix chord.</td>
-          </tr>
-          <tr data-tool="wezterm">
-            <td class="tool-cell"><span class="badge-tool tool-wezterm">WZ</span></td>
-            <td class="keys-cell"><kbd>Leader</kbd> then <kbd>r</kbd></td>
-            <td>Resize</td>
-            <td>Enter modal pane resize table (<kbd>h/j/k/l</kbd> adjusts, <kbd>Esc</kbd> leaves).</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </section>
+      <h3>Panes &amp; windows</h3>
+      <div class="tw">
+        <table>
+          <thead><tr><th>Prefix then…</th><th>Action</th></tr></thead>
+          <tbody>
+            <tr><td><kbd>|</kbd> / <kbd>-</kbd></td><td>Split side-by-side / stacked, inheriting the cwd</td></tr>
+            <tr><td><kbd>c</kbd> · <kbd>n</kbd> <kbd>p</kbd> · <kbd>0</kbd>…<kbd>9</kbd></td><td>New window · next/previous · select by number</td></tr>
+            <tr><td><kbd>z</kbd> · <kbd>x</kbd> · <kbd>X</kbd></td><td>Zoom pane · kill pane (confirms) · kill pane (no prompt)</td></tr>
+            <tr><td><kbd>o</kbd> · <kbd>;</kbd> · <kbd>q</kbd></td><td>Next pane · last pane · show pane numbers</td></tr>
+            <tr><td><kbd>E</kbd> / <kbd>=</kbd></td><td>Even out the layout</td></tr>
+            <tr><td><kbd>w</kbd> / <kbd>s</kbd> / <kbd>S</kbd></td><td>Session/window tree · session tree · session switcher popup</td></tr>
+            <tr><td><kbd>f</kbd></td><td><strong>Project Hub</strong> — fzf over sessions, <code>~/Projects</code>, scratch</td></tr>
+            <tr><td><kbd>D</kbd> · <kbd>Q</kbd></td><td>Detach · save state and shut the server down</td></tr>
+            <tr><td><kbd>C-s</kbd> / <kbd>C-r</kbd></td><td>Resurrect save / restore now</td></tr>
+          </tbody>
+        </table>
+      </div>
 
-  <!-- ============ FOOTER ============ -->
-  <footer>
-    <span>Terminal Stack Master Guide · Sahil's Dotfiles</span>
-    <span>WezTerm · Kitty · Tmux · Neovim 0.12</span>
-    <span>Auto-generated &amp; Verified</span>
-  </footer>
+      <h3>Popups — the TUI layer, in place</h3>
+      <div class="grid">
+        <div class="cell"><div class="k">Prefix g</div><div class="d"><b>lazygit</b> scoped to the pane's repo</div></div>
+        <div class="cell"><div class="k">Prefix d</div><div class="d"><b>lazydocker</b> containers, volumes, logs</div></div>
+        <div class="cell"><div class="k">Prefix b</div><div class="d"><b>yazi</b> file manager</div></div>
+        <div class="cell"><div class="k">Prefix e</div><div class="d"><b>error jump</b> — scrape the pane for <code>file:line</code>, open in nvim</div></div>
+        <div class="cell"><div class="k">Prefix h</div><div class="d"><b>scrollback pager</b> — history in a floating nvim buffer</div></div>
+        <div class="cell"><div class="k">Prefix T · V</div><div class="d"><b>btop</b> · <b>nvtop</b> at 90%</div></div>
+        <div class="cell"><div class="k">Prefix P · ;</div><div class="d"><b>project tasks</b> — run/test/lint/format, result opens in a new window</div></div>
+        <div class="cell"><div class="k">Prefix k</div><div class="d"><b>omni-keymap dump</b> — tmux + nvim + WezTerm in one fzf list</div></div>
+      </div>
 
-</main>
+      <h3>Copy mode</h3>
+      <p>Vi keys are on (<code>mode-keys vi</code>): <kbd>v</kbd> character select, <kbd>V</kbd> line, <kbd>Ctrl</kbd>+<kbd>v</kbd> block, <kbd>y</kbd> yank-and-exit to the OS clipboard over OSC52.</p>
+    </section>
+
+    <!-- ================= NEOVIM ================= -->
+    <section id="neovim">
+      <div class="eyebrow">05 · Editor</div>
+      <h2>Neovim 0.12: 157 leader maps</h2>
+      <p class="lede">Leader is <kbd>Space</kbd>. Press it and pause — which-key prints the menu, which is the only cheat sheet you need. Live counts: 394 global normal maps, 157 leader maps, 28 buffer-local normal maps, 174 visual maps.</p>
+
+      <h3>The leader menu</h3>
+      <div class="grid">
+        <div class="cell"><div class="k">Space f</div><div class="d"><b>find</b> — <code>ff</code> files · <code>fg</code> git files · <code>fb</code> buffers · <code>fr</code> file ring · <code>fp</code> projects · <code>ft</code>/<code>fT</code> terminal</div></div>
+        <div class="cell"><div class="k">Space s</div><div class="d"><b>search</b> — <code>sg</code> grep · <code>sw</code> word/selection · <code>sr</code> replace · <code>ss</code>/<code>sS</code> symbols · <code>sd</code>/<code>sD</code> diagnostics · <code>sk</code> keymaps</div></div>
+        <div class="cell"><div class="k">Space r</div><div class="d"><b>run</b> — <code>rc</code> file · <code>rl</code> line · <code>rs</code> selection · <code>rt</code> REPL · <code>rp</code> focus · <code>rk</code> kill</div></div>
+        <div class="cell"><div class="k">Space w</div><div class="d"><b>window</b> — <code>wd</code> close · <code>wm</code> zoom · <code>wz</code> zoom window <em>and</em> tmux pane</div></div>
+        <div class="cell"><div class="k">Space c</div><div class="d"><b>code</b> — <code>cr</code> rename · <code>ca</code> code action · <code>cf</code> format · <code>cy</code> yank diagnostic · <code>cd</code>/<code>cD</code> Trouble</div></div>
+        <div class="cell"><div class="k">Space g</div><div class="d"><b>git</b> — <code>gg</code> lazygit · <code>gs</code> status · <code>gl</code> log · <code>gD</code>/<code>gH</code> diffview · <code>gB</code> blame</div></div>
+        <div class="cell"><div class="k">Space u</div><div class="d"><b>ui</b> — <code>uw</code> wrap · <code>ul</code> numbers · <code>ud</code> diagnostics · <code>uh</code> inlay hints · <code>us</code> spell · <code>uu</code> undo tree</div></div>
+        <div class="cell"><div class="k">Space t · d</div><div class="d"><b>test</b> neotest: <code>tt</code> file · <code>tr</code> nearest · <code>tw</code> watch. <b>debug</b>: <code>db</code> breakpoint · <code>dc</code> continue · <code>du</code> UI</div></div>
+        <div class="cell"><div class="k">Space P</div><div class="d"><b>project tasks</b> — menu, plus <code>Pr</code>/<code>Pt</code>/<code>Pl</code>/<code>Pf</code></div></div>
+        <div class="cell"><div class="k">Space q · b</div><div class="d"><b>sessions</b> <code>qq</code>/<code>ql</code>/<code>qs</code> · <b>buffers</b> <code>bd</code>/<code>bo</code>/<code>bp</code>/<code>bs</code></div></div>
+        <div class="cell"><div class="k">Space D · O · Z</div><div class="d"><b>LazyDocker</b> float · <b>Oil</b> float · <b>zoom</b> the window</div></div>
+        <div class="cell"><div class="k">Space z · n</div><div class="d"><b>zen mode</b> · <b>notes</b> — <code>nn</code> daily note · <code>nN</code> scratch</div></div>
+      </div>
+
+      <h3>The filesystem is a buffer</h3>
+      <p><kbd>-</kbd> opens the parent directory in Oil. Rename, copy, move and delete with ordinary Vim commands (<code>ciw</code>, <code>dd</code>, <code>p</code>), then <code>:w</code> writes the changes to disk. <kbd>Space</kbd>+<kbd>O</kbd> gives you the same thing in a float.</p>
+
+      <h3>Quickfix triage</h3>
+      <p>Send search results to the quickfix list, then <kbd>]q</kbd>/<kbd>[q</kbd> walk them with wrap-around. Delete entries you will never touch with <code>dd</code>, narrow with <code>:Cfilter &lt;pattern&gt;</code>, and finish with <code>:cfdo %s/old/new/ge | update</code> for an atomic edit across every file left in the list.</p>
+
+      <h3>Runner: code out, errors back</h3>
+      <div class="tw">
+        <table>
+          <thead><tr><th>Keys</th><th>Action</th></tr></thead>
+          <tbody>
+            <tr><td><kbd>Space</kbd>+<kbd>r</kbd>+<kbd>c</kbd></td><td>Run the current file in an adjacent tmux split (Python, Go, Node, Bash, Rust)</td></tr>
+            <tr><td><kbd>Space</kbd>+<kbd>r</kbd>+<kbd>l</kbd> / <kbd>r</kbd>+<kbd>s</kbd></td><td>Send the current line / the selection</td></tr>
+            <tr><td><kbd>Space</kbd>+<kbd>r</kbd>+<kbd>t</kbd></td><td>Toggle a language REPL in the runner pane</td></tr>
+            <tr><td><kbd>Space</kbd>+<kbd>w</kbd>+<kbd>z</kbd></td><td>Synchronized zoom — the editor window and the tmux pane in one keystroke</td></tr>
+            <tr><td><kbd>Prefix</kbd> <kbd>e</kbd></td><td>And back: jump from a traceback in the pane to that exact line in Neovim</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ================= PLAYBOOKS ================= -->
+    <section id="playbooks">
+      <div class="eyebrow">06 · Muscle memory</div>
+      <h2>Three drills worth repeating</h2>
+      <p class="lede">Each drill chains layers on purpose. Run them until the keys stop being a lookup.</p>
+
+      <div class="drill">
+        <div class="goal">Drill 1 · 30 seconds</div>
+        <h4>Spin up a project workspace</h4>
+        <ol class="steps">
+          <li><kbd>Prefix</kbd> <kbd>f</kbd> (or Kitty <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>o</kbd>) — type the project, <kbd>Enter</kbd>.</li>
+          <li>In Neovim: <kbd>Space</kbd> <kbd>Space</kbd> → jump to a file.</li>
+          <li><kbd>Prefix</kbd> <kbd>-</kbd> for a runner pane, then <kbd>Ctrl</kbd>+<kbd>k</kbd> to come back.</li>
+          <li><kbd>Space</kbd> <kbd>r</kbd> <kbd>c</kbd> — run the file into that pane.</li>
+        </ol>
+      </div>
+
+      <div class="drill">
+        <div class="goal">Drill 2 · failure loop</div>
+        <h4>Error → blame → fix → rerun</h4>
+        <ol class="steps">
+          <li>A test fails. <kbd>Prefix</kbd> <kbd>e</kbd> (tmux) or <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>p</kbd>→<kbd>n</kbd> (Kitty).</li>
+          <li>Pick the error line — it previews, then lands the cursor on that line.</li>
+          <li><kbd>Space</kbd> <kbd>g</kbd> <kbd>B</kbd> for full blame on the line you are about to change.</li>
+          <li>Fix it, then <kbd>Space</kbd> <kbd>r</kbd> <kbd>c</kbd> to rerun without leaving the buffer.</li>
+        </ol>
+      </div>
+
+      <div class="drill">
+        <div class="goal">Drill 3 · no arrows, no mouse</div>
+        <h4>Surgical AST editing</h4>
+        <ol class="steps">
+          <li><kbd>s</kbd> then two characters — Flash lands anywhere visible on screen.</li>
+          <li><kbd>c</kbd><kbd>i</kbd><kbd>a</kbd> changes inside the function argument you landed on.</li>
+          <li><kbd>Ctrl</kbd>+<kbd>l</kbd> in insert mode hops past the closing bracket instead of typing it.</li>
+          <li><kbd>g</kbd><kbd>s</kbd><kbd>a</kbd><kbd>i</kbd><kbd>w</kbd><kbd>"</kbd> wraps the word in quotes; <kbd>g</kbd><kbd>s</kbd><kbd>r</kbd><kbd>"</kbd><kbd>'</kbd> swaps them.</li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- ================= CATALOG ================= -->
+    <section id="catalog">
+      <div class="eyebrow">07 · Reference</div>
+      <h2>Live catalog</h2>
+      <p class="lede">Filter by layer or search by intent. Press <kbd>/</kbd> to jump to the search box. This is a curated slice of the 229 generated bindings — the full dump lives in the README block and in <code>bin/terminal-cheatsheet</code>.</p>
+
+      <div class="filter">
+        <button class="chip" data-tool="all" aria-pressed="true">All</button>
+        <button class="chip" data-tool="nvim" aria-pressed="false">Neovim</button>
+        <button class="chip" data-tool="tmux" aria-pressed="false">tmux</button>
+        <button class="chip" data-tool="kitty" aria-pressed="false">Kitty</button>
+        <button class="chip" data-tool="wezterm" aria-pressed="false">WezTerm</button>
+        <input id="q" type="search" placeholder="   search keys or actions…  ( / )" aria-label="Search bindings" />
+        <span class="count" id="count"></span>
+      </div>
+
+      <div class="tw">
+        <table id="cat">
+          <thead><tr><th>Key</th><th>Layer</th><th>Action</th></tr></thead>
+          <tbody>
+            <tr data-tool="all nvim tmux kitty"><td><span class="keys"><kbd>Ctrl</kbd>+<kbd>h/j/k/l</kbd></span></td><td>all</td><td>Seamless split navigation across nvim windows and tmux/Kitty panes</td></tr>
+            <tr data-tool="nvim"><td><span class="keys"><kbd>Space</kbd>+<kbd>|</kbd> / <kbd>-</kbd></span></td><td>nvim</td><td>Vertical (side-by-side) / horizontal (stacked) split</td></tr>
+            <tr data-tool="tmux"><td><span class="keys"><kbd>Prefix</kbd>+<kbd>|</kbd> / <kbd>-</kbd></span></td><td>tmux</td><td>Split in the current directory, same shape convention</td></tr>
+            <tr data-tool="kitty"><td><span class="keys"><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>d</kbd> / <kbd>s</kbd></span></td><td>kitty</td><td>Split side-by-side / stacked</td></tr>
+            <tr data-tool="nvim"><td><span class="keys"><kbd>Space</kbd>+<kbd>w</kbd>+<kbd>z</kbd></span></td><td>nvim</td><td>Synchronized zoom — nvim window and the outer tmux pane together</td></tr>
+            <tr data-tool="tmux"><td><span class="keys"><kbd>Prefix</kbd>+<kbd>z</kbd></span></td><td>tmux</td><td>Toggle full-window zoom for the pane</td></tr>
+            <tr data-tool="kitty"><td><span class="keys"><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>z</kbd></span></td><td>kitty</td><td>Toggle stack layout (Kitty's zoom)</td></tr>
+            <tr data-tool="tmux"><td><span class="keys"><kbd>Prefix</kbd>+<kbd>f</kbd></span></td><td>tmux</td><td>Project Hub — sessions, ~/Projects, scratch</td></tr>
+            <tr data-tool="kitty"><td><span class="keys"><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>o</kbd></span></td><td>kitty</td><td>Project Hub overlay</td></tr>
+            <tr data-tool="wezterm"><td><span class="keys"><kbd>Alt</kbd>+<kbd>Ctrl</kbd>+<kbd>s</kbd></span></td><td>wezterm</td><td>Open a tab that <em>is</em> a tmux session (the bridge)</td></tr>
+            <tr data-tool="wezterm"><td><span class="keys"><kbd>Leader</kbd> → <kbd>w</kbd></span></td><td>wezterm</td><td>Workspaces table</td></tr>
+            <tr data-tool="tmux"><td><span class="keys"><kbd>Prefix</kbd>+<kbd>e</kbd></span></td><td>tmux</td><td>Error jump — traceback to Neovim at the line</td></tr>
+            <tr data-tool="kitty"><td><span class="keys"><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>p</kbd> → <kbd>n</kbd></span></td><td>kitty</td><td>Hints linenum — same jump, from the emulator</td></tr>
+            <tr data-tool="tmux"><td><span class="keys"><kbd>Prefix</kbd>+<kbd>h</kbd></span></td><td>tmux</td><td>Scrollback pager in a floating Neovim buffer</td></tr>
+            <tr data-tool="kitty"><td><span class="keys"><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>h</kbd></span></td><td>kitty</td><td>Scrollback pager overlay</td></tr>
+            <tr data-tool="nvim"><td><span class="keys"><kbd>Space</kbd>+<kbd>r</kbd>+<kbd>c</kbd> / <kbd>r</kbd>+<kbd>f</kbd></span></td><td>nvim</td><td>Run current file in the tmux runner split</td></tr>
+            <tr data-tool="nvim"><td><span class="keys"><kbd>Space</kbd>+<kbd>r</kbd>+<kbd>l</kbd> / <kbd>r</kbd>+<kbd>s</kbd></span></td><td>nvim</td><td>Send the line / the selection to the runner or REPL</td></tr>
+            <tr data-tool="nvim"><td><span class="keys"><kbd>Space</kbd>+<kbd>r</kbd>+<kbd>k</kbd></span></td><td>nvim</td><td>Kill / clear the runner</td></tr>
+            <tr data-tool="nvim"><td><span class="keys"><kbd>Space</kbd>+<kbd>g</kbd>+<kbd>g</kbd></span></td><td>nvim</td><td>LazyGit float</td></tr>
+            <tr data-tool="tmux"><td><span class="keys"><kbd>Prefix</kbd>+<kbd>g</kbd></span></td><td>tmux</td><td>LazyGit popup, repo-scoped</td></tr>
+            <tr data-tool="kitty"><td><span class="keys"><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>g</kbd></span></td><td>kitty</td><td>LazyGit overlay</td></tr>
+            <tr data-tool="nvim"><td><span class="keys"><kbd>-</kbd></span></td><td>nvim</td><td>Oil — edit the parent directory as a buffer</td></tr>
+            <tr data-tool="nvim"><td><span class="keys"><kbd>Space</kbd>+<kbd>e</kbd></span></td><td>nvim</td><td>Toggle the file tree</td></tr>
+            <tr data-tool="nvim"><td><span class="keys"><kbd>s</kbd></span></td><td>nvim</td><td>Flash — jump to any visible word with 1–2 characters</td></tr>
+            <tr data-tool="nvim"><td><span class="keys"><kbd>Space</kbd>+<kbd>c</kbd>+<kbd>f</kbd></span></td><td>nvim</td><td>Format buffer or selection (conform)</td></tr>
+            <tr data-tool="nvim"><td><span class="keys"><kbd>Space</kbd>+<kbd>c</kbd>+<kbd>y</kbd></span></td><td>nvim</td><td>Yank the line diagnostic to the clipboard</td></tr>
+            <tr data-tool="nvim"><td><span class="keys"><kbd>Space</kbd>+<kbd>s</kbd>+<kbd>k</kbd></span></td><td>nvim</td><td>Search every keymap in the editor</td></tr>
+            <tr data-tool="tmux"><td><span class="keys"><kbd>Prefix</kbd>+<kbd>k</kbd></span></td><td>tmux</td><td>Omni-keymap search: tmux + nvim + WezTerm</td></tr>
+            <tr data-tool="tmux"><td><span class="keys"><kbd>Prefix</kbd>+<kbd>Q</kbd></span></td><td>tmux</td><td>Save state and shut the server down</td></tr>
+            <tr data-tool="tmux"><td><span class="keys"><kbd>Alt</kbd>+<kbd>1</kbd>…<kbd>9</kbd></span></td><td>tmux</td><td>Window jump without the prefix</td></tr>
+            <tr data-tool="wezterm"><td><span class="keys"><kbd>Alt</kbd>+<kbd>,</kbd> <kbd>.</kbd> <kbd>/</kbd></span></td><td>wezterm</td><td>Previous / next / random wallpaper — re-themes everything</td></tr>
+            <tr data-tool="wezterm"><td><span class="keys"><kbd>Leader</kbd> → <kbd>f</kbd> / <kbd>p</kbd></span></td><td>wezterm</td><td>Font-size / pane-resize tables</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ================= VERIFY ================= -->
+    <section id="verify">
+      <div class="eyebrow">08 · Truth</div>
+      <h2>Verify, don't trust this page</h2>
+      <p class="lede">Every number above came from the machine. These are the commands that produce them — click to copy.</p>
+
+      <div class="cmd" data-copy="cd ~/mydotfiles && ./bin/sync-keybindings --check"><code>cd ~/mydotfiles &amp;&amp; ./bin/sync-keybindings --check</code><span class="hint">copy</span></div>
+      <div class="cmd" data-copy="~/.config/wezterm/scripts/check-key-collisions.sh"><code>~/.config/wezterm/scripts/check-key-collisions.sh</code><span class="hint">copy</span></div>
+      <div class="cmd" data-copy="tmux list-keys -T prefix | wc -l; tmux list-keys -T root | wc -l"><code>tmux list-keys -T prefix | wc -l ; tmux list-keys -T root | wc -l</code><span class="hint">copy</span></div>
+      <div class="cmd" data-copy="cd ~/.config/nvim && make keymaps"><code>cd ~/.config/nvim &amp;&amp; make keymaps</code><span class="hint">copy</span></div>
+      <div class="cmd" data-copy="wezterm show-keys"><code>wezterm show-keys</code><span class="hint">copy</span></div>
+      <div class="cmd" data-copy="cd ~/mydotfiles && ./bin/stow-apply --check"><code>cd ~/mydotfiles &amp;&amp; ./bin/stow-apply --check</code><span class="hint">copy</span></div>
+      <div class="cmd" data-copy="devcheck"><code>devcheck</code><span class="hint">copy</span></div>
+
+      <div class="note">
+        <div class="t">If the numbers move</div>
+        <p>Re-run the gates, then regenerate the docs instead of editing them by hand: <code>sync-keybindings</code> rewrites the README table and the cheatsheet, and <code>scripts/terminal_snapshot.py</code> in the Obsidian vault rewrites the live snapshot note.</p>
+      </div>
+    </section>
+
+    <footer>
+      <span>Terminal stack · Sahil's dotfiles · 2026</span>
+      <span><a href=".config/nvim/learn-nvim.html">Companion guide: Learn Neovim →</a></span>
+      <span>229 bindings · 5 layers · verified 2026-11-15</span>
+    </footer>
+  </main>
 </div>
 
-<!-- ============ INTERACTIVE SCRIPT ============ -->
 <script>
-// Real-time HUD reading progress & active chapter detection
-var chapters = Array.prototype.slice.call(document.querySelectorAll('.chapter, .hero'));
-var navLinks = Array.prototype.slice.call(document.querySelectorAll('.sidebar-nav a'));
-var progressBar = document.getElementById('progress-bar');
-var hudChip = document.getElementById('hud-chip');
-var hudTitle = document.getElementById('hud-title');
-var hudClock = document.getElementById('hud-clock');
+(function () {
+  "use strict";
 
-// Update Clock
-function updateClock() {
-  var now = new Date();
-  var h = String(now.getHours()).padStart(2, '0');
-  var m = String(now.getMinutes()).padStart(2, '0');
-  if (hudClock) hudClock.textContent = h + ':' + m;
-}
-setInterval(updateClock, 1000);
-updateClock();
-
-// Scroll & Progress Tracking
-window.addEventListener('scroll', function() {
-  var sTop = window.scrollY || document.documentElement.scrollTop;
-  var dHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
-  var progress = dHeight > 0 ? (sTop / dHeight) * 100 : 0;
-  if (progressBar) progressBar.style.width = Math.min(100, Math.max(0, progress)) + '%';
-
-  // Active Chapter detection
-  var currentChapter = null;
-  for (var i = chapters.length - 1; i >= 0; i--) {
-    var rect = chapters[i].getBoundingClientRect();
-    if (rect.top <= 120) {
-      currentChapter = chapters[i];
-      break;
-    }
+  /* ---- reading progress ---- */
+  var prog = document.getElementById("prog");
+  function onScroll() {
+    var h = document.documentElement;
+    var max = h.scrollHeight - h.clientHeight;
+    prog.style.width = (max > 0 ? (h.scrollTop / max) * 100 : 0) + "%";
   }
+  addEventListener("scroll", onScroll, { passive: true });
+  onScroll();
 
-  if (currentChapter) {
-    var id = currentChapter.id;
-    var tool = currentChapter.dataset.tool || 'ECOSYSTEM';
-    if (hudChip) hudChip.textContent = tool;
-
-    var heading = currentChapter.querySelector('h2') || currentChapter.querySelector('h1');
-    if (heading && hudTitle) hudTitle.textContent = heading.textContent.replace(/^\d+\s*/, '');
-
-    navLinks.forEach(function(link) {
-      if (link.getAttribute('href') === '#' + id) {
-        link.classList.add('active');
-      } else {
-        link.classList.remove('active');
-      }
+  /* ---- scrollspy ---- */
+  var links = Array.prototype.slice.call(document.querySelectorAll("#nav a"));
+  var targets = links.map(function (a) { return document.querySelector(a.getAttribute("href")); });
+  var spy = new IntersectionObserver(function (entries) {
+    entries.forEach(function (e) {
+      if (!e.isIntersecting) return;
+      var i = targets.indexOf(e.target);
+      if (i < 0) return;
+      links.forEach(function (l) { l.classList.remove("on"); });
+      links[i].classList.add("on");
     });
+  }, { rootMargin: "-15% 0px -70% 0px", threshold: 0 });
+  targets.forEach(function (t) { if (t) spy.observe(t); });
+
+  /* ---- catalog filter ---- */
+  var chips = Array.prototype.slice.call(document.querySelectorAll(".chip"));
+  var rows = Array.prototype.slice.call(document.querySelectorAll("#cat tbody tr"));
+  var q = document.getElementById("q");
+  var count = document.getElementById("count");
+  var tool = "all";
+
+  function apply() {
+    var term = (q.value || "").toLowerCase().trim();
+    var shown = 0;
+    rows.forEach(function (tr) {
+      var tools = tr.getAttribute("data-tool") || "";
+      var matchTool = tool === "all" || tools.split(/\s+/).indexOf(tool) > -1;
+      var matchText = !term || tr.textContent.toLowerCase().indexOf(term) > -1;
+      var vis = matchTool && matchText;
+      tr.style.display = vis ? "" : "none";
+      if (vis) shown++;
+    });
+    count.textContent = shown + " / " + rows.length;
   }
-});
 
-// Interactive Omni-Search & Filter Engine
-var searchInput = document.getElementById('omni-search');
-var filterPills = Array.prototype.slice.call(document.querySelectorAll('.filter-pill'));
-var tableRows = Array.prototype.slice.call(document.querySelectorAll('#keymap-tbody tr'));
-var countLabel = document.getElementById('search-count');
+  chips.forEach(function (c) {
+    c.addEventListener("click", function () {
+      tool = c.getAttribute("data-tool");
+      chips.forEach(function (x) { x.setAttribute("aria-pressed", String(x === c)); });
+      apply();
+    });
+  });
+  q.addEventListener("input", apply);
+  apply();
 
-var currentFilter = 'all';
-
-function filterKeymaps() {
-  var query = (searchInput.value || '').toLowerCase().trim();
-  var visible = 0;
-
-  tableRows.forEach(function(row) {
-    var rowTool = (row.dataset.tool || '').toLowerCase();
-    var rowText = (row.textContent || '').toLowerCase();
-
-    var toolMatches = (currentFilter === 'all') || (rowTool === currentFilter) || (rowTool === 'all');
-    var queryMatches = !query || rowText.indexOf(query) !== -1;
-
-    if (toolMatches && queryMatches) {
-      row.style.display = '';
-      visible++;
-    } else {
-      row.style.display = 'none';
+  /* ---- "/" focuses search ---- */
+  addEventListener("keydown", function (e) {
+    if (e.key === "/" && document.activeElement !== q) {
+      e.preventDefault();
+      q.focus();
+      q.scrollIntoView({ block: "center", behavior: "smooth" });
     }
+    if (e.key === "Escape" && document.activeElement === q) { q.blur(); }
   });
 
-  if (countLabel) {
-    countLabel.textContent = 'Showing ' + visible + ' of ' + tableRows.length + ' bindings';
-  }
-}
-
-if (searchInput) {
-  searchInput.addEventListener('input', filterKeymaps);
-}
-
-filterPills.forEach(function(pill) {
-  pill.addEventListener('click', function() {
-    filterPills.forEach(function(p) { p.classList.remove('active'); });
-    pill.classList.add('active');
-    currentFilter = pill.dataset.filter || 'all';
-    filterKeymaps();
+  /* ---- copy commands ---- */
+  document.querySelectorAll(".cmd").forEach(function (el) {
+    el.addEventListener("click", function () {
+      var text = el.getAttribute("data-copy") || "";
+      var hint = el.querySelector(".hint");
+      var done = function () { el.classList.add("done"); hint.textContent = "copied"; setTimeout(function () { el.classList.remove("done"); hint.textContent = "copy"; }, 1400); };
+      if (navigator.clipboard) { navigator.clipboard.writeText(text).then(done, done); } else { done(); }
+    });
   });
-});
+})();
 </script>
 </body>
 </html>

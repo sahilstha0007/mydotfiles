@@ -727,11 +727,13 @@ class KittyTabBarTests(unittest.TestCase):
     def test_custom_conf_hud_and_remote_control(self) -> None:
         conf = (KITTY_DIR / "custom.conf").read_text()
         self.assertIn("tab_bar_min_tabs 1", conf)
-        # Remote control was removed for a local lockdown; kitty 0.50's
-        # permissive default still allowed OSC52 clipboard writes, so those
-        # are explicitly disabled too.
+        # Remote control was removed for a local lockdown; local OSC52 writes
+        # are allowed for nvim's unnamedplus, clipboard reads stay blocked.
         self.assertNotIn("allow_remote_control", conf)
-        self.assertIn("clipboard_control none", conf)
+        self.assertIn("clipboard_control write-clipboard", conf)
+        self.assertNotIn("read-clipboard", conf)
+        nav = [l for l in conf.splitlines() if l.startswith(("map ctrl+h ", "map ctrl+j ", "map ctrl+k ", "map ctrl+l "))]
+        self.assertTrue(nav and all("pass_keys.py" in l for l in nav), nav)
         self.assertIn('tab_title_template "{title}"', conf)
         self.assertIn("▸ {title}", conf)
         self.assertNotIn("[:22]", conf)

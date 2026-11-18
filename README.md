@@ -43,6 +43,26 @@ cd ~/mydotfiles
 xargs -n 1 code --install-extension < .config/Code/User/extensions.txt
 ```
 
+### Stow layout
+
+The repo is also a valid GNU Stow package, which is the fastest way to re-link after a
+fresh clone or a partially broken `$HOME`:
+
+```bash
+cd ~/mydotfiles
+./bin/stow-apply --check   # dry run: exit 0 means $HOME already matches the repo
+./bin/stow-apply           # link every .config/<tool> dir into $HOME (idempotent)
+./bin/stow-apply --remove  # unlink everything this repo owns
+```
+
+Stow owns **`~/.config/<tool>` directory symlinks only** (folding on, so nvim's `lazy/`
+cache and tmux plugins stay inside the repo). `install.sh` still owns what stow cannot
+express: `bin/` → `~/.local/bin/`, the renamed shell files (`shell/zshrc` → `~/.zshrc`),
+and `~/.config/Code/User`. Running both is safe — `install.sh` skips links that are
+already correct.
+
+Validate the whole thing with `devcheck` or `install.sh --doctor`.
+
 ---
 
 <!-- BEGIN KEYBINDINGS -->

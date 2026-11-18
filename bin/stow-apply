@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+# Apply / verify the stow layout for this repo.
+#
+#   stow-apply            link every repo .config/<tool> into $HOME (idempotent)
+#   stow-apply --check    dry run: list what would change, exit 0 if nothing
+#   stow-apply --remove   unlink everything this repo owns
+#
+# Why a wrapper instead of a bare `stow .`:
+#   * `.stow-local-ignore` is not honoured for a package that *is* the stow
+#     directory, so the ignore set is passed explicitly instead of silently
+#     doing nothing.
+#   * A plain `stow .` would also link install.sh, tests/ and the HTML
+#     tutorials into $HOME, and would fight ~/.config/Code, which VS Code
+#     rewrites at runtime.
+#
+# Scope: stow owns `~/.config/<tool>` as directory symlinks (folding on, so
+# nvim's lazy/ cache and tmux plugins stay inside the repo). install.sh keeps
+# owning ~/.local/bin (bin/), the renamed shell files (shell/), and
+# ~/.config/Code/User.
+set -euo pipefail
+
+REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+TARGET="${HOME}"
+IGNORE='^(\.git|bin|shell|tests|docs|install\.sh|.*\.html|\.gitignore|\.stow-local-ignore|README\.md|AGENTS\.md|CLAUDE\.md|skills-lock\.json|\.config/Code)(/.*)?$'
+
+usage() { sed -n '2,18p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; }
+
+run() { cd "$REPO" && stow --ignore="$IGNORE" -t "$TARGET" "$@"; }
+
+case "${1:---apply}" in
+  -h|--help) usage; exit 0 ;;
+  --check)
+    raw="$(run -n -v . 2>&1)"; rc=$?
+    out="$(printf '%s\n' "$raw" | grep -v '^WARNING: in simulation mode' | grep -v '^[[:space:]]*$' || true)"
+    if [ -n "$out" ]; then printf '%s\n' "$out"; echo "stow-apply: drift above (run: stow-apply)"; exit 1; fi
+    [ "$rc" -eq 0 ] || { echo "stow-apply: stow failed (rc=$rc)"; exit "$rc"; }
+    echo "stow-apply: clean — stow owns $(find "$TARGET/.config" -maxdepth 1 -type l -lname '*mydotfiles*' | wc -l) config links"
+    ;;
+  --apply)
+    run -v . 2>&1 | sed 's/^/  /'
+    echo "stow-apply: linked"
+    ;;
+  --remove)
+    run -D -v . 2>&1 | sed 's/^/  /'
+    echo "stow-apply: removed repo links from $TARGET"
+    ;;
+  *) echo "stow-apply: unknown option: $1" >&2; usage >&2; exit 2 ;;
+esac

@@ -1,0 +1,40 @@
+# GNU Stow ignore list (stow >= 2.4).
+#
+# This repo is stowed from its root into $HOME:
+#
+#   cd ~/mydotfiles && stow --dotfiles -t "$HOME" .
+#
+# Patterns are Perl regexes matched against each path relative to the package
+# root. Keep them unanchored to `^/` — stow strips the leading slash before
+# matching, so `^/bin` never fires while `^bin` does.
+#
+# What stow manages here: `.config/<tool>` directories only (directory-level
+# links, so caches such as nvim's `lazy/` stay inside the repo).
+#
+# NOT stowed, on purpose:
+#   bin/    install.sh links these into ~/.local/bin (stow cannot rename)
+#   shell/  install.sh links zshrc/zshenv/zshrc_custom to renamed $HOME files
+#   tests/  repo-only harness
+#   Code/   VS Code rewrites its own tree; install.sh owns those three files
+
+# --- repo metadata -----------------------------------------------------------
+^\.git$
+^\.gitignore$
+^\.stow-local-ignore$
+^README\.md$
+^AGENTS\.md$
+^CLAUDE\.md$
+^skills-lock\.json$
+
+# --- deploys elsewhere / repo-only ------------------------------------------
+^install\.sh$
+^bin$
+^shell$
+^tests$
+^docs$
+
+# --- generated tutorials ----------------------------------------------------
+\.html$
+
+# --- owned by install.sh (VS Code rewrites these at runtime) ----------------
+^\.config/Code$
