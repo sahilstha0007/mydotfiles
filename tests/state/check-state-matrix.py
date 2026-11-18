@@ -63,6 +63,8 @@ def snapshot_tree_rel(d: pathlib.Path) -> set[str]:
             # any children inside nvim.<user> or any other file/dir are still treated strictly as leaks.
             if rel == nvim_parent and (root_p / name).is_dir() and not any((root_p / name).iterdir()):
                 continue
+            if rel == "node-compile-cache" or rel.startswith("node-compile-cache/"):
+                continue
             entries.add(rel)
     return entries
 
@@ -165,6 +167,7 @@ def prepare_state(state: str, st_repo: pathlib.Path, st_home: pathlib.Path, st_d
         (st_tmp / "tmp.decoy.out").write_text("decoy\n", encoding="utf-8")
         (st_tmp / "ccDecoy.s").write_text("decoy\n", encoding="utf-8")
     elif state == "fresh_matugen":
+        env["DOTFILES_FRESH_MATUGEN"] = "1"
         wall = st_repo / "tests/wezterm/fixtures/wall-a.png"
         wez_tpl = st_repo / "tests/wezterm/fixtures/wezterm-colors.lua"
         m_toml = st_dir / "matugen.toml"
