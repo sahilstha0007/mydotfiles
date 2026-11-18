@@ -1,4 +1,0 @@
-[
-  (object)
-  (pair)
-] @context

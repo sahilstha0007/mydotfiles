@@ -80,10 +80,10 @@ The snapshot at the time of an incident is at `~/.local/share/tmux/resurrect/las
 
 ## Known gotchas
 
-- **Lockdown (v10):** kitty remote-control socket, explicit clipboard IPC, tmux OSC52,
-  broadcast, and hints-to-clipboard were removed. `kitty @` CLI control and cross-pane
-  clipboard handoff no longer work by design. Kitty window nav uses `neighboring_window`
-  (not `pass_keys.py`); nvim→kitty split fallback is disabled.
+- **IPC & clipboard policy:** Kitty uses `allow_remote_control socket-only` + `listen_on unix:@kitty-{kitty_pid}`
+  (required by `pass_keys.py`, `broadcast`, and `stack-reload`) with write-only clipboard
+  (`clipboard_control write-clipboard write-primary`; clipboard reads stay blocked). Tmux enables
+  OSC52 clipboard (`Ms`, `:clipboard`, `set -s set-clipboard on`) for cross-pane/SSH yanks.
 - **Static palette (v10/v12):** `colors.json` under `.config/ohmyposh/` is dead (removed);
   the oh-my-posh prompt uses `zen.toml` / `zen-apple-glass.toml` directly. `colors-matugen.conf`
   in tmux is a committed static copy of `apple-glass.conf`, sourced by tmux.conf.

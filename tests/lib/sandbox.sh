@@ -49,6 +49,7 @@ sandbox_init() {
   SB_PATH="${extra_path:+$extra_path:}$PATH"
   SB_MISE_DATA_DIR="${MISE_DATA_DIR:-$SB_REAL_HOME/.local/share/mise}"
   SB_MISE_CONFIG_DIR="${MISE_CONFIG_DIR:-$SB_REAL_HOME/.config/mise}"
+  SB_NVIM_LAZY_DIR="${NVIM_LAZY_DIR:-$SB_REAL_HOME/.local/share/nvim/lazy}"
 }
 
 sandbox_install() {
@@ -64,5 +65,6 @@ sandbox_run() {
     PATH="$SB_PATH" \
     MISE_DATA_DIR="$SB_MISE_DATA_DIR" \
     MISE_CONFIG_DIR="$SB_MISE_CONFIG_DIR" \
+    NVIM_LAZY_DIR="$SB_NVIM_LAZY_DIR" \
     "$@"
 }

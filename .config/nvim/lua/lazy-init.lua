@@ -1,15 +1,11 @@
--- lazy.nvim and every plugin are vendored in the repo at <config>/vendor.
--- No network I/O at runtime: point lazy's root at the vendor dir so it treats
--- all plugins as already installed instead of trying to clone missing ones.
-local vendor = vim.fn.stdpath 'config' .. '/vendor'
-local lazypath = vim.env.LAZY or (vendor .. '/lazy.nvim')
+-- lazy.nvim is provisioned by install.sh — the only place allowed to do
+-- network I/O. Never fetch at runtime; fail fast with an actionable message.
+local lazypath = vim.env.LAZY or (vim.fn.stdpath 'data' .. '/lazy/lazy.nvim')
 if not (vim.uv or vim.loop).fs_stat(lazypath) then
   error(
     'lazy.nvim not found at '
       .. lazypath
-      .. '. Expected vendored plugins at '
-      .. vendor
-      .. ' (or set $LAZY to a valid lazy.nvim path).'
+      .. '. Run install.sh to provision it, or set $LAZY to a valid lazy.nvim path.'
   )
 end
 vim.opt.rtp:prepend(lazypath)
@@ -78,10 +74,8 @@ require('lazy').setup({
     { import = 'plugins.util.mini-hipatterns' },
   },
   defaults = {},
-  -- Use the vendored plugin sources directly; nothing is fetched at runtime.
-  root = vendor,
-  -- No :Lazy update in this workflow, so disable the background checker's
-  -- `git ls-remote` fan-out across all plugins (also keeps startup offline).
+  -- Disable background update checker to avoid `git ls-remote` fan-out at
+  -- startup; run `:Lazy update` / `:Lazy sync` explicitly when desired.
   checker = { enabled = false },
   performance = {
     rtp = {

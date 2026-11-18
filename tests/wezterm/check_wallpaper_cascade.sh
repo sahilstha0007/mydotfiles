@@ -54,10 +54,10 @@ expect "wezterm accent is $ACC (ANSI blue)"  "wezterm ANSI accent drifted" \
    grep -qF "$ACC', -- blue (accent)" "$CUSTOM"
 
 # wezterm static token table
-expect "matugen bg is $BG"   "matugen bg drifted"   grep -qF "background = \"$BG\"" "$MATUGEN"
-expect "matugen fg is $FG"   "matugen fg drifted"   grep -qF "foreground = \"$FG\"" "$MATUGEN"
+expect "matugen bg is $BG"   "matugen bg drifted"   grep -qE "background = ['\"]${BG}['\"]" "$MATUGEN"
+expect "matugen fg is $FG"   "matugen fg drifted"   grep -qE "foreground = ['\"]${FG}['\"]" "$MATUGEN"
 expect "matugen accent is $ACC"  "matugen accent drifted" \
-   grep -qF "primary = \"$ACC\"" "$MATUGEN"
+   grep -qE "primary = ['\"]${ACC}['\"]" "$MATUGEN"
 
 # kitty coding profile
 expect "kitty bg is $BG"     "kitty bg drifted"     grep -qE "^background[[:space:]]+$BG" "$KITTY"

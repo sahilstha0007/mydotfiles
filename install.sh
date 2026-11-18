@@ -76,7 +76,7 @@ run_doctor() {
       echo "  [FAIL]   repo script lacks +x: $rscript" >&2
       repo_fail=1
     fi
-  done < <(find "$repo/.config" -type d -name vendor -prune -o -type f \( -name "*.sh" -o -name "*.py" \) -print0 2>/dev/null || true)
+  done < <(find "$repo/.config" -type f \( -name "*.sh" -o -name "*.py" \) -print0 2>/dev/null || true)
 
   # 2. Scan ~/.config and ~/.local/bin for real dangling symlinks.
   # Browser/Electron/Mozilla runtime lock symlinks intentionally encode host/PID tokens as dangling targets:
@@ -325,14 +325,23 @@ find "$repo/.config" -type f -name "*.sh" -exec chmod +x {} + 2>/dev/null || tru
 find "$repo/.config" -type f -name "*.py" -exec chmod +x {} + 2>/dev/null || true
 find "$repo/bin" -type f -exec chmod +x {} + 2>/dev/null || true
 
-# 6b. lazy.nvim and all plugins are vendored in the repo; lazy-init.lua points
-#     lazy's root at <config>/vendor, so no provisioning (and no network) is
-#     needed here. The config dir was symlinked in step 1, making vendor live.
-vendor_dir="$repo/.config/nvim/vendor"
-if [ -d "$vendor_dir/lazy.nvim" ]; then
-  echo "  [OK]     vendored lazy.nvim + plugins at $vendor_dir"
+# 6b. Provision lazy.nvim (nvim's plugin manager) here — the single place allowed
+#     to do network I/O. lazy-init.lua deliberately does NOT bootstrap at runtime.
+#     Pinned to the stable release commit (annotated tag 'stable' = v11.17.5).
+lazy_nvim_dir="${XDG_DATA_HOME:-$HOME/.local/share}/nvim/lazy/lazy.nvim"
+if [ -d "$lazy_nvim_dir/.git" ]; then
+  echo "  [OK]     lazy.nvim already installed at $lazy_nvim_dir"
+elif [ -e "$lazy_nvim_dir" ]; then
+  echo "  [WARN]   $lazy_nvim_dir exists but is not a git checkout — skipping (nvim may fail)" >&2
 else
-  echo "  [WARN]   vendored plugins missing at $vendor_dir — nvim will not boot offline" >&2
+  echo "  [INSTALL] cloning pinned lazy.nvim -> $lazy_nvim_dir"
+  mkdir -p "$(dirname "$lazy_nvim_dir")"
+  if git clone --filter=blob:none --branch=stable https://github.com/folke/lazy.nvim.git "$lazy_nvim_dir" \
+      && git -C "$lazy_nvim_dir" checkout --detach 85c7ff3711b730b4030d03144f6db6375044ae82; then
+    echo "  [OK]     lazy.nvim pinned at $(git -C "$lazy_nvim_dir" rev-parse --short HEAD)"
+  else
+    echo "  [WARN]   lazy.nvim provision failed (offline?). Re-run install.sh with network to fix nvim." >&2
+  fi
 fi
 
 # 7. Rebuild bat theme cache if bat is installed (idempotent: only rebuild if missing or older than themes)

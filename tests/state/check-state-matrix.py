@@ -89,9 +89,12 @@ def seed_base_state(repo_src: pathlib.Path, work: pathlib.Path, real_home: str, 
     # Seed lazy plugins into isolated base_home (local read-only copy when not in clean-clone; full fetch otherwise)
     host_lazy = pathlib.Path(real_home) / ".local" / "share" / "nvim" / "lazy"
     base_lazy = base_home / ".local" / "share" / "nvim" / "lazy"
-    if os.environ.get("DEVCHECK_IN_CLEAN_CLONE") != "1" and host_lazy.is_dir() and not base_lazy.exists():
-        base_lazy.parent.mkdir(parents=True, exist_ok=True)
-        subprocess.run(["cp", "-a", str(host_lazy), str(base_lazy)], check=True)
+    if os.environ.get("DEVCHECK_IN_CLEAN_CLONE") != "1" and host_lazy.is_dir():
+        base_lazy.mkdir(parents=True, exist_ok=True)
+        for item in host_lazy.iterdir():
+            dst = base_lazy / item.name
+            if not dst.exists():
+                subprocess.run(["cp", "-a", str(item), str(dst)], check=True)
     # Pre-seed/verify lazy plugins once so per-state nvim_keymaps runs deterministically without 5x network fetches
     subprocess.run(["make", "-C", str(base_repo / ".config/nvim"), "keymaps"], env=env, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     # Seed non-secret empty .zshrc.local in baseline so missing_zshrc_local contrasts cleanly

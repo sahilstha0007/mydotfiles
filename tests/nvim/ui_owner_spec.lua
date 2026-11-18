@@ -25,15 +25,7 @@
 -- So the two plugin dirs this spec needs are prepended explicitly.
 
 local passed, failed = 0, 0
--- Plugins are vendored in the repo (v10) so offline/clean-clone boots work;
--- fall back to the old XDG data dir for older checkouts.
-local _spec_src = debug.getinfo(1, 'S').source:sub(2)
-local _nvim_root = vim.fn.fnamemodify(
-  vim.fn.fnamemodify(vim.fn.fnamemodify(_spec_src, ':p:h'), ':h'),
-  ':h'
-)
-local LAZY = vim.fn.isdirectory(_nvim_root .. '/.config/nvim/vendor') == 1
-    and (_nvim_root .. '/.config/nvim/vendor')
+local LAZY = vim.env.NVIM_LAZY_DIR
   or (vim.fn.expand '$HOME' .. '/.local/share/nvim/lazy')
 vim.opt.runtimepath:prepend(LAZY .. '/dressing.nvim')
 vim.opt.runtimepath:prepend(LAZY .. '/snacks.nvim')

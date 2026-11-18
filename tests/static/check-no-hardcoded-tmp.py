@@ -17,7 +17,7 @@ EXPLICIT_SCRIPTS = {
     "shell/zshenv",
     "shell/bashrc_custom",
 }
-SKIP_DIRS = {".git", "plugins", "fixtures", "__pycache__", ".cache", "vendor"}
+SKIP_DIRS = {".git", "plugins", "fixtures", "__pycache__", ".cache"}
 
 # Each allowlisted match requires an exact (relpath, substring): justification mapping.
 # Every entry MUST match at least once on disk (stale entries fail verification).

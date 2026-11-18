@@ -727,10 +727,10 @@ class KittyTabBarTests(unittest.TestCase):
     def test_custom_conf_hud_and_remote_control(self) -> None:
         conf = (KITTY_DIR / "custom.conf").read_text()
         self.assertIn("tab_bar_min_tabs 1", conf)
-        # Remote control was removed for a local lockdown; local OSC52 writes
-        # are allowed for nvim's unnamedplus, clipboard reads stay blocked.
-        self.assertNotIn("allow_remote_control", conf)
-        self.assertIn("clipboard_control write-clipboard", conf)
+        # Socket-only remote control is required by pass_keys.py, broadcast,
+        # and stack-reload; clipboard stays write-only (reads blocked).
+        self.assertIn("allow_remote_control socket-only", conf)
+        self.assertIn("clipboard_control write-clipboard write-primary", conf)
         self.assertNotIn("read-clipboard", conf)
         nav = [l for l in conf.splitlines() if l.startswith(("map ctrl+h ", "map ctrl+j ", "map ctrl+k ", "map ctrl+l "))]
         self.assertTrue(nav and all("pass_keys.py" in l for l in nav), nav)

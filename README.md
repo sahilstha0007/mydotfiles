@@ -75,7 +75,7 @@ Validate the whole thing with `devcheck` or `install.sh --doctor`.
 - **Universal Cross-Layer Navigation**: `Ctrl+h/j/k/l` moves seamlessly across Kitty/Tmux splits and Neovim splits, and `terminal-cheatsheet` searches the full keybind table interactively.
 
 <details>
-<summary>Complete Live Keybinding Reference (220 generated bindings: WezTerm 99, Kitty 65, Tmux 56)</summary>
+<summary>Complete Live Keybinding Reference (229 generated bindings: WezTerm 99, Kitty 74, Tmux 56)</summary>
 
 | Layer | Scope | Key | Action | Canonical ID |
 |---|---|---|---|---|
@@ -183,10 +183,10 @@ Validate the whole thing with `devcheck` or `install.sh --doctor`.
 | Kitty | Keys | `ctrl+shift+enter` | launch --cwd=current | `Kitty\|ctrl+shift+enter` |
 | Kitty | Keys | `ctrl+shift+z` | toggle_layout stack | `Kitty\|ctrl+shift+z` |
 | Kitty | Keys | `ctrl+shift+l` | next_layout | `Kitty\|ctrl+shift+l` |
-| Kitty | Keys | `ctrl+h` | neighboring_window left | `Kitty\|ctrl+h` |
-| Kitty | Keys | `ctrl+j` | neighboring_window bottom | `Kitty\|ctrl+j` |
-| Kitty | Keys | `ctrl+k` | neighboring_window top | `Kitty\|ctrl+k` |
-| Kitty | Keys | `ctrl+l` | neighboring_window right | `Kitty\|ctrl+l` |
+| Kitty | Keys | `ctrl+h` | kitten pass_keys.py left ctrl+h | `Kitty\|ctrl+h` |
+| Kitty | Keys | `ctrl+j` | kitten pass_keys.py bottom ctrl+j | `Kitty\|ctrl+j` |
+| Kitty | Keys | `ctrl+k` | kitten pass_keys.py top ctrl+k | `Kitty\|ctrl+k` |
+| Kitty | Keys | `ctrl+l` | kitten pass_keys.py right ctrl+l | `Kitty\|ctrl+l` |
 | Kitty | Keys | `ctrl+shift+left` | neighboring_window left | `Kitty\|ctrl+shift+left` |
 | Kitty | Keys | `ctrl+shift+right` | neighboring_window right | `Kitty\|ctrl+shift+right` |
 | Kitty | Keys | `ctrl+shift+up` | neighboring_window up | `Kitty\|ctrl+shift+up` |
@@ -219,6 +219,7 @@ Validate the whole thing with `devcheck` or `install.sh --doctor`.
 | Kitty | Leader > | `ctrl+shift+p>t` | launch --type=overlay tab-switcher.sh | `Kitty\|ctrl+shift+p>t` |
 | Kitty | Keys | `ctrl+shift+f` | launch --type=overlay --stdin-source=@screen_scrollback fzf --no-sort --exact -i --reverse | `Kitty\|ctrl+shift+f` |
 | Kitty | Keys | `ctrl+shift+h` | launch --stdin-source=@screen_scrollback --type=overlay nvim-scrollback-pager.sh | `Kitty\|ctrl+shift+h` |
+| Kitty | Keys | `ctrl+shift+b` | launch --allow-remote-control kitten broadcast --match-tab state:focused | `Kitty\|ctrl+shift+b` |
 | Kitty | Keys | `ctrl+shift+k` | kitten command_palette | `Kitty\|ctrl+shift+k` |
 | Kitty | Leader > | `ctrl+shift+p>c` | kitten command_palette | `Kitty\|ctrl+shift+p>c` |
 | Kitty | Keys | `ctrl+shift+g` | launch --type=overlay --cwd=current lazygit | `Kitty\|ctrl+shift+g` |
@@ -230,9 +231,17 @@ Validate the whole thing with `devcheck` or `install.sh --doctor`.
 | Kitty | Leader > | `ctrl+shift+p>m` | launch --type=overlay btop -c ~/.config/btop/btop-apple-glass.conf | `Kitty\|ctrl+shift+p>m` |
 | Kitty | Leader > | `ctrl+shift+p>k` | launch --type=overlay --cwd=current zsh -c 'git difftool --tool=kitty --no-prompt \|\| { echo "No git diff to display"; sleep 1; }' | `Kitty\|ctrl+shift+p>k` |
 | Kitty | Keys | `ctrl+shift+u` | kitten unicode_input | `Kitty\|ctrl+shift+u` |
+| Kitty | Keys | `ctrl+shift+space` | kitten hints --type word --program @ | `Kitty\|ctrl+shift+space` |
 | Kitty | Keys | `ctrl+shift+e` | open_url_with_hints | `Kitty\|ctrl+shift+e` |
 | Kitty | Leader > | `ctrl+shift+p>n` | kitten hints --type linenum --linenum-action=self nvim +{line} {path} | `Kitty\|ctrl+shift+p>n` |
+| Kitty | Leader > | `ctrl+shift+p>h` | kitten hints --type hash --program - | `Kitty\|ctrl+shift+p>h` |
+| Kitty | Leader > | `ctrl+shift+p>shift+h` | kitten hints --type hash --program @ | `Kitty\|ctrl+shift+p>shift+h` |
+| Kitty | Leader > | `ctrl+shift+p>f` | kitten hints --type path --program - | `Kitty\|ctrl+shift+p>f` |
 | Kitty | Leader > | `ctrl+shift+p>shift+f` | kitten hints --type path | `Kitty\|ctrl+shift+p>shift+f` |
+| Kitty | Leader > | `ctrl+shift+p>l` | kitten hints --type line --program - | `Kitty\|ctrl+shift+p>l` |
+| Kitty | Leader > | `ctrl+shift+p>shift+l` | kitten hints --type line --program @ | `Kitty\|ctrl+shift+p>shift+l` |
+| Kitty | Leader > | `ctrl+shift+p>w` | kitten hints --type word --program - | `Kitty\|ctrl+shift+p>w` |
+| Kitty | Leader > | `ctrl+shift+p>i` | kitten hints --type ip --program - | `Kitty\|ctrl+shift+p>i` |
 | Kitty | Keys | `ctrl+shift+o` | launch --type=overlay project-hub.sh | `Kitty\|ctrl+shift+o` |
 | Kitty | Leader > | `ctrl+shift+p>p` | launch --type=overlay project-hub.sh | `Kitty\|ctrl+shift+p>p` |
 | Kitty | Leader > | `ctrl+shift+a>m` | set_background_opacity +0.05 | `Kitty\|ctrl+shift+a>m` |
