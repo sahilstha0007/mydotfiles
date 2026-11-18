@@ -4,7 +4,7 @@
 States verified:
   1. empty_tmp             -- fresh empty TMPDIR, standard XDG_RUNTIME_DIR, empty .zshrc.local
   2. populated_tmp         -- TMPDIR pre-populated with probe_repo and leak decoys (assert zero interference/leaks)
-  3. fresh_matugen         -- sandbox static-palette regeneration (wezterm palette + omp reassert)
+  3. fresh_matugen         -- sandbox static-palette regeneration (wezterm palette)
   4. missing_zshrc_local   -- $HOME/.zshrc.local absent
   5. unset_xdg_runtime_dir -- XDG_RUNTIME_DIR unset
 
@@ -190,7 +190,6 @@ def prepare_state(state: str, st_repo: pathlib.Path, st_home: pathlib.Path, st_d
             capture_output=True,
             text=True,
         )
-        subprocess.run(["bash", str(st_home / ".config/ohmyposh/omp-palette.sh")], env=env, check=True, capture_output=True)
     elif state == "missing_zshrc_local":
         (st_home / ".zshrc.local").unlink(missing_ok=True)
     elif state == "unset_xdg_runtime_dir":

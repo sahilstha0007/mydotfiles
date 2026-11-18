@@ -387,9 +387,6 @@ prewarm_zsh_tool zoxide "$HOME/.cache/zsh-cache/zoxide.zsh" "" zoxide init zsh
 prewarm_zsh_tool direnv "$HOME/.cache/zsh-cache/direnv.zsh" "" direnv hook zsh
 prewarm_zsh_tool atuin  "$HOME/.cache/zsh-cache/atuin.zsh"  "" atuin init zsh
 if command -v oh-my-posh >/dev/null 2>&1; then
-  [ -f "$HOME/.config/ohmyposh/zen-nightfox.toml" ] && \
-    prewarm_zsh_tool oh-my-posh "$HOME/.cache/zsh-cache/omp-nightfox.zsh" "$HOME/.config/ohmyposh/zen-nightfox.toml" \
-      oh-my-posh init zsh --config "$HOME/.config/ohmyposh/zen-nightfox.toml"
   [ -f "$HOME/.config/ohmyposh/zen.toml" ] && \
     prewarm_zsh_tool oh-my-posh "$HOME/.cache/zsh-cache/omp-zen.zsh" "$HOME/.config/ohmyposh/zen.toml" \
       oh-my-posh init zsh --config "$HOME/.config/ohmyposh/zen.toml"

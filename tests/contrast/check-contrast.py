@@ -354,26 +354,10 @@ def _extract_omp_hexes(toml_text: str) -> list[tuple[str, str]]:
 
 
 def audit_ohmyposh(aud: Auditor) -> None:
-    # The committed Nightfox prompt theme is still a valid static palette.
-    nf_bg = "#192330"
-    nf_toml = (CONFIG_ROOT / "ohmyposh" / "zen-nightfox.toml").read_text(encoding="utf-8")
-    for label, hx in _extract_omp_hexes(nf_toml):
-        aud.check_against_effective("ohmyposh", "nightfox", label, hx, nf_bg)
-
-    # Static design: omp-palette.sh only substitutes the committed Apple Glass
-    # roles into the template. Verify it reproduces the committed zen.toml, then
-    # audit that file against the committed palette bg (flat: white-translucent
-    # glass composites are not part of this static prompt design).
+    # Static design: the committed zen.toml is the prompt source. Audit it
+    # against the committed palette bg (flat: white-translucent glass composites
+    # are not part of this static prompt design).
     zen_p = CONFIG_ROOT / "ohmyposh" / "zen.toml"
-    with tempfile.TemporaryDirectory(prefix="contrast-omp-") as tmp:
-        omp_d = Path(tmp) / ".config" / "ohmyposh"
-        omp_d.mkdir(parents=True)
-        (omp_d / "zen.template.toml").write_bytes((CONFIG_ROOT / "ohmyposh" / "zen.template.toml").read_bytes())
-        env = {**os.environ, "HOME": str(Path(tmp))}
-        subprocess.run(["bash", str(CONFIG_ROOT / "ohmyposh" / "omp-palette.sh")], env=env, check=True)
-        if (omp_d / "zen.toml").read_text(encoding="utf-8") != zen_p.read_text(encoding="utf-8"):
-            raise RuntimeError("omp-palette.sh does not regenerate the committed zen.toml")
-
     bg = _parse_kitty_theme(APPLE_GLASS_KITTY)["background"]
     for label, hx in _extract_omp_hexes(zen_p.read_text(encoding="utf-8")):
         aud.check("ohmyposh", "apple_glass", label, hx, bg)

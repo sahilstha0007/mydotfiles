@@ -259,7 +259,7 @@ The shell is layer 5, and its visible surface is the Oh-My-Posh prompt. Prompt s
 
 - **Detection order (`shell/zshrc:188-199`):** an explicit `TERMINAL_STACK_PROFILE` (`kitty` or `wezterm`) wins first, so attaching to a shared Tmux server from a different terminal is not hijacked by a stale `KITTY_WINDOW_ID` / `WEZTERM_PANE` captured when the server started; those environment variables are the fallback. The three `_omp_init_cached` call sites are at `shell/zshrc:210,262,309`.
 - **Cached init (`shell/zshrc:137-152,201-206`):** `_omp_init_cached` calls `_zsh_cached_init`, which writes `oh-my-posh init zsh --config <cfg>` into a cache file and reuses it until the cache is missing/empty or the binary or config is newer. Each shell then exports a **fresh `POSH_SESSION_ID`** from `/proc/sys/kernel/random/uuid`, so a cached init is not shared verbatim across shells. The three branches use distinct cache files (`omp-apple-glass.zsh`, `omp-zen.zsh`, `omp-fallback.zsh`), so switching profile cannot reuse another profile's prompt.
-- **`zen.toml` is generated from static hexes, not hand-edited (`.config/ohmyposh/omp-palette.sh:2-20`):** the script substitutes `@@ACCENT@@`, `@@OK@@`, `@@SOFT@@`, `@@ERR@@` in `zen.template.toml` with the committed Apple Dark Glass hexes hard-coded at `omp-palette.sh:11-14` (`#2dd4bf`, `#7dce8b`, `#f2d97a`, `#ff6b6b`) and writes `zen.toml`. There is no wallpaper-derived input and no caller that regenerates it on theme changes — the colors are static committed config. To change the prompt, edit `zen.template.toml`, not the generated output.
+- **`zen.toml` and `zen-apple-glass.toml` are committed static configs:** edit them directly — there is no generator or template. The Apple Dark Glass hexes (`#2dd4bf`, `#7dce8b`, `#f2d97a`, `#ff6b6b`) are static committed config, not wallpaper-derived.
 - **Verify:** `bash tests/shell/check-omp-init.sh` asserts that every referenced config exists, parses, and has no foreground/background collision, and that the detection order, per-branch config/cache mapping, and cache distinctness above all hold.
 
 ---
@@ -277,7 +277,7 @@ propagates to any terminal layer.
 - **Consumers derive from that static file:** `wezterm/colors/custom.lua` and
   `matugen.lua` are committed static tables; tmux sources the committed
   `tmux/colors-apple-glass.conf` directly for every profile;
-  `ohmyposh/omp-palette.sh` writes committed hexes into `zen.toml`.
+  `ohmyposh/zen.toml` and `zen-apple-glass.toml` are committed static prompt configs.
 - **Removed:** `.config/matugen/`, `bin/kitty-colors-sanitize`,
   `sync-wallpaper.sh`, kitty `colors-matugen.conf` / `.validated.conf`, OMP `colors.json`.
 - **Verify:** `bin/devcheck` (kitty config parse + palette-consistency + contrast gates)

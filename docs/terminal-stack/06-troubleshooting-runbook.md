@@ -168,7 +168,7 @@ stack-reload --dry-run
 | **Kitty splits navigation stops at Neovim edge** | `pass_keys.py` unable to read window process | Ensure `listen_on unix:@kitty-{kitty_pid}` is active in `custom.conf`. |
 | **Zsh startup latency exceeds 120ms** | Stale cache or slow network query | Run `zsh -i -c exit` under `devcheck` to pinpoint slow plugin. |
 | **Clipboard fails over SSH** | Outer terminal does not support OSC 52 | Verify `clipboard_control` in Kitty or `set-clipboard on` in Tmux. |
-| **Prompt colors stale after a palette edit / `stack-reload`** | Long-lived Zsh shell kept its cached Oh-My-Posh init | Run `exec zsh` in each affected shell; `zen.toml` is written from committed hexes by `omp-palette.sh` and the other layers are handled by `stack-reload`. |
+| **Prompt colors stale after a palette edit / `stack-reload`** | Long-lived Zsh shell kept its cached Oh-My-Posh init | Run `exec zsh` in each affected shell; `zen.toml` is a committed static config and the other layers are handled by `stack-reload`. |
 | **`devcheck` fails a palette-consistency / contrast gate** | A committed palette file drifted out of sync with kitty's `apple-glass.conf` | Fix the committed hexes, then `stack-reload`; verify with `install.sh --doctor` and `bin/devcheck`. There is no matugen/sanitizer chain or matugen config symlink to repair. |
 
 ---

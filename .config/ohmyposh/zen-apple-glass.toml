@@ -1,5 +1,5 @@
 # Zen prompt — oh-my-posh (Apple Dark Glass Profile for Kitty)
-# Mirrors zen-kanagawa.toml; Apple system colors, one blue accent.
+# Committed static palette; Apple system colors, one blue accent.
 console_title_template = '{{ .Shell }} in {{ .Folder }}'
 version = 3
 final_space = true

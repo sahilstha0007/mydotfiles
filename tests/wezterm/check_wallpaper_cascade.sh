@@ -3,8 +3,7 @@
 #
 # The wallpaper-driven palette cascade is gone: the stack uses committed static
 # Apple Dark Glass palettes. This test proves the committed palettes are
-# present and agree across wezterm, kitty, tmux and oh-my-posh, including a real
-# oh-my-posh generator dry run into a throwaway HOME.
+# present and agree across wezterm, kitty, tmux and oh-my-posh.
 set -u
 
 TESTS_WEZTERM_DIR=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
@@ -23,25 +22,16 @@ expect() {
 # shellcheck disable=SC2329
 in_both() { grep -qF "$1" "$2" 2>/dev/null && grep -qF "$1" "$3" 2>/dev/null; }
 
-TMP=$(mktemp -d)
-trap 'chmod -R u+w "$TMP" 2>/dev/null; rm -rf "$TMP"' EXIT
-
-# --- fixture HOME (generator dry run must not touch the live session) --------
-HOME="$TMP/home"; export HOME
-XDG_RUNTIME_DIR="$TMP/runtime"; export XDG_RUNTIME_DIR
-mkdir -p "$HOME" "$XDG_RUNTIME_DIR"
-
 # --- 1. committed static palettes are present and consistent -----------------
 printf '\n1. static palettes agree across wezterm / kitty / tmux / omp\n'
 CUSTOM=$SRC_DIR/colors/custom.lua
 MATUGEN=$SRC_DIR/colors/matugen.lua
 KITTY=$REPO_ROOT/.config/kitty/themes/apple-glass.conf
 TMUX=$REPO_ROOT/.config/tmux/colors-apple-glass.conf
-OMP=$REPO_ROOT/.config/ohmyposh/omp-palette.sh
-OMP_TPL=$REPO_ROOT/.config/ohmyposh/zen.template.toml
+OMP=$REPO_ROOT/.config/ohmyposh/zen.toml
 BG='#1c1c1e'; FG='#f5f5f7'; ACC='#2dd4bf'
 
-for f in "$CUSTOM" "$MATUGEN" "$KITTY" "$TMUX" "$OMP" "$OMP_TPL"; do
+for f in "$CUSTOM" "$MATUGEN" "$KITTY" "$TMUX" "$OMP"; do
    expect "present: ${f#"$REPO_ROOT"/}" "missing: $f" [ -f "$f" ]
 done
 
@@ -78,23 +68,9 @@ for h in '#3a3a3c' '#ff6b6b' '#7dce8b' '#f2d97a' '#2dd4bf' '#cba6f0' '#64d2ff' '
    expect "wezterm+kitty share ANSI $h" "ANSI $h drifted" in_both "$h" "$CUSTOM" "$KITTY"
 done
 
-# oh-my-posh: static roles + a real generator dry run into the fixture HOME.
-expect "omp accent role is $ACC"  "omp accent drifted"  grep -qF "accent='$ACC'" "$OMP"
-expect "omp ok role is #7dce8b"   "omp ok drifted"      grep -qF "ok='#7dce8b'" "$OMP"
-expect "omp soft role is #f2d97a" "omp soft drifted"    grep -qF "soft='#f2d97a'" "$OMP"
-expect "omp err role is #ff6b6b"  "omp err drifted"     grep -qF "err='#ff6b6b'" "$OMP"
-expect "omp template uses static tokens" "omp template lost its tokens" \
-   grep -qF '@@ACCENT@@' "$OMP_TPL"
+# oh-my-posh: the committed static prompt config carries the same accent.
+expect "omp accent is $ACC" "omp accent drifted" grep -qF "'$ACC'" "$OMP"
 
-mkdir -p "$HOME/.config/ohmyposh"
-cp "$OMP_TPL" "$HOME/.config/ohmyposh/zen.template.toml"
-bash "$OMP" >"$TMP/omp.out" 2>"$TMP/omp.err"
-OMP_RC=$?
-GEN="$HOME/.config/ohmyposh/zen.toml"
-expect "omp generator exits 0"        "omp generator failed: $OMP_RC" [ "$OMP_RC" -eq 0 ]
-expect "omp output uses static accent" "omp output missed $ACC" grep -qF "$ACC" "$GEN"
-expect "omp output has no leftover tokens" "omp left substitution tokens behind" \
-   [ -z "$(grep -E '@@(ACCENT|OK|SOFT|ERR)@@' "$GEN" 2>/dev/null)" ]
 
 # --- result -------------------------------------------------------------------
 printf '\n%s\n' "result: $pass passed, $fail failed"

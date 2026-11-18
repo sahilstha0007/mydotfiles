@@ -50,9 +50,7 @@ def collect_omp_emitters(cfg_root: pathlib.Path) -> tuple[dict[str, set[str]], l
     errors: list[str] = []
     per_file: dict[str, set[str]] = {}
     omp_dir = cfg_root / "ohmyposh"
-    paths = [omp_dir / "zen.template.toml", omp_dir / "zen-nightfox.toml"]
-    if (omp_dir / "zen.toml").exists():
-        paths.append(omp_dir / "zen.toml")
+    paths = [omp_dir / "zen.toml", omp_dir / "zen-apple-glass.toml"]
 
     for p in paths:
         if not p.is_file():
