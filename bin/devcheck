@@ -642,12 +642,13 @@ if [ "$RUN_ALL" -eq 1 ]; then
   # Upstream Neovim C core creates an empty $TMPDIR/nvim.<user> parent directory and never unlinks it;
   # rmdir ONLY removes it if completely empty (any leaked socket/child fails find below).
   rmdir "$DEVCHECK_PRIV_TMP/nvim.$(id -un)" 2>/dev/null || true
-  PRIV_LEAKED=$(find "$DEVCHECK_PRIV_TMP" -mindepth 1 -maxdepth 2 -printf '%P\n' | sort)
+  # Node 22+ writes $TMPDIR/node-compile-cache when any node-backed tool runs (matches state-matrix allowlist).
+  PRIV_LEAKED=$(find "$DEVCHECK_PRIV_TMP" -mindepth 1 -maxdepth 2 -printf '%P\n' | grep -vE '^node-compile-cache(/|$)' | sort || true)
   TMP_AFTER=$(find /tmp -maxdepth 1 -mindepth 1 -user "$(id -u)" -printf '%f\n' | grep -vxF "$DEVCHECK_LEAK_SELF" | grep -vxF "$DEVCHECK_TMP_SELF" | sort)
-  # Browser/runtime lock files (Firefox, Chromium, etc.) can appear mid-run and
+  # Browser/runtime lock files & temp dirs (Firefox, Chromium, etc.) can appear mid-run and
   # are owned by unrelated desktop apps, not this stack. Exclude them so the
   # leak gate tests OUR tmp hygiene, not the desktop's background activity.
-  TMP_AFTER=$(printf '%s\n' "$TMP_AFTER" | grep -vE '^MozillaUpdateLock-|^org\.chromium\.|^kitty-socket-|^plasma-' || true)
+  TMP_AFTER=$(printf '%s\n' "$TMP_AFTER" | grep -vE '^MozillaUpdateLock-|^org\.chromium\.|^scoped_dir|^kitty-socket-|^plasma-' || true)
   TMP_LEAKED=$(comm -13 <(printf '%s\n' "$TMP_BEFORE") <(printf '%s\n' "$TMP_AFTER"))
   if [ -z "$PRIV_LEAKED" ] && [ -z "$TMP_LEAKED" ]; then
     NAMES+=("tmp: no leaks")
