@@ -184,11 +184,11 @@ def check_wezterm_live(wz_pids: list[int]) -> tuple[list[str], list[str]]:
         )
 
     # Verify tmux attached from WezTerm re-evaluates -gF options via on-client-attached.sh
-    mat_conf = repo / ".config/tmux/colors-matugen.conf"
+    tmux_conf_palette = repo / ".config/tmux/colors-apple-glass.conf"
     expected_blue = ""
     expected_text = ""
-    if mat_conf.is_file():
-        m_txt = mat_conf.read_text(encoding="utf-8", errors="replace")
+    if tmux_conf_palette.is_file():
+        m_txt = tmux_conf_palette.read_text(encoding="utf-8", errors="replace")
         mb = re.findall(r'^set -g @thm_blue\s+"(#[0-9a-fA-F]{6})"', m_txt, re.M)
         mt = re.findall(r'^set -g @thm_text\s+"(#[0-9a-fA-F]{6})"', m_txt, re.M)
         expected_blue = mb[-1] if mb else ""
@@ -265,7 +265,7 @@ def newest_mtime(paths: list[pathlib.Path]) -> tuple[float, str]:
     return best_t, best_p
 
 targets = [
-    ("tmux", [repo / ".config/tmux/tmux.conf", repo / ".config/tmux/scripts", repo / ".config/tmux/colors-apple-glass.conf", repo / ".config/tmux/colors-matugen.conf"], "stack-reload  (or detach & restart tmux server: tmux kill-server)"),
+    ("tmux", [repo / ".config/tmux/tmux.conf", repo / ".config/tmux/scripts", repo / ".config/tmux/colors-apple-glass.conf"], "stack-reload  (or detach & restart tmux server: tmux kill-server)"),
     ("kitty", [repo / ".config/kitty/kitty.conf", repo / ".config/kitty/custom.conf", repo / ".config/kitty/tab_bar.py", repo / ".config/kitty/themes/apple-glass.conf"], "stack-reload  (or restart Kitty for restart-only options like listen_on)"),
     ("wezterm", [repo / ".config/wezterm"], "stack-reload  (auto-reloads live wezterm-gui)"),
     ("nvim", [repo / ".config/nvim/init.lua", repo / ".config/nvim/lua"], "restart stale nvim session(s)"),

@@ -32,12 +32,13 @@ fi
 if [ -n "$detected" ]; then
   tmux set-environment -g TERMINAL_STACK_PROFILE "$detected"
   tmux set-environment TERMINAL_STACK_PROFILE "$detected"
+  # One shared static palette; profile only picks the ancillary theme vars below.
+  tmux source-file -q ~/.config/tmux/colors-apple-glass.conf
   if [ "$detected" = "kitty" ]; then
     tmux set-environment -u -g WEZTERM_PANE 2>/dev/null || true
     tmux set-environment -u WEZTERM_PANE 2>/dev/null || true
     tmux set-environment -u -g OPENCODE_TUI_CONFIG 2>/dev/null || true
     tmux set-environment -u OPENCODE_TUI_CONFIG 2>/dev/null || true
-    tmux source-file -q ~/.config/tmux/colors-apple-glass.conf
     tmux set -gF popup-style "bg=default,fg=#{@thm_text}"
     tmux set -gF popup-border-style "fg=#{@thm_blue}"
     tmux set -g popup-border-lines rounded
@@ -53,7 +54,6 @@ if [ -n "$detected" ]; then
   elif [ "$detected" = "wezterm" ]; then
     tmux set-environment -u -g KITTY_WINDOW_ID 2>/dev/null || true
     tmux set-environment -u KITTY_WINDOW_ID 2>/dev/null || true
-    tmux source-file -q ~/.config/tmux/colors-matugen.conf
     tmux set -gF popup-style "bg=default,fg=#{@thm_text}"
     tmux set -gF popup-border-style "fg=#{@thm_blue}"
     tmux set -g popup-border-lines rounded

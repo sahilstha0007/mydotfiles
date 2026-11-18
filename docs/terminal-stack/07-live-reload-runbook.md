@@ -85,5 +85,5 @@ The snapshot at the time of an incident is at `~/.local/share/tmux/resurrect/las
   (`clipboard_control write-clipboard write-primary`; clipboard reads stay blocked). Tmux enables
   OSC52 clipboard (`Ms`, `:clipboard`, `set -s set-clipboard on`) for cross-pane/SSH yanks.
 - **Static palette (v10):** `colors.json` under `.config/ohmyposh/` is dead (removed);
-  the oh-my-posh prompt uses `zen.toml` / `zen-apple-glass.toml` directly. `colors-matugen.conf`
-  in tmux is a committed static copy of `apple-glass.conf`, sourced by tmux.conf.
+  the oh-my-posh prompt uses `zen.toml` / `zen-apple-glass.toml` directly. tmux sources
+  the committed `colors-apple-glass.conf` for every terminal profile.

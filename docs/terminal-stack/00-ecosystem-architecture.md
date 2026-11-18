@@ -275,8 +275,8 @@ propagates to any terminal layer.
   canonical hexes (bg `#1c1c1e`, fg `#f5f5f7`, accent `#2dd4bf`). `custom.conf` includes
   it directly; kitty no longer includes any generated `colors-matugen*.conf`.
 - **Consumers derive from that static file:** `wezterm/colors/custom.lua` and
-  `matugen.lua` are committed static tables; `tmux/colors-from-matugen.sh` copies
-  `colors-apple-glass.conf` → `colors-matugen.conf` (sourced by `tmux.conf:352`);
+  `matugen.lua` are committed static tables; tmux sources the committed
+  `tmux/colors-apple-glass.conf` directly for every profile;
   `ohmyposh/omp-palette.sh` writes committed hexes into `zen.toml`.
 - **Removed:** `.config/matugen/`, `bin/kitty-colors-sanitize`,
   `sync-wallpaper.sh`, kitty `colors-matugen.conf` / `.validated.conf`, OMP `colors.json`.

@@ -2,11 +2,10 @@
 --
 -- The point of this spec is that it loads the REAL functions out of
 -- lua/plugins/ui/terminal-colors.lua by line range and evals them, rather
--- than re-typing a copy. A re-typed copy is a test of the copy: the four
--- places that are supposed to stay in sync (wezterm colors/custom.lua, tmux
--- colors-from-matugen.sh, nvim terminal-colors.lua) would drift and the spec
--- would still go green, which is exactly the failure mode this file exists
--- to catch.
+-- than re-typing a copy. A re-typed copy is a test of the copy: the places
+-- that are supposed to stay in sync (wezterm colors/custom.lua, nvim
+-- terminal-colors.lua) would drift and the spec would still go green, which
+-- is exactly the failure mode this file exists to catch.
 --
 -- What is asserted:
 --   1. contrast() matches the WCAG reference values to 2dp (hand-computed,
@@ -481,10 +480,9 @@ end
 -- ---------------------------------------------------------------------------
 -- CHECK 6: the terminal consumers all use the committed STATIC Apple Glass palette
 -- ---------------------------------------------------------------------------
--- The wallpaper/matugen derivation pipeline is gone. wezterm now carries a
--- committed static palette and tmux just copies the committed
--- colors-apple-glass.conf. These checks go red if either drifts from the
--- shared Apple Glass hexes; nvim's contrast gate still uses MIN_CONTRAST 4.5.
+-- The wallpaper/matugen derivation pipeline is gone. wezterm and tmux each carry
+-- a committed static Apple Glass palette. These checks go red if either drifts
+-- from the shared hexes; nvim's contrast gate still uses MIN_CONTRAST 4.5.
 do
   local function has_const(path, pattern)
     local fh = io.open(path, 'r')
@@ -538,13 +536,14 @@ do
     }),
     'wezterm colors/custom.lua uses the committed Apple Glass palette'
   )
-  check(has_all(cfg_root .. '/tmux/colors-from-matugen.sh', {
-    'colors%-apple%-glass%.conf', -- copies the committed static source
-  }) and has_all(cfg_root .. '/tmux/colors-apple-glass.conf', {
-    'set %-g @thm_bg "#1c1c1e"',
-    'set %-g @thm_fg "#f5f5f7"',
-    'set %-g @thm_blue "#2dd4bf"',
-  }), 'tmux colors-from-matugen.sh copies the committed Apple Glass palette')
+  check(
+    has_all(cfg_root .. '/tmux/colors-apple-glass.conf', {
+      'set %-g @thm_bg "#1c1c1e"',
+      'set %-g @thm_fg "#f5f5f7"',
+      'set %-g @thm_blue "#2dd4bf"',
+    }),
+    'tmux sources the committed Apple Glass palette'
+  )
   check(
     has_const(SRC, 'local MIN_CONTRAST = 4%.5'),
     'nvim terminal-colors.lua uses the same MIN_CONTRAST'

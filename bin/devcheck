@@ -267,7 +267,6 @@ if [ -f "$TMUX_DIR/scripts/on-client-attached.sh" ] && [ -f "$TMUX_DIR/scripts/s
     "$TMUX_DIR/scripts/on-client-attached.sh" \
     "$TMUX_DIR/scripts/status-right.sh" \
     "$TMUX_DIR/scripts/auto-save-session.sh" \
-    "$TMUX_DIR/colors-from-matugen.sh" \
     "$TMUX_DIR/keymap-dump.sh" \
     "$TMUX_DIR/project-task.sh" \
     "$TMUX_DIR/session-switcher.sh"

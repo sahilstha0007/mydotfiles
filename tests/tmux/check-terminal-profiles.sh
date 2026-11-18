@@ -7,6 +7,12 @@ mkdir -p "$scratch_root"
 work=$(mktemp -d "$scratch_root/p.XXXXXX")
 conf="$work/tmux.conf"
 
+expected_blue=$(grep '^set -g @thm_blue ' "$conf_dir/colors-apple-glass.conf" | tail -1 | sed -E 's/.*"(#[0-9a-fA-F]{6})".*/\1/')
+[[ -n "$expected_blue" ]] || {
+  echo "FAIL: could not read @thm_blue from colors-apple-glass.conf" >&2
+  exit 1
+}
+
 cleanup() {
   TMUX_TMPDIR="$work/w" tmux -L p kill-server >/dev/null 2>&1 || true
   TMUX_TMPDIR="$work/k" tmux -L p kill-server >/dev/null 2>&1 || true
@@ -33,13 +39,8 @@ for _ in {1..30}; do
   sleep 0.1
 done
 
-expected_wezterm_blue=$(grep '^set -g @thm_blue ' "$conf_dir/colors-matugen.conf" | tail -1 | sed -E 's/.*"(#[0-9a-fA-F]{6})".*/\1/')
-[[ -n "$expected_wezterm_blue" ]] || {
-  echo "FAIL: could not read @thm_blue from colors-matugen.conf" >&2
-  exit 1
-}
-[[ "$wezterm_blue" == "$expected_wezterm_blue" ]] || {
-  echo "FAIL: WezTerm tmux should use the wallpaper palette ($expected_wezterm_blue), got '$wezterm_blue'" >&2
+[[ "$wezterm_blue" == "$expected_blue" ]] || {
+  echo "FAIL: WezTerm tmux should use the shared Apple Glass palette ($expected_blue), got '$wezterm_blue'" >&2
   exit 1
 }
 
@@ -49,7 +50,7 @@ wezterm_env=$(TMUX_TMPDIR="$work/w" tmux -L p show-environment -g TERMINAL_STACK
   exit 1
 }
 
-# 2. Start Kitty Apple Glass profile and verify pane-border-status auto-toggle
+# 2. Start Kitty profile and verify pane-border-status auto-toggle
 env -u TMUX -u TMUX_PANE -u WEZTERM_PANE TMUX_TMPDIR="$work/k" \
   TERMINAL_STACK_PROFILE="kitty" KITTY_WINDOW_ID="1" \
   tmux -L p -f "$conf" new-session -d -s "kitty-probe"
@@ -60,9 +61,8 @@ for _ in {1..30}; do
   [[ -n "$kitty_blue" ]] && break
   sleep 0.1
 done
-expected_kitty_blue=$(grep '^set -g @thm_blue ' "$conf_dir/colors-apple-glass.conf" | tail -1 | sed -E 's/.*"(#[0-9a-fA-F]{6})".*/\1/')
-[[ "$kitty_blue" == "$expected_kitty_blue" ]] || {
-  echo "FAIL: Kitty tmux should use Apple Glass ($expected_kitty_blue), got '$kitty_blue'" >&2
+[[ "$kitty_blue" == "$expected_blue" ]] || {
+  echo "FAIL: Kitty tmux should use the shared Apple Glass palette ($expected_blue), got '$kitty_blue'" >&2
   exit 1
 }
 
@@ -141,4 +141,4 @@ hit_out=$(PATH="$work/bin:$PATH" XDG_RUNTIME_DIR="$work/runtime" \
   exit 1
 }
 
-echo "PASS: Kitty Apple Glass + WezTerm Matugen profiles, split-only pane borders, and status-right cache consistency verified"
+echo "PASS: both terminal profiles load the shared Apple Glass palette, split-only pane borders, and status-right cache consistency verified"

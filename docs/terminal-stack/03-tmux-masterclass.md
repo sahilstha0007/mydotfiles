@@ -62,9 +62,9 @@ In this ecosystem, Tmux operates as an independent, persistent process superviso
 ### Decoupled Lifecycle Guarantees:
 1. **Zero Session Loss on Emulator Crash:** Closing Kitty (`SUPER+q`) or terminating WezTerm completely detaches the GUI without signaling the underlying shells. Re-opening Kitty (`SUPER+RETURN`) instantly attaches back to the running session via `tmux-smart-attach`.
 2. **Dynamic Client Synchronization (`on-client-attached.sh`):**
-   When a terminal attaches, Tmux interrogates `/proc/$client_pid/environ` to detect the host profile and switches the palette accordingly:
-   - A WezTerm client loads `colors-matugen.conf` and keeps the WezTerm markers.
-   - A Kitty client loads `colors-apple-glass.conf` and strips the WezTerm markers.
+   When a terminal attaches, Tmux interrogates `/proc/$client_pid/environ` to detect the host profile and sets the ancillary theme vars accordingly (the palette is one shared static file):
+   - A WezTerm client keeps the WezTerm markers and TUI config.
+   - A Kitty client strips the WezTerm markers and selects the Apple Glass lazygit/lazydocker themes.
 3. **Continuous State Snapshotting:**
    - `tmux-continuum`: Saves session trees every 5 minutes (`@continuum-save-interval '5'`).
    - `client-detached` hook: Automatically invokes `auto-save-session.sh`, recording the active session name and running `resurrect/save.sh`.

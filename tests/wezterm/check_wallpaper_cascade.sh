@@ -36,7 +36,7 @@ printf '\n1. static palettes agree across wezterm / kitty / tmux / omp\n'
 CUSTOM=$SRC_DIR/colors/custom.lua
 MATUGEN=$SRC_DIR/colors/matugen.lua
 KITTY=$REPO_ROOT/.config/kitty/themes/apple-glass.conf
-TMUX=$REPO_ROOT/.config/tmux/colors-matugen.conf
+TMUX=$REPO_ROOT/.config/tmux/colors-apple-glass.conf
 OMP=$REPO_ROOT/.config/ohmyposh/omp-palette.sh
 OMP_TPL=$REPO_ROOT/.config/ohmyposh/zen.template.toml
 BG='#1c1c1e'; FG='#f5f5f7'; ACC='#2dd4bf'

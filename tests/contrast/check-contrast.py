@@ -44,7 +44,6 @@ CONFIG_ROOT = REPO_ROOT / ".config"
 # every Apple Glass hex originates; wezterm/tmux/oh-my-posh mirror it.
 APPLE_GLASS_KITTY = CONFIG_ROOT / "kitty" / "themes" / "apple-glass.conf"
 APPLE_GLASS_TMUX = CONFIG_ROOT / "tmux" / "colors-apple-glass.conf"
-APPLE_GLASS_TMUX_SYNCED = CONFIG_ROOT / "tmux" / "colors-matugen.conf"
 
 
 def _chan(c: float) -> float:
@@ -338,23 +337,8 @@ def audit_tmux(aud: Auditor) -> None:
     nf = _parse_tmux_thm(CONFIG_ROOT / "tmux" / "colors-nightfox.conf")
     _audit_tmux_palette(aud, "nightfox", nf)
 
-    # Static design: the two committed tmux palettes must resolve identically,
-    # and the reassert script must regenerate the synced copy from the source.
+    # Static design: tmux sources one committed Apple Glass palette.
     source = _parse_tmux_thm(APPLE_GLASS_TMUX)
-    synced = _parse_tmux_thm(APPLE_GLASS_TMUX_SYNCED)
-    if source != synced:
-        diff = {k: (source.get(k), synced.get(k)) for k in set(source) | set(synced) if source.get(k) != synced.get(k)}
-        raise RuntimeError(f"committed tmux palettes diverged: {diff}")
-
-    with tempfile.TemporaryDirectory(prefix="contrast-tmux-") as tmp:
-        out = Path(tmp) / "colors-matugen.conf"
-        subprocess.run(
-            ["bash", str(CONFIG_ROOT / "tmux" / "colors-from-matugen.sh"), str(APPLE_GLASS_TMUX), str(out)],
-            check=True,
-        )
-        if _parse_tmux_thm(out) != source:
-            raise RuntimeError("colors-from-matugen.sh did not reassert the committed Apple Glass palette")
-
     _audit_tmux_apple_glass(aud, source)
 
 

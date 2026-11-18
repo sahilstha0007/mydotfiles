@@ -2,7 +2,7 @@
 # DEAD SCRIPT — no callers anywhere in the repo (grep across tmux.conf, all
 # *.sh and *.md finds zero references), and it cannot work anyway:
 #
-#   1. tmux.conf:241 `source-file -q ~/.config/tmux/colors-matugen.conf` rewrites
+#   1. tmux.conf:351 `source-file -q ~/.config/tmux/colors-apple-glass.conf` rewrites
 #      all 26 @thm_* tokens on every config load, overwriting whatever this set.
 #   2. The catppuccin/tmux @plugin line was removed from tmux.conf; nothing
 #      loads plugins/tmux/themes/*_tmux.conf anymore.

@@ -25,9 +25,9 @@ already fixed to a readable catppuccin slot. Repair is for the case where the
 fallback itself fails.
 
 WCAG 2.1 relative luminance and contrast ratio, MIN_CONTRAST 4.5 for normal
-text. The same constant and the same formula appear in colors/custom.lua,
-tmux/colors-from-matugen.sh, and nvim's terminal-colors.lua; this module is
-the python3 face of that one shared rule.
+text. The same constant and the same formula appear in wezterm's
+colors/custom.lua and nvim's terminal-colors.lua; this module is the python3
+face of that one shared rule.
 """
 
 import colorsys
