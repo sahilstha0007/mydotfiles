@@ -100,7 +100,9 @@ if [ -d "$ZSH" ]; then
   zstyle ':fzf-tab:complete:kill:argument-rest' fzf-flags '--preview-window=down:3:wrap'
   zstyle ':fzf-tab:*' continuous-trigger '/'
 
-  [ -f "$ZSH_CUSTOM/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh" ] && _zsh_deferred_sources+=("$ZSH_CUSTOM/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh")
+  if [[ -z "$KITTY_WINDOW_ID" && "$TERMINAL_STACK_PROFILE" != "kitty" ]]; then
+    [ -f "$ZSH_CUSTOM/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh" ] && _zsh_deferred_sources+=("$ZSH_CUSTOM/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh")
+  fi
   [ -f "$ZSH_CUSTOM/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh" ] && _zsh_deferred_sources+=("$ZSH_CUSTOM/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh")
 fi
 
