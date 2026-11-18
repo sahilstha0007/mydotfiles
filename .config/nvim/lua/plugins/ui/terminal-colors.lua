@@ -1,11 +1,8 @@
 -- Terminal-adopting colorscheme.
 --
--- Instead of a fixed wallpaper-derived palette (the old matugen theme), nvim
--- queries the terminal emulator it runs inside for its actual palette and
+-- nvim queries the terminal emulator it runs inside for its actual palette and
 -- adopts it. Both kitty and wezterm answer OSC 4 (colors 0-15), OSC 10 (fg)
--- and OSC 11 (bg) queries, and both push updated OSC 4 sequences to running
--- apps when the terminal colorscheme changes — so nvim re-tints live when you
--- switch themes in the terminal.
+-- and OSC 11 (bg) queries.
 --
 -- Mechanics (documented in :h TermResponse):
 --   * vim.api.nvim_ui_send("\027]4;N;?\027\\") asks the host terminal for
@@ -15,12 +12,12 @@
 --     catppuccin integration (treesitter, blink, gitsigns, snacks, trouble,
 --     neo-tree, lualine, bufferline, …) follows the terminal automatically.
 --   * If the terminal never answers (no OSC support / non-tty, or nvim runs
---     inside tmux which eats OSC queries), the stack reads wezterm's
---     colors/custom.lua and watches colors/matugen.lua for live re-tints.
---     TERMINAL_STACK_PROFILE selects the source; legacy KITTY_WINDOW_ID /
---     WEZTERM_PANE markers remain supported. Both kitty and WezTerm share one
---     wallpaper palette (kitty's colors are regenerated from wezterm's), so
---     kitty adopts it too. Unknown profiles keep stock Catppuccin.
+--     inside tmux which eats OSC queries), read the terminal's config file:
+--     kitty's include chain (kitty.conf -> custom.conf -> apple-glass.conf)
+--     or wezterm's colors/custom.lua. Palettes are static, so this is read
+--     once at startup — there is no live file watcher. TERMINAL_STACK_PROFILE
+--     selects the source; legacy KITTY_WINDOW_ID / WEZTERM_PANE markers remain
+--     supported. Unknown profiles keep stock Catppuccin.
 
 local M = {}
 
@@ -865,11 +862,8 @@ end
 -- OSC queries only reach the terminal when nvim is DIRECTLY attached to it.
 -- Under tmux (this setup's normal case) tmux eats the queries and answers
 -- nothing, so OSC adoption silently fails. Both kitty and wezterm keep their
--- palette in a config file on disk (ml4w writes them on theme switch), so
--- read the ACTIVE terminal's file as the authoritative fallback — works
--- inside tmux and updates when the file changes.
-
-local palette_file = nil -- resolved palette file once found
+-- palette in a static config file on disk, so read the ACTIVE terminal's file
+-- as the authoritative fallback inside tmux.
 
 -- Follow `include` lines in a kitty config file. Returns a list of
 -- { path, content } pairs for every file in the chain (resolved relative
@@ -903,9 +897,7 @@ local function read_kitty_with_includes(path, depth)
 end
 
 -- Parse kitty color directives (color0..color15, foreground, background) into
--- pal. Returns true when the 16 ANSI colors were all found. Tracks the file
--- that supplied the colors so the live watcher can poll it (ml4w re-writes
--- colors-matugen.conf on theme switch).
+-- pal. Returns true when the 16 ANSI colors were all found.
 local function read_kitty_palette()
   local home = vim.env.HOME or ''
   local conf = home .. '/.config/kitty/kitty.conf'
@@ -929,7 +921,6 @@ local function read_kitty_palette()
             if idx >= 0 and idx <= 15 then
               pal.ansi[idx] = hex
               found[idx] = true
-              palette_file = file.path
             end
           elseif key == 'foreground' then
             pal.fg = hex
@@ -948,10 +939,10 @@ local function read_kitty_palette()
   return true
 end
 
--- Parse wezterm's colorscheme file (~/.config/wezterm/colors/*.lua — ml4w
--- writes colors/custom.lua). It's a Lua table `colorscheme` with `ansi` and
--- `brights` arrays + foreground/background, so load and read it. Returns true
--- when the 16 ANSI colors were all found.
+-- Parse wezterm's colorscheme file (~/.config/wezterm/colors/custom.lua).
+-- It's a Lua table `colorscheme` with `ansi` and `brights` arrays +
+-- foreground/background, so load and read it. Returns true when the 16 ANSI
+-- colors were all found.
 local function read_wezterm_palette()
   local home = vim.env.HOME or ''
   local conf = home .. '/.config/wezterm/colors/custom.lua'
@@ -1005,7 +996,6 @@ local function read_wezterm_palette()
     if type(hex) == 'string' and hex:match '^#[%x][%x][%x][%x][%x][%x]$' then
       pal.ansi[i] = hex
       found[i] = true
-      palette_file = conf
     end
   end
   for i = 0, 7 do
@@ -1099,10 +1089,9 @@ host_terminal = function()
   return nil
 end
 
--- Read the wallpaper palette that drives the stack:
--- - WezTerm uses the dev stack's custom wallpaper cascade (~/.config/wezterm/colors/custom.lua).
--- - Kitty (daily driver) uses ML4W's palette (~/.config/kitty/colors-matugen.conf).
--- Fallback resolves wezterm then kitty so standalone sessions inherit wallpaper colors.
+-- Read the static palette that drives the stack:
+-- - WezTerm: ~/.config/wezterm/colors/custom.lua.
+-- - Kitty (daily driver): the include chain in ~/.config/kitty/kitty.conf.
 local function read_terminal_palette()
   local host = host_terminal()
   if host == 'wezterm' then
@@ -1114,156 +1103,21 @@ local function read_terminal_palette()
   return false
 end
 
--- Re-read the palette file and report whether any color changed — the 16
--- ANSI colors plus fg/bg (a theme switch may alter only the background).
-local function poll_palette_file()
-  local before_ansi = vim.deepcopy(pal.ansi)
-  local before_fg, before_bg = pal.fg, pal.bg
-  local ok = read_terminal_palette()
-  if not ok then
-    -- Roll back a PARTIAL read. Both readers assign into `pal` slot by slot
-    -- and report failure when one is missing — a matugen write caught
-    -- mid-flight, a file swapped under us, a slot that fails to parse. Left in
-    -- place, that half-populated palette becomes the next read's "before"
-    -- state, so the following successful read can decide nothing changed and
-    -- never re-tint: the editor keeps a mix of two wallpapers until nvim
-    -- restarts. Restoring the snapshot makes a failed read a true no-op.
-    pal.ansi, pal.fg, pal.bg = before_ansi, before_fg, before_bg
-    return false
-  end
-  if pal.fg ~= before_fg or pal.bg ~= before_bg then
-    return true
-  end
-  for i = 0, 15 do
-    if pal.ansi[i] ~= before_ansi[i] then
-      return true
-    end
-  end
-  return false
-end
-
--- Debounced re-read of the palette file after a filesystem change: the
--- wallpaper sync may rewrite the palette in a burst, so collapse events
--- within ~200ms, then re-read and re-tint once (no-op when colors unchanged).
-local refresh_timer
-local function refresh_from_file()
-  if refresh_timer then
-    refresh_timer:stop()
-  else
-    refresh_timer = vim.uv.new_timer()
-  end
-  refresh_timer:start(
-    200,
-    0,
-    vim.schedule_wrap(function()
-      if poll_palette_file() and complete() then
-        apply()
-      end
-    end)
-  )
-end
-
--- Live palette updates when OSC is dead (inside tmux, or over ssh where no
--- terminal answers queries): watch the palette FILE instead of waiting out a
--- poll interval. An fs event fires the instant the wallpaper sync rewrites
--- the palette, so nvim re-tints ~instantly instead of up to 3s later.
--- A slow poll is kept as a safety net for sources that miss fs events
--- (e.g. atomic renames that some watchers don't surface).
-local watch_timer
-local watch_handles = {}
-
--- Watch every directory a palette can appear in. Two reasons this is a list
--- and not the single `palette_file` dir it used to be:
---
---   * the file that actually CHANGES is colors/matugen.lua, not the
---     custom.lua whose dir was being watched. They happen to share a
---     directory today, so this worked by luck rather than by design.
---   * when neither read succeeded at startup, `palette_file` was nil, the
---     watcher returned early, and nvim went the REST OF THE SESSION with no
---     file watch at all — only the 3s poll and a focus event could revive it.
---     A first paint that fails now still gets live updates once a palette
---     lands on disk.
-local function start_palette_watch()
-  if watch_timer then
-    return
-  end
-
-  watch_timer = vim.uv.new_timer()
-  watch_timer:start(
-    3000,
-    3000,
-    vim.schedule_wrap(function()
-      if poll_palette_file() and complete() then
-        apply()
-      end
-    end)
-  )
-
-  local home = vim.env.HOME or ''
-  local seen = {}
-  local function watch_dir(dir)
-    if not dir or dir == '' or seen[dir] then
-      return
-    end
-    seen[dir] = true
-    -- fs_stat first: watching a directory that does not exist returns an
-    -- error through the callback on every event, which is noise, not a signal.
-    if not vim.uv.fs_stat(dir) then
-      return
-    end
-    local handle = vim.uv.new_fs_event()
-    if not handle then
-      return
-    end
-    local ok_start = handle:start(
-      dir,
-      {},
-      vim.schedule_wrap(function(err2)
-        if err2 then
-          return
-        end
-        refresh_from_file()
-      end)
-    )
-    if ok_start then
-      watch_handles[#watch_handles + 1] = handle
-    else
-      handle:close()
-    end
-  end
-
-  -- The dir of whatever file answered, so the host terminal's own source is
-  -- covered even when it is not one of the two well-known paths.
-  watch_dir(vim.fs.dirname(palette_file or ''))
-  -- The cascade's write target (matugen.lua lands here).
-  watch_dir(home .. '/.config/wezterm/colors')
-  -- ml4w's desktop path for kitty.
-  watch_dir(home .. '/.config/kitty')
-end
-
 -- ---------------------------------------------------------------------------
 -- Setup
 -- ---------------------------------------------------------------------------
-local augroup
 local function setup()
-  augroup = vim.api.nvim_create_augroup('terminal-colors', { clear = true })
   vim.api.nvim_create_autocmd('TermResponse', {
-    group = augroup,
+    group = vim.api.nvim_create_augroup('terminal-colors', { clear = true }),
     callback = on_termresponse,
   })
 
   local host = host_terminal()
-
-  -- Both WezTerm and Kitty adopt the shared wallpaper palette.
-  -- Unknown profiles stay on stock Catppuccin mocha without querying a guessed source.
   if host == 'wezterm' or host == 'kitty' then
     -- Read the terminal's config file FIRST (fast, works inside tmux) so the
     -- very first paint already uses the terminal palette — the editor never
-    -- flashes stock mocha at boot. ml4w keeps the palette in these files, so
-    -- this is the authoritative source even before OSC answers. Goes through
-    -- the polling reader so a half-written file rolls back instead of seeding
-    -- the session with a partial palette.
-    poll_palette_file()
+    -- flashes stock mocha at boot. Palettes are static, so one read is enough.
+    read_terminal_palette()
 
     -- Paint immediately with whatever we have: the terminal palette when the
     -- file read above succeeded, stock mocha as a last resort.
@@ -1277,52 +1131,16 @@ local function setup()
     if complete() then
       apply()
     end
-
-    -- Live updates: kitty/wezterm push OSC 4 to the app when the terminal
-    -- colorscheme changes (caught by on_termresponse). Under tmux OSC is dead,
-    -- so poll the terminal's palette file instead. Re-query on focus too, in
-    -- case the palette changed while nvim was unfocused.
-    start_palette_watch()
   else
-    -- Unknown profiles: stock Catppuccin mocha, no adoption.
     apply()
-  end
-
-  vim.api.nvim_create_autocmd('FocusGained', {
-    group = augroup,
-    callback = function()
-      host = host_terminal()
-      if host ~= 'wezterm' and host ~= 'kitty' then
-        return
-      end
-      vim.schedule(function()
-        query()
-        -- also re-read the palette file (covers tmux where OSC is dead)
-        if poll_palette_file() and complete() then
-          schedule_apply()
-        end
-        if not watch_timer then
-          start_palette_watch()
-        end
-      end)
-    end,
-  })
-end
-
-local function reassert()
-  poll_palette_file()
-  apply()
-  if not watch_timer then
-    start_palette_watch()
   end
 end
 
 M.setup = setup
--- Re-assert the current palette. Exposed for external cascades (sync-wallpaper.sh)
--- and plugins that define their own highlight groups at setup time (Octo).
--- Re-reads the palette file from disk, recompiles catppuccin options, and
--- applies all highlight overrides live.
-M.reassert = reassert
+-- Re-apply the current palette. Exposed for plugins that define their own
+-- highlight groups at setup time (Octo); palettes are static, so this just
+-- recompiles catppuccin with the already-loaded palette.
+M.reassert = apply
 M.read_kitty_palette = read_kitty_palette
 
 -- Publish M where a caller can actually reach it.

@@ -45,8 +45,7 @@ local HOME = vim.env.HOME or ''
 local WEZ_CUSTOM = HOME .. '/.config/wezterm/colors/custom.lua'
 -- Kitty is pinned to the fixed Apple Dark Glass palette through
 -- kitty.conf -> custom.conf -> themes/apple-glass.conf. That included file is
--- the one that supplies the ANSI colors, so it is the path palette_file() must
--- record for the watcher.
+-- the one that supplies the ANSI colors the reader adopts.
 local KITTY_CONF = HOME .. '/.config/kitty/themes/apple-glass.conf'
 
 local passed, failed = 0, 0
@@ -60,9 +59,9 @@ local function check(cond, msg, detail)
 end
 
 -- ---------------------------------------------------------------------------
--- Extract the REAL source-selection region: `palette_file` through the end of
--- read_terminal_palette(), stopping just before poll_palette_file(). Anchored
--- by content, not line numbers, so `make fmt` cannot break it.
+-- Extract the REAL palette-reader region: read_kitty_with_includes() through
+-- read_terminal_palette(), stopping before setup(). Anchored by content, not
+-- line numbers, so `make fmt` cannot break it.
 -- ---------------------------------------------------------------------------
 local f = assert(io.open(SRC, 'r'))
 local body = f:read '*a'
@@ -71,28 +70,26 @@ local lines = vim.split(body, '\n', { plain = true })
 
 local start, stop = nil, nil
 for i, l in ipairs(lines) do
-  if not start and l:match '^local palette_file = nil' then
+  if not start and l:match '^local function read_kitty_with_includes' then
     start = i
   end
-  if start and not stop and l:match '^local function poll_palette_file' then
+  if start and not stop and l:match '^local function setup' then
     stop = i - 1
     break
   end
 end
-assert(start, 'could not find the palette_file declaration in ' .. SRC)
-assert(stop, 'could not find poll_palette_file to bound the region')
+assert(start, 'could not find the palette readers in ' .. SRC)
+assert(stop, 'could not find setup to bound the region')
 
 local CHUNK = table.concat({
   'local pal = _TEST_PAL',
-  'local palette_file = nil',
-  table.concat(vim.list_slice(lines, start + 1, stop), '\n'),
+  table.concat(vim.list_slice(lines, start, stop), '\n'),
   [[
 return {
   read_kitty_palette = read_kitty_palette,
   read_wezterm_palette = read_wezterm_palette,
   read_terminal_palette = read_terminal_palette,
   pal = function() return pal end,
-  palette_file = function() return palette_file end,
 }]],
 }, '\n')
 
@@ -139,17 +136,7 @@ do
   check(hex6(pal.bg), 'background came through', tostring(pal.bg))
 
   -- ---------------------------------------------------------------------
-  -- CHECK 2: the file that answered is the cascade's, so the live watcher is
-  -- pointed at the directory the cascade actually writes.
-  -- ---------------------------------------------------------------------
-  check(
-    M.palette_file() == WEZ_CUSTOM,
-    'the wezterm palette file is the one recorded for the fs watcher',
-    tostring(M.palette_file())
-  )
-
-  -- ---------------------------------------------------------------------
-  -- CHECK 3: the `wezterm` stub is removed again. A leaked preload entry makes
+  -- CHECK 2: the `wezterm` stub is removed again. A leaked preload entry makes
   -- every later require('wezterm') inside nvim return a table instead of
   -- raising, which would hide this class of bug for good.
   -- ---------------------------------------------------------------------
@@ -192,11 +179,6 @@ do
     )
     check(hex6(kpal.fg), 'kitty foreground came through', tostring(kpal.fg))
     check(hex6(kpal.bg), 'kitty background came through', tostring(kpal.bg))
-    check(
-      Mk.palette_file() == KITTY_CONF,
-      'kitty palette file is recorded for the fs watcher',
-      tostring(Mk.palette_file())
-    )
   end
 end
 
@@ -246,43 +228,36 @@ do
     }
     local mk = build()
     check(
-      mk.read_terminal_palette() == true and mk.palette_file() == KITTY_CONF,
-      'kitty profile reads its own Apple Dark Glass palette file, even inside tmux',
-      tostring(mk.palette_file())
+      mk.read_terminal_palette() == true,
+      'kitty profile reads its own Apple Dark Glass palette file, even inside tmux'
     )
 
     set_env { TERMINAL_STACK_PROFILE = 'wezterm', TERM = 'tmux-256color' }
     local mw = build()
     check(
-      mw.read_terminal_palette() == true and mw.palette_file() == WEZ_CUSTOM,
-      'wezterm profile reads only the wallpaper cascade, even inside tmux',
-      tostring(mw.palette_file())
+      mw.read_terminal_palette() == true,
+      'wezterm profile reads only its own palette file, even inside tmux'
     )
 
     set_env { KITTY_WINDOW_ID = '1', TERM = 'xterm-kitty' }
     local legacy_kitty = build()
     check(
-      legacy_kitty.read_terminal_palette() == true
-        and legacy_kitty.palette_file() == KITTY_CONF,
-      'kitty marker fallback reads kitty palette file',
-      tostring(legacy_kitty.palette_file())
+      legacy_kitty.read_terminal_palette() == true,
+      'kitty marker fallback reads kitty palette file'
     )
 
     set_env { WEZTERM_PANE = '1', TERM = 'xterm-256color' }
     local legacy_wez = build()
     check(
-      legacy_wez.read_terminal_palette() == true
-        and legacy_wez.palette_file() == WEZ_CUSTOM,
-      'wezterm marker fallback reads the cascade file',
-      tostring(legacy_wez.palette_file())
+      legacy_wez.read_terminal_palette() == true,
+      'wezterm marker fallback reads wezterm palette file'
     )
 
     set_env {}
     local no_host = build()
     check(
-      no_host.read_terminal_palette() == false and no_host.palette_file() == nil,
-      'an unknown terminal does not guess a wallpaper source',
-      tostring(no_host.palette_file())
+      no_host.read_terminal_palette() == false,
+      'an unknown terminal does not guess a palette source'
     )
   end
 
