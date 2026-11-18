@@ -52,7 +52,7 @@ try:
 except OSError:
     sys.exit(0)
 
-tok = dict(re.findall(r'^\s*(\w+)\s*=\s*"(#[0-9A-Fa-f]{6})"', txt, re.M))
+tok = dict(re.findall(r"^\s*(\w+)\s*=\s*['\"](#[0-9A-Fa-f]{6})['\"]", txt, re.M))
 bg = tok.get('background')
 if not bg:  # no background -> no contrast reference, leave the static styles
     sys.exit(0)
