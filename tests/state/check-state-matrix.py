@@ -65,6 +65,8 @@ def snapshot_tree_rel(d: pathlib.Path) -> set[str]:
                 continue
             if rel == "node-compile-cache" or rel.startswith("node-compile-cache/"):
                 continue
+            if rel.startswith("pyright-") and (root_p / name).is_dir():
+                continue
             entries.add(rel)
     return entries
 
