@@ -33,18 +33,31 @@ compositor_blur = false
 shadow = false
 smart_auto_hide = false
 capsule = true
+thickness = 38
+padding = 10
+widget_spacing = 8
+radius = 16
+capsule_padding = 5
+capsule_thickness = 0.82
+capsule_radius = 14.0
+capsule_border = "outline_variant"
+capsule_border_width = 1.0
 margin_ends = 100
 margin_edge = 0
 concave_edge_corners = true
 start = ["launcher", "wallpaper", "workspaces", "taskbar"]
-end = ["tray", "notifications", "group:g1", "group:g2", "group:g3", "screenshot", "eye", "control-center", "session", "sysmon", "arch"]
+center = ["clock"]
+end = ["tray", "privacy", "notifications", "group:g1", "group:g2", "group:g3", "screenshot", "eye", "control-center", "session", "sysmon", "arch"]
 
 [[bar.main.capsule_group]]
 id = "g1"
 members = ["network", "bluetooth"]
 fill = "surface_container"
 foreground = "primary"
-padding = 6.0
+padding = 5.0
+radius = 12
+border = "outline_variant"
+border_width = 1.0
 opacity = 1.0
 enabled = true
 accordion = false
@@ -55,7 +68,10 @@ id = "g2"
 members = ["volume", "brightness"]
 fill = "surface_container"
 foreground = "primary"
-padding = 6.0
+padding = 5.0
+radius = 12
+border = "outline_variant"
+border_width = 1.0
 opacity = 1.0
 enabled = true
 accordion = false
@@ -66,7 +82,10 @@ id = "g3"
 members = ["battery", "nightlight"]
 fill = "surface_container"
 foreground = "primary"
-padding = 6.0
+padding = 5.0
+radius = 12
+border = "outline_variant"
+border_width = 1.0
 opacity = 1.0
 enabled = true
 accordion = false
@@ -158,6 +177,15 @@ extension = "md"
 [widget.clock]
 format = "{:%a %d %b  %H:%M}"
 tooltip_format = "%A, %B %d, %Y"
+font_scale = 1.15
+font_weight = 700
+capsule_padding = 7
+capsule_radius = 12
+capsule_border = "primary"
+capsule_border_width = 1.0
+
+[widget.privacy]
+hide_inactive = true
 
 [widget.sysmon]
 peek = true
