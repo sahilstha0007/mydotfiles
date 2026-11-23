@@ -32,7 +32,14 @@ tint_intensity = 0.0
 compositor_blur = false
 shadow = false
 capsule = true
-end = ['media', 'tray', 'notifications', 'clipboard', 'group:g1', 'group:g2', 'group:g3', 'screenshot', 'control-center', 'session', 'sysmon']
+margin_ends = 0
+margin_edge = 0
+concave_edge_corners = false
+radius_top_left = 0
+radius_top_right = 0
+radius_bottom_left = 0
+radius_bottom_right = 0
+end = ['tray', 'notifications', 'group:g1', 'group:g2', 'group:g3', 'screenshot', 'control-center', 'session', 'sysmon']
 
 [[bar.main.capsule_group]]
 id = "g1"
@@ -66,6 +73,7 @@ widget_spacing = 8
 
 [bar.main.dead_zone.actions]
 left = "panel-toggle launcher"
+right = "panel-toggle control-center"
 middle = "exec kitty"
 scroll_up = "workspace-switch prev"
 scroll_down = "workspace-switch next"
@@ -73,6 +81,13 @@ scroll_down = "workspace-switch next"
 [osd.kinds]
 media = false
 media_volume = false
+
+[widget.clock]
+format = "{:%a %d %b  %H:%M}"
+tooltip_format = "%A, %B %d, %Y"
+
+[lockscreen]
+blur_intensity = 0.0
 
 [wallpaper.automation]
 enabled = false
