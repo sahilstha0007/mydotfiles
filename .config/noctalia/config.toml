@@ -76,6 +76,27 @@ peek = true
 [widget.battery]
 peek = true
 
+[control_center]
+hidden_tabs = ["weather", "calendar", "screen-time"]
+
+[[control_center.shortcuts]]
+type = "wifi"
+
+[[control_center.shortcuts]]
+type = "bluetooth"
+
+[[control_center.shortcuts]]
+type = "nightlight"
+
+[[control_center.shortcuts]]
+type = "dark_mode"
+
+[[control_center.shortcuts]]
+type = "notification"
+
+[[control_center.shortcuts]]
+type = "power_profile"
+
 [widget.brightness.actions]
 right = "panel-open launcher /eye"
 
