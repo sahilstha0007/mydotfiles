@@ -5,12 +5,14 @@
 
 [theme]
 source = "builtin"
-builtin = "Noctalia"
+builtin = "Tokyo-Night"
 mode = "dark"
+shell_mode = "dark"
 
 [shell]
 offline_mode = true          # no weather/exchange-rate/community-palette HTTP calls
 shared_gl_context = true
+font_family = "Fira Sans"
 
 [shell.animation]
 enabled = false              # kill shell animations; stock layout/colours remain
