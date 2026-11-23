@@ -1,0 +1,7 @@
+[Desktop Entry]
+Name=Hyprland + Noctalia
+Comment=Independent Hyprland test session with Noctalia shell
+Exec=/usr/local/bin/hyprland-noctalia-session
+Type=Application
+DesktopNames=Hyprland
+Keywords=tiling;wayland;compositor;noctalia;

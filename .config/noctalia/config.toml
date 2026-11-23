@@ -1,0 +1,71 @@
+# Minimal low-heat overrides on top of Noctalia's stock defaults.
+# Stock look retained: Noctalia palette, dock, bar, rounded panels.
+# Sources: docs.noctalia.dev configuration/shell, services/system-monitor,
+# bar, theming — accessed 2026-11-22. Validated with `noctalia config validate`.
+
+[theme]
+source = "builtin"
+builtin = "Noctalia"
+mode = "dark"
+
+[shell]
+offline_mode = true          # no weather/exchange-rate/community-palette HTTP calls
+shared_gl_context = true
+
+[shell.animation]
+enabled = false              # kill shell animations; stock layout/colours remain
+
+[shell.shadow]
+alpha = 0.0
+
+[shell.panel]
+transparency_mode = "solid"
+
+[backdrop]
+enabled = false
+blur_intensity = 0.0
+tint_intensity = 0.0
+
+[bar.main]
+compositor_blur = false
+shadow = false
+end = ['media', 'tray', 'notifications', 'clipboard', 'network', 'bluetooth', 'volume', 'brightness', 'battery', 'control-center', 'session', 'sysmon']
+
+[wallpaper.automation]
+enabled = false
+
+# Slower sysmon polling; widgets stay, work is reduced.
+[system.monitor]
+enabled = true
+cpu_poll_seconds = 4.0
+memory_poll_seconds = 4.0
+gpu_poll_seconds = 10.0
+network_poll_seconds = 5.0
+disk_poll_seconds = 15.0
+
+[shell.launcher]
+fetch_exchange_rates = false
+
+# Win+Tab overview: all windows across all workspaces/outputs.
+[shell.window_switcher]
+style = "icons"
+mru = true
+show_caption = true
+show_count = true
+show_app_icon = true
+show_all_outputs = true
+current_workspace_only = false
+
+[shell.screenshot]
+directory = "/home/sahil/Pictures/screenshots"
+
+[widget.brightness.actions]
+right = "panel-open launcher /eye"
+
+[shell.launcher.dmenu.entry.eyecare]
+command = "echo 'Night light'; echo 'Blue-light filter'; echo 'Grayscale'; echo 'Dim'; echo 'Reset all'"
+exec = "/home/sahil/.local/bin/eye-care.sh {selection}"
+prefix = "eye"
+label = "Eye care"
+glyph = "eye"
+global = false

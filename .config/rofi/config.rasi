@@ -1,0 +1,57 @@
+configuration {
+  modi: "drun,run,filebrowser,window";
+  show-icons: true;
+  font: "Fira Sans 11";
+  width: 45;
+  lines: 10;
+  fixed-num-lines: false;
+}
+
+* {
+  background-color: #1e1e2e;
+  foreground-color: #cdd6f4;
+  border-color: #313244;
+  selected-background-color: #313244;
+  selected-foreground-color: #89b4fa;
+  urgent-background-color: #f5c2e4;
+  urgent-foreground-color: #1e1e2e;
+}
+
+window {
+  transparency: "real";
+  background-color: @background-color;
+  border: 2px;
+  border-color: @border-color;
+  border-radius: 10px;
+  padding: 8px;
+}
+
+inputbar {
+  children: [prompt, entry];
+  background-color: @background-color;
+  padding: 4px;
+}
+
+prompt {
+  text: "❯ ";
+}
+
+entry {
+  placeholder: "Type to search...";
+}
+
+listview {
+  lines: 8;
+  spacing: 2px;
+  padding: 4px;
+}
+
+element {
+  padding: 6px 10px;
+  border-radius: 6px;
+}
+
+element.selected {
+  background-color: @selected-background-color;
+  text-color: @selected-foreground-color;
+}

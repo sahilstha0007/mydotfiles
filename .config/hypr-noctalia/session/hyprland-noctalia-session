@@ -1,0 +1,12 @@
+#!/bin/sh
+# Wrapper for the independent "Hyprland + Noctalia" SDDM test session.
+# start-hyprland is the watchdog wrapper; arguments after -- go to Hyprland.
+export XDG_SESSION_TYPE=wayland
+export XDG_CURRENT_DESKTOP=Hyprland
+export XDG_SESSION_DESKTOP=Hyprland
+export DESKTOP_SESSION=Hyprland
+export ELECTRON_OZONE_PLATFORM_HINT=wayland
+export MOZ_ENABLE_WAYLAND=1
+export GDK_BACKEND='wayland,x11,*'
+export NOCTALIA_SESSION=1
+exec /usr/bin/start-hyprland -- --config "$HOME/.config/hypr-noctalia/hyprland.conf"
