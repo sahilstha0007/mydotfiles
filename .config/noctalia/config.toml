@@ -4,8 +4,8 @@
 # bar, theming — accessed 2026-11-22. Validated with `noctalia config validate`.
 
 [theme]
-source = "builtin"
-builtin = "Tokyo-Night"
+source = "custom"
+custom_palette = "Peach"
 mode = "dark"
 shell_mode = "dark"
 
@@ -36,7 +36,7 @@ start = ['launcher', 'wallpaper', 'workspaces', 'taskbar']
 margin_ends = 100
 margin_edge = 0
 concave_edge_corners = true
-end = ['tray', 'notifications', 'group:g1', 'group:g2', 'group:g3', 'screenshot', 'eye', 'control-center', 'session', 'sysmon']
+end = ['tray', 'notifications', 'group:g1', 'group:g2', 'group:g3', 'screenshot', 'eye', 'control-center', 'session', 'sysmon', 'arch']
 
 [[bar.main.capsule_group]]
 id = "g1"
@@ -90,6 +90,15 @@ custom_label = "Eye"
 
 [widget.eye.actions]
 left = "panel-open launcher /eye"
+
+[widget.arch]
+type = "custom_button"
+custom_image = "/home/sahil/.config/noctalia/assets/archlinux-logo.svg"
+custom_image_colorize = false
+label = ""
+
+[widget.arch.actions]
+left = "none"
 
 [lockscreen]
 blur_intensity = 0.0
