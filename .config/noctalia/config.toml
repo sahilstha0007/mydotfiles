@@ -76,6 +76,9 @@ peek = true
 [widget.battery]
 peek = true
 
+[widget.tray]
+peek = true
+
 [control_center]
 hidden_tabs = ["weather", "calendar", "screen-time"]
 
