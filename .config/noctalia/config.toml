@@ -103,6 +103,7 @@ default_view = "all"
 show_app_actions = true
 category_icons_only = true
 search_position = "top"
+pinned = ["kitty", "brave-browser", "org.gnome.Nautilus", "obsidian", "zen"]
 
 # Win+Tab overview: all windows across all workspaces/outputs.
 [shell.window_switcher]
