@@ -53,6 +53,7 @@ category_icons_only = true
 
 # Win+Tab overview: all windows across all workspaces/outputs.
 [shell.window_switcher]
+colorize_icons = false
 style = "icons"
 mru = true
 show_caption = true
