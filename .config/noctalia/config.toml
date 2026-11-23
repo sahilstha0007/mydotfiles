@@ -32,6 +32,7 @@ tint_intensity = 0.0
 compositor_blur = false
 shadow = false
 capsule = true
+start = ['launcher', 'wallpaper', 'workspaces', 'taskbar']
 margin_ends = 100
 margin_edge = 0
 concave_edge_corners = true
