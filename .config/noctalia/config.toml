@@ -36,7 +36,7 @@ start = ['launcher', 'wallpaper', 'workspaces', 'taskbar']
 margin_ends = 100
 margin_edge = 0
 concave_edge_corners = true
-end = ['tray', 'notifications', 'group:g1', 'group:g2', 'group:g3', 'screenshot', 'control-center', 'session', 'sysmon']
+end = ['tray', 'notifications', 'group:g1', 'group:g2', 'group:g3', 'screenshot', 'eye', 'control-center', 'session', 'sysmon']
 
 [[bar.main.capsule_group]]
 id = "g1"
@@ -82,6 +82,14 @@ media_volume = false
 [widget.clock]
 format = "{:%a %d %b  %H:%M}"
 tooltip_format = "%A, %B %d, %Y"
+
+[widget.eye]
+type = "custom_button"
+glyph = "eye"
+custom_label = "Eye"
+
+[widget.eye.actions]
+left = "panel-open launcher /eye"
 
 [lockscreen]
 blur_intensity = 0.0
