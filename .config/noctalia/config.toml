@@ -81,6 +81,7 @@ fetch_exchange_rates = false
 default_view = "all"
 show_app_actions = true
 category_icons_only = true
+search_position = "top"
 
 # Win+Tab overview: all windows across all workspaces/outputs.
 [shell.window_switcher]
