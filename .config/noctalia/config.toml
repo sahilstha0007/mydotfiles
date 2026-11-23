@@ -70,6 +70,10 @@ middle = "exec kitty"
 scroll_up = "workspace-switch prev"
 scroll_down = "workspace-switch next"
 
+[osd.kinds]
+media = false
+media_volume = false
+
 [wallpaper.automation]
 enabled = false
 
