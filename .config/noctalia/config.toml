@@ -1,8 +1,3 @@
-# Minimal low-heat overrides on top of Noctalia's stock defaults.
-# Stock look retained: Noctalia palette, dock, bar, rounded panels.
-# Sources: docs.noctalia.dev configuration/shell, services/system-monitor,
-# bar, theming — accessed 2026-11-22. Validated with `noctalia config validate`.
-
 [theme]
 source = "custom"
 custom_palette = "Peach"
@@ -10,12 +5,13 @@ mode = "dark"
 shell_mode = "dark"
 
 [shell]
-offline_mode = true          # no weather/exchange-rate/community-palette HTTP calls
+offline_mode = true
 shared_gl_context = true
 font_family = "Fira Sans"
+popup_shadows = false
 
 [shell.animation]
-enabled = false              # kill shell animations; stock layout/colours remain
+enabled = false
 
 [shell.shadow]
 alpha = 0.0
@@ -28,22 +24,27 @@ enabled = false
 blur_intensity = 0.0
 tint_intensity = 0.0
 
+[lockscreen]
+blur_intensity = 0.0
+transition = []
+
 [bar.main]
 compositor_blur = false
 shadow = false
+smart_auto_hide = false
 capsule = true
-start = ['launcher', 'wallpaper', 'workspaces', 'taskbar']
 margin_ends = 100
 margin_edge = 0
 concave_edge_corners = true
-end = ['tray', 'notifications', 'group:g1', 'group:g2', 'group:g3', 'screenshot', 'eye', 'control-center', 'session', 'sysmon', 'arch']
+start = ["launcher", "wallpaper", "workspaces", "taskbar"]
+end = ["tray", "notifications", "group:g1", "group:g2", "group:g3", "screenshot", "eye", "control-center", "session", "sysmon", "arch"]
 
 [[bar.main.capsule_group]]
 id = "g1"
 members = ["network", "bluetooth"]
 fill = "surface_container"
 padding = 6.0
-opacity = 0.9
+opacity = 1.0
 enabled = true
 accordion = false
 widget_spacing = 8
@@ -53,7 +54,7 @@ id = "g2"
 members = ["volume", "brightness"]
 fill = "surface_container"
 padding = 6.0
-opacity = 0.9
+opacity = 1.0
 enabled = true
 accordion = false
 widget_spacing = 8
@@ -63,7 +64,7 @@ id = "g3"
 members = ["battery", "nightlight"]
 fill = "surface_container"
 padding = 6.0
-opacity = 0.9
+opacity = 1.0
 enabled = true
 accordion = false
 widget_spacing = 8
@@ -79,34 +80,6 @@ scroll_down = "workspace-switch next"
 media = false
 media_volume = false
 
-[widget.clock]
-format = "{:%a %d %b  %H:%M}"
-tooltip_format = "%A, %B %d, %Y"
-
-[widget.eye]
-type = "custom_button"
-glyph = "eye"
-custom_label = "Eye"
-
-[widget.eye.actions]
-left = "panel-open launcher /eye"
-
-[widget.arch]
-type = "custom_button"
-custom_image = "/home/sahil/.config/noctalia/assets/archlinux-logo.svg"
-custom_image_colorize = false
-label = ""
-
-[widget.arch.actions]
-left = "none"
-
-[lockscreen]
-blur_intensity = 0.0
-
-[wallpaper.automation]
-enabled = false
-
-# Slower sysmon polling; widgets stay, work is reduced.
 [system.monitor]
 enabled = true
 cpu_poll_seconds = 10.0
@@ -123,7 +96,14 @@ category_icons_only = true
 search_position = "top"
 pinned = ["kitty", "brave-browser", "org.gnome.Nautilus", "obsidian", "zen"]
 
-# Win+Tab overview: all windows across all workspaces/outputs.
+[shell.launcher.dmenu.entry.eyecare]
+command = "echo 'Night light'; echo 'Blue-light filter'; echo 'Grayscale'; echo 'Dim'; echo 'Reset all'"
+exec = "/home/sahil/.local/bin/eye-care.sh {selection}"
+prefix = "eye"
+label = "Eye care"
+glyph = "eye"
+global = false
+
 [shell.window_switcher]
 colorize_icons = false
 style = "icons"
@@ -137,23 +117,11 @@ current_workspace_only = false
 [shell.screenshot]
 directory = "/home/sahil/Pictures/screenshots"
 
-[widget.sysmon]
-peek = true
-
-[widget.volume]
-peek = true
-
-[widget.brightness]
-peek = true
-
-[widget.battery]
-peek = true
-
-[widget.tray]
-peek = true
-
 [control_center]
 hidden_tabs = ["weather", "calendar", "screen-time"]
+
+[control_center.media]
+show_visualizer = false
 
 [[control_center.shortcuts]]
 type = "wifi"
@@ -173,6 +141,9 @@ type = "notification"
 [[control_center.shortcuts]]
 type = "power_profile"
 
+[wallpaper.automation]
+enabled = false
+
 [plugins]
 auto_update = "none"
 enabled = ["noctalia/notes", "noctalia/timer"]
@@ -181,13 +152,41 @@ enabled = ["noctalia/notes", "noctalia/timer"]
 notes_dir = "/home/sahil/Documents/noctalia-notes"
 extension = "md"
 
+[widget.clock]
+format = "{:%a %d %b  %H:%M}"
+tooltip_format = "%A, %B %d, %Y"
+
+[widget.sysmon]
+peek = true
+
+[widget.volume]
+peek = true
+
+[widget.brightness]
+peek = true
+
 [widget.brightness.actions]
 right = "panel-open launcher /eye"
 
-[shell.launcher.dmenu.entry.eyecare]
-command = "echo 'Night light'; echo 'Blue-light filter'; echo 'Grayscale'; echo 'Dim'; echo 'Reset all'"
-exec = "/home/sahil/.local/bin/eye-care.sh {selection}"
-prefix = "eye"
-label = "Eye care"
+[widget.battery]
+peek = true
+
+[widget.tray]
+peek = true
+
+[widget.eye]
+type = "custom_button"
 glyph = "eye"
-global = false
+custom_label = "Eye"
+
+[widget.eye.actions]
+left = "panel-open launcher /eye"
+
+[widget.arch]
+type = "custom_button"
+custom_image = "/home/sahil/.config/noctalia/assets/archlinux-logo.svg"
+custom_image_colorize = false
+label = ""
+
+[widget.arch.actions]
+left = "none"
