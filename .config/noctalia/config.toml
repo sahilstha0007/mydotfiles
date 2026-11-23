@@ -64,6 +64,12 @@ enabled = true
 accordion = false
 widget_spacing = 8
 
+[bar.main.dead_zone.actions]
+left = "panel-toggle launcher"
+middle = "exec kitty"
+scroll_up = "workspace-switch prev"
+scroll_down = "workspace-switch next"
+
 [wallpaper.automation]
 enabled = false
 
