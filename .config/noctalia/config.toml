@@ -29,7 +29,7 @@ tint_intensity = 0.0
 [bar.main]
 compositor_blur = false
 shadow = false
-end = ['media', 'tray', 'notifications', 'clipboard', 'network', 'bluetooth', 'volume', 'brightness', 'battery', 'control-center', 'session', 'sysmon']
+end = ['media', 'tray', 'notifications', 'clipboard', 'network', 'bluetooth', 'volume', 'brightness', 'battery', 'nightlight', 'screenshot', 'control-center', 'session', 'sysmon']
 
 [wallpaper.automation]
 enabled = false
@@ -58,6 +58,18 @@ current_workspace_only = false
 
 [shell.screenshot]
 directory = "/home/sahil/Pictures/screenshots"
+
+[widget.sysmon]
+peek = true
+
+[widget.volume]
+peek = true
+
+[widget.brightness]
+peek = true
+
+[widget.battery]
+peek = true
 
 [widget.brightness.actions]
 right = "panel-open launcher /eye"
