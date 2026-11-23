@@ -47,6 +47,9 @@ disk_poll_seconds = 15.0
 
 [shell.launcher]
 fetch_exchange_rates = false
+default_view = "all"
+show_app_actions = true
+category_icons_only = true
 
 # Win+Tab overview: all windows across all workspaces/outputs.
 [shell.window_switcher]
