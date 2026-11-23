@@ -175,6 +175,11 @@ type = "power_profile"
 
 [plugins]
 auto_update = "none"
+enabled = ["noctalia/notes", "noctalia/timer"]
+
+[plugin_settings."noctalia/notes"]
+notes_dir = "/home/sahil/Documents/noctalia-notes"
+extension = "md"
 
 [widget.brightness.actions]
 right = "panel-open launcher /eye"
