@@ -31,7 +31,38 @@ tint_intensity = 0.0
 [bar.main]
 compositor_blur = false
 shadow = false
-end = ['media', 'tray', 'notifications', 'clipboard', 'network', 'bluetooth', 'volume', 'brightness', 'battery', 'nightlight', 'screenshot', 'control-center', 'session', 'sysmon']
+capsule = true
+end = ['media', 'tray', 'notifications', 'clipboard', 'group:g1', 'group:g2', 'group:g3', 'screenshot', 'control-center', 'session', 'sysmon']
+
+[[bar.main.capsule_group]]
+id = "g1"
+members = ["network", "bluetooth"]
+fill = "surface_container"
+padding = 6.0
+opacity = 0.9
+enabled = true
+accordion = false
+widget_spacing = 8
+
+[[bar.main.capsule_group]]
+id = "g2"
+members = ["volume", "brightness"]
+fill = "surface_container"
+padding = 6.0
+opacity = 0.9
+enabled = true
+accordion = false
+widget_spacing = 8
+
+[[bar.main.capsule_group]]
+id = "g3"
+members = ["battery", "nightlight"]
+fill = "surface_container"
+padding = 6.0
+opacity = 0.9
+enabled = true
+accordion = false
+widget_spacing = 8
 
 [wallpaper.automation]
 enabled = false
