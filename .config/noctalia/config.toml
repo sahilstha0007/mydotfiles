@@ -24,7 +24,7 @@ control_center_position = "center"
 control_center_placement = "floating"
 list_item_background = true
 border_color = "primary"
-transparency_mode = "soft"
+transparency_mode = "glass"
 
 [backdrop]
 enabled = true
@@ -135,7 +135,7 @@ disk_poll_seconds = 0.0
 
 [shell.launcher]
 width = 820
-colorize_icons = true
+colorize_icons = false
 fetch_exchange_rates = false
 default_view = "all"
 show_app_actions = true
@@ -281,11 +281,11 @@ left = "panel-toggle launcher"
 [notification]
 max_visible = 4
 width = 380
-background_opacity = 1.0
+background_opacity = 0.88
 
 [osd]
 position = "top_right"
-background_opacity = 1.0
+background_opacity = 0.88
 hide_delay_ms = 2000
 
 [dock]
