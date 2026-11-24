@@ -136,6 +136,8 @@ disk_poll_seconds = 0.0
 
 [shell.launcher]
 width = 820
+track_usage = true
+sort_by_usage = false
 colorize_icons = false
 fetch_exchange_rates = false
 default_view = "all"
