@@ -786,13 +786,15 @@ M.setup = function(opts)
    end)
 
    -- BUILTIN EVENT
-   wezterm.on('format-tab-title', function(tab, _tabs, _panes, _config, hover, max_width)
+   wezterm.on('format-tab-title', function(tab, _tabs, _panes, config, hover, max_width)
       if not tab_list[tab.tab_id] then
          tab_list[tab.tab_id] = Tab:new()
       end
 
-      -- `max_width` refers to the `tab_max_width` option set in `config/appearance.lua`
-      tab_list[tab.tab_id]:update_cells(valid_opts, tab, hover, max_width)
+      -- tab_max_width only bounds wezterm's first pass; the second pass hands a
+      -- lone tab the whole bar, so a long title stretches the pill across it.
+      local title_width = math.min(max_width, config.tab_max_width or max_width)
+      tab_list[tab.tab_id]:update_cells(valid_opts, tab, hover, title_width)
       return tab_list[tab.tab_id]:render()
    end)
 end

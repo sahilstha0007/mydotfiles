@@ -311,3 +311,46 @@ Validate the whole thing with `devcheck` or `install.sh --doctor`.
 
 </details>
 <!-- END KEYBINDINGS -->
+
+---
+
+## Noctalia UI — Tokyo Night, final bar (2026-11-24)
+
+Noctalia v5 on Hyprland, themed end to end from the builtin **Tokyo-Night** palette, with a bar shaped after Lau's Niri + Noctalia video.
+
+| Property | Value |
+|---|---|
+| position | `top` (inherited from `[bar.default]`) |
+| thickness | 32 px |
+| margin_edge | 6 px (floats off the screen edge) |
+| margin_ends | `8%` |
+| radius | 16 on all four corners |
+| border | `outline_variant` at 1.0 px |
+| background_opacity | 0.55 over compositor blur |
+| shadow / contact_shadow | on / on |
+| panel_overlap | 1 px |
+| padding / widget_spacing | 12 / 5 |
+| capsule_thickness | 0.72 (fraction of bar height) |
+| hover_highlight | on |
+| font_weight | 600 |
+| smart auto-hide | on (pointer auto_hide off, reserve-while-visible on) |
+
+Lanes: `start = ['group:g0', 'workspaces']`, `center = ['clock']`, `end = ['media', 'group:g1', 'group:g3']`.
+
+| Group | Members | Fill | Foreground | Radius | Border |
+|---|---|---|---|---|---|
+| `g0` | arch, launcher | `surface_container_high` | `primary` | 12 | `outline_variant` |
+| `g1` | network, bluetooth, volume, brightness, battery | `surface_container_high` | `primary` | 16 | `primary` |
+| `g3` | tray, notifications, privacy, control-center, session | `surface_container` | `on_surface_variant` | 12 | `outline_variant` |
+
+- **Workspaces** use `focus_hint`: inactive dots, focused pill at `2.4×` thickness, no labels, no app icon. Focused `primary`, occupied `secondary`, empty `outline_variant`.
+- **Media** is artwork-only (18 px, hidden with no player) and sits before the system pill; the **tray** is a `drawer` with a leading chevron.
+- **Accents**: network `primary` · bluetooth `secondary` · volume `primary` · brightness `tertiary` · battery `primary`.
+- **Animations**: one `smooth` curve (0.05,0.9) → (0.1,1.0) at speeds 7–10, `popin 97%`, `slidefade 8%`; shell animations at `speed = 1.6`.
+- **Smart auto-hide** on bar and dock — visible on an empty workspace, hidden when a window is present; the bar releases its reserved gap while hidden.
+- **Dock**: enabled, floating (`margin_edge 8`, radius 18), pinned `kitty`, `brave-browser`, `org.gnome.Nautilus`, `firefox`.
+- **Panels**: `transparency_mode = "soft"`, floating centered control center, OSD `bottom_center`, notifications 380 px / 4 max.
+
+Tracked files: `.config/noctalia/config.toml`, `.config/hypr-noctalia/hyprland.conf`, `.config/kitty/themes/tokyo-night.conf`, `.config/kitty/custom.conf`.
+
+Full detail, verification runs, backups and the precedence gotchas: `~/2026-11-23-hyprland-noctalia-current-state.md` → section **“UI pass — final state (2026-11-24)”**.

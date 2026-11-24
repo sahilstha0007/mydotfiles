@@ -1,62 +1,85 @@
 [theme]
-source = "custom"
+source = "builtin"
 custom_palette = "Peach"
 mode = "dark"
 shell_mode = "dark"
 
 [shell]
+settings_window_translucent = true
+corner_radius_scale = 1.15
 offline_mode = true
 shared_gl_context = true
 font_family = "Fira Sans"
-popup_shadows = false
+popup_shadows = true
 
 [shell.animation]
-enabled = false
+speed = 1.6
+enabled = true
 
 [shell.shadow]
-alpha = 0.0
+alpha = 0.28
 
 [shell.panel]
-transparency_mode = "solid"
+control_center_position = "center"
+control_center_placement = "floating"
+list_item_background = true
+border_color = "primary"
+transparency_mode = "soft"
 
 [backdrop]
-enabled = false
-blur_intensity = 0.0
-tint_intensity = 0.0
+enabled = true
+blur_intensity = 0.55
+tint_intensity = 0.15
 
 [lockscreen]
-blur_intensity = 0.0
+blur_intensity = 0.35
 transition = []
 
 [bar.main]
-compositor_blur = false
-shadow = false
-smart_auto_hide = false
+panel_overlap = 1
+border = "outline_variant"
+radius_bottom_right = 16
+radius_bottom_left = 16
+radius_top_right = 16
+radius_top_left = 16
+hover_highlight = true
+show_on_workspace_switch = true
+auto_hide_reserve_space = true
+capsule_opacity = 0.92
+font_weight = 600
+contact_shadow = true
+border_width = 1.0
+background_opacity = 0.55
+compositor_blur = true
+shadow = true
+smart_auto_hide = true
+auto_hide = false
+reserve_space = true
 capsule = true
-thickness = 38
-padding = 10
-widget_spacing = 8
+thickness = 32
+padding = 12
+widget_spacing = 5
 radius = 16
-capsule_padding = 5
-capsule_thickness = 0.82
+capsule_padding = 3
+capsule_thickness = 0.72
 capsule_radius = 14.0
 capsule_border = "outline_variant"
 capsule_border_width = 1.0
-margin_ends = 100
-margin_edge = 0
+margin_ends = "8%"
+margin_edge = 6
 concave_edge_corners = true
-start = ["launcher", "wallpaper", "workspaces", "taskbar"]
+start = ["group:g0", "workspaces", "active_window"]
 center = ["clock"]
-end = ["tray", "privacy", "notifications", "group:g1", "group:g2", "group:g3", "screenshot", "eye", "control-center", "session", "sysmon", "arch"]
+end = ["media", "wallpaper", "clipboard", "screenshot", "group:g1", "group:g3"]
 
 [[bar.main.capsule_group]]
 id = "g1"
-members = ["network", "bluetooth"]
-fill = "surface_container"
+members = ["network", "bluetooth", "volume", "brightness", "battery"]
+fill = "surface_container_high"
 foreground = "primary"
-padding = 5.0
-radius = 12
-border = "outline_variant"
+padding = 6.0
+radius = 16
+border = "primary"
 border_width = 1.0
 opacity = 1.0
 enabled = true
@@ -64,9 +87,9 @@ accordion = false
 widget_spacing = 8
 
 [[bar.main.capsule_group]]
-id = "g2"
-members = ["volume", "brightness"]
-fill = "surface_container"
+id = "g0"
+members = ["arch", "launcher"]
+fill = "surface_container_high"
 foreground = "primary"
 padding = 5.0
 radius = 12
@@ -75,13 +98,13 @@ border_width = 1.0
 opacity = 1.0
 enabled = true
 accordion = false
-widget_spacing = 8
+widget_spacing = 6
 
 [[bar.main.capsule_group]]
 id = "g3"
-members = ["battery", "nightlight"]
+members = ["tray", "notifications", "privacy", "control-center", "session"]
 fill = "surface_container"
-foreground = "primary"
+foreground = "on_surface_variant"
 padding = 5.0
 radius = 12
 border = "outline_variant"
@@ -89,7 +112,7 @@ border_width = 1.0
 opacity = 1.0
 enabled = true
 accordion = false
-widget_spacing = 8
+widget_spacing = 6
 
 [bar.main.dead_zone.actions]
 left = "panel-toggle launcher"
@@ -111,6 +134,8 @@ network_poll_seconds = 0.0
 disk_poll_seconds = 0.0
 
 [shell.launcher]
+width = 820
+colorize_icons = true
 fetch_exchange_rates = false
 default_view = "all"
 show_app_actions = true
@@ -155,7 +180,7 @@ type = "bluetooth"
 type = "nightlight"
 
 [[control_center.shortcuts]]
-type = "dark_mode"
+type = "caffeine"
 
 [[control_center.shortcuts]]
 type = "notification"
@@ -174,14 +199,22 @@ enabled = ["noctalia/notes", "noctalia/timer"]
 notes_dir = "/home/sahil/Documents/noctalia-notes"
 extension = "md"
 
+[widget.active_window]
+display = "icon_and_text"
+max_length = 145
+title_scroll = "on_hover"
+show_empty_label = false
+
 [widget.clock]
+color = "on_surface"
+capsule_fill = "surface_container_highest"
 format = "{:%a %d %b  %H:%M}"
 tooltip_format = "%A, %B %d, %Y"
 font_scale = 1.15
 font_weight = 700
-capsule_padding = 7
-capsule_radius = 12
-capsule_border = "primary"
+capsule_padding = 8
+capsule_radius = 14
+capsule_border = "secondary"
 capsule_border_width = 1.0
 
 [widget.privacy]
@@ -191,24 +224,33 @@ hide_inactive = true
 peek = true
 
 [widget.volume]
+color = "primary"
 peek = true
 
 [widget.brightness]
+color = "tertiary"
 peek = true
 
 [widget.brightness.actions]
 right = "panel-open launcher /eye"
 
 [widget.battery]
+color = "primary"
 peek = true
 
 [widget.tray]
+hide_passive = true
+drawer_item_size = 20
+drawer_columns = 3
+glyph_position = "before"
+drawer = true
 peek = true
 
 [widget.eye]
+show_glyph = true
 type = "custom_button"
 glyph = "eye"
-custom_label = "Eye"
+custom_label = ""
 
 [widget.eye.actions]
 left = "panel-open launcher /eye"
@@ -216,8 +258,63 @@ left = "panel-open launcher /eye"
 [widget.arch]
 type = "custom_button"
 custom_image = "/home/sahil/.config/noctalia/assets/archlinux-logo.svg"
-custom_image_colorize = false
+custom_image_colorize = true
 label = ""
 
 [widget.arch.actions]
 left = "none"
+
+[notification]
+max_visible = 4
+width = 380
+background_opacity = 1.0
+
+[osd]
+position = "top_right"
+background_opacity = 1.0
+hide_delay_ms = 2000
+
+[dock]
+position = "bottom"
+pinned = ["kitty", "brave-browser", "org.gnome.Nautilus", "firefox"]
+reserve_space = false
+auto_hide = false
+smart_auto_hide = true
+enabled = true
+launcher_position = "start"
+active_scale = 1.05
+magnification_scale = 1.35
+icon_size = 44
+margin_edge = 8
+radius = 18
+border_width = 1.0
+
+[widget.workspaces]
+change_color_on_hover = true
+hide_when_empty = false
+pill_scale = 0.85
+inactive_pill_size = 1.0
+active_pill_size = 2.4
+urgent_color = "error"
+empty_color = "outline_variant"
+occupied_color = "secondary"
+focused_color = "primary"
+show_icons = false
+show_labels = false
+style = "focus_hint"
+type = "workspaces"
+[widget.network]
+color = "primary"
+peek = true
+
+[widget.bluetooth]
+color = "secondary"
+peek = true
+
+[widget.media]
+title_scroll = "on_hover"
+max_length = 200
+hide_when_idle = true
+hide_when_no_media = true
+art_size = 18
+album_art_only = true
