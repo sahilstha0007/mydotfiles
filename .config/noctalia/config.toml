@@ -152,6 +152,14 @@ label = "Eye care"
 glyph = "eye"
 global = false
 
+[shell.launcher.dmenu.entry.glass]
+command = "/home/sahil/.local/bin/glass-mode.sh --list"
+exec = "/home/sahil/.local/bin/glass-mode.sh {selection}"
+prefix = "glass"
+label = "Glass mode"
+glyph = "eye"
+global = false
+
 [shell.window_switcher]
 colorize_icons = false
 style = "icons"
