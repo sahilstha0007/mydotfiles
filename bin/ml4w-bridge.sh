@@ -87,7 +87,9 @@ case "${1:-}" in
     [ -n "$class" ] || exit 0
     pids=$(hyprctl clients -j | jq -r --arg c "$class" '.[] | select(.class == $c) | .pid' | sort -u)
     [ -n "$pids" ] || exit 0
-    kill $pids 2>/dev/null || true
+    while IFS= read -r pid; do
+      [ -n "$pid" ] && kill "$pid" 2>/dev/null || true
+    done <<< "$pids"
     notify "Closed all $class windows"
     ;;
   workspace-alert)
