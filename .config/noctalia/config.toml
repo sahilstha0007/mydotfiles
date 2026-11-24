@@ -156,7 +156,7 @@ global = false
 
 [shell.launcher.dmenu.entry.glass]
 command = "/home/sahil/.local/bin/glass-mode.sh --list"
-exec = "/home/sahil/.local/bin/glass-mode.sh {selection}"
+exec = "/home/sahil/.local/bin/glass-mode.sh \"{selection}\""
 prefix = "glass"
 label = "Glass mode"
 glyph = "eye"
