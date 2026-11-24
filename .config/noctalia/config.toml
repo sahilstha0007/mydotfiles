@@ -7,7 +7,7 @@ shell_mode = "dark"
 [shell]
 settings_window_translucent = true
 corner_radius_scale = 1.15
-offline_mode = true
+offline_mode = false
 shared_gl_context = true
 font_family = "Fira Sans"
 popup_shadows = true
@@ -88,7 +88,7 @@ widget_spacing = 8
 
 [[bar.main.capsule_group]]
 id = "g0"
-members = ["arch", "launcher", "keybinds", "calc"]
+members = ["arch", "launcher", "cat", "pomo"]
 fill = "surface_container_high"
 foreground = "primary"
 padding = 5.0
@@ -102,7 +102,7 @@ widget_spacing = 6
 
 [[bar.main.capsule_group]]
 id = "g3"
-members = ["tray", "notifications", "privacy", "nightlight", "caffeine", "timer", "control-center", "session"]
+members = ["tray", "notifications", "privacy", "nightlight", "caffeine", "control-center", "session"]
 fill = "surface_container"
 foreground = "on_surface_variant"
 padding = 5.0
@@ -193,7 +193,7 @@ enabled = false
 
 [plugins]
 auto_update = "none"
-enabled = ["noctalia/notes", "noctalia/timer", "cleboost/ssh-launcher", "cleboost/zed-provider", "kenn/keybind-cheatsheet", "yuuto/calculator", "nightwatch75/file-search"]
+enabled = ["noctalia/notes", "cleboost/ssh-launcher", "cleboost/zed-provider", "nightwatch75/file-search", "noctalia/bongocat", "thepunkoff/pomodoro"]
 
 [plugin_settings."noctalia/notes"]
 notes_dir = "/home/sahil/Documents/noctalia-notes"
@@ -317,14 +317,23 @@ show_icons = false
 show_labels = false
 style = "focus_hint"
 type = "workspaces"
-[widget.keybinds]
-type = "kenn/keybind-cheatsheet:keybinds"
+[widget.cat]
+type = "noctalia/bongocat:cat"
+audio_spectrum = true
+tappy_mode = true
+input_devices = []
 
-[widget.calc]
-type = "yuuto/calculator:bar"
+[widget.pomo]
+type = "thepunkoff/pomodoro:widget"
+widget-glyph-main = "brain"
+widget-glyph-work = "brain"
+widget-glyph-break = "coffee"
 
-[widget.timer]
-type = "noctalia/timer:bar"
+[plugin_settings."thepunkoff/pomodoro"]
+work-duration = 25
+short-break-duration = 5
+long-break-duration = 15
+sessions-before-long-break = 4
 
 [widget.network]
 color = "primary"
