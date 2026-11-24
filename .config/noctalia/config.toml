@@ -88,7 +88,7 @@ widget_spacing = 8
 
 [[bar.main.capsule_group]]
 id = "g0"
-members = ["arch", "launcher"]
+members = ["arch", "launcher", "keybinds", "calc"]
 fill = "surface_container_high"
 foreground = "primary"
 padding = 5.0
@@ -193,11 +193,25 @@ enabled = false
 
 [plugins]
 auto_update = "none"
-enabled = ["noctalia/notes", "noctalia/timer"]
+enabled = ["noctalia/notes", "noctalia/timer", "cleboost/ssh-launcher", "cleboost/zed-provider", "kenn/keybind-cheatsheet", "yuuto/calculator", "nightwatch75/file-search"]
 
 [plugin_settings."noctalia/notes"]
 notes_dir = "/home/sahil/Documents/noctalia-notes"
 extension = "md"
+
+[plugin_settings."cleboost/ssh-launcher"]
+config_path = "/home/sahil/.ssh/config"
+max_results = 30
+
+[plugin_settings."cleboost/zed-provider"]
+db_path = "/home/sahil/.local/share/zed/db/0-stable/db.sqlite"
+max_results = 20
+new_window = false
+
+[plugin_settings."nightwatch75/file-search"]
+search_folder = "/home/sahil"
+exclude_dirs = ".git, node_modules, .cache, .venv"
+space_enabled = false
 
 [widget.active_window]
 display = "icon_and_text"
@@ -303,6 +317,12 @@ show_icons = false
 show_labels = false
 style = "focus_hint"
 type = "workspaces"
+[widget.keybinds]
+type = "kenn/keybind-cheatsheet:keybinds"
+
+[widget.calc]
+type = "yuuto/calculator:bar"
+
 [widget.timer]
 type = "noctalia/timer:bar"
 
