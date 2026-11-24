@@ -262,7 +262,7 @@ custom_image_colorize = true
 label = ""
 
 [widget.arch.actions]
-left = "none"
+left = "panel-toggle launcher"
 
 [notification]
 max_visible = 4
