@@ -6,7 +6,7 @@ shell_mode = "dark"
 
 [shell]
 settings_window_translucent = true
-corner_radius_scale = 1.15
+corner_radius_scale = 1.35
 offline_mode = false
 shared_gl_context = true
 font_family = "Fira Sans"
@@ -17,13 +17,14 @@ speed = 1.6
 enabled = true
 
 [shell.shadow]
-alpha = 0.28
+alpha = 0.38
 
 [shell.panel]
 control_center_position = "center"
 control_center_placement = "floating"
 list_item_background = true
-border_color = "primary"
+border_color = "#7aa2f7aa"
+border_width = 1.5
 transparency_mode = "glass"
 
 [backdrop]
@@ -45,11 +46,11 @@ radius_top_left = 16
 hover_highlight = true
 show_on_workspace_switch = true
 auto_hide_reserve_space = true
-capsule_opacity = 0.92
+capsule_opacity = 0.78
 font_weight = 600
 contact_shadow = true
 border_width = 1.0
-background_opacity = 0.55
+background_opacity = 0.42
 compositor_blur = true
 shadow = true
 smart_auto_hide = true
@@ -81,7 +82,7 @@ padding = 6.0
 radius = 16
 border = "primary"
 border_width = 1.0
-opacity = 1.0
+opacity = 0.86
 enabled = true
 accordion = false
 widget_spacing = 8
@@ -95,7 +96,7 @@ padding = 5.0
 radius = 12
 border = "outline_variant"
 border_width = 1.0
-opacity = 1.0
+opacity = 0.86
 enabled = true
 accordion = false
 widget_spacing = 6
@@ -109,7 +110,7 @@ padding = 5.0
 radius = 12
 border = "outline_variant"
 border_width = 1.0
-opacity = 1.0
+opacity = 0.86
 enabled = true
 accordion = false
 widget_spacing = 6
@@ -300,8 +301,10 @@ active_scale = 1.05
 magnification_scale = 1.35
 icon_size = 44
 margin_edge = 8
-radius = 18
-border_width = 1.0
+radius = 20
+border_width = 1.5
+background_opacity = 0.72
+compositor_blur = true
 
 [widget.workspaces]
 change_color_on_hover = true
